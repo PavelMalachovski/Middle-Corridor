@@ -12,9 +12,11 @@ import uvicorn
 
 from app.api.main import create_app
 from app.bot.main import create_bot, create_dispatcher
+from app.bot.publisher import ChannelPublisher
 from app.config import get_settings
-from app.db.base import create_engine
+from app.db.base import create_engine, create_session_factory
 from app.logging import configure_logging
+from app.services.manual_reports import ManualReportsService
 
 logger = structlog.get_logger(__name__)
 
@@ -24,6 +26,7 @@ async def run() -> None:
     configure_logging(settings.log_level, settings.env)
 
     engine = create_engine(settings.database_url)
+    session_factory = create_session_factory(engine)
 
     api_app = create_app(engine=engine)
     server = uvicorn.Server(
@@ -35,7 +38,9 @@ async def run() -> None:
     bot = None
     if settings.bot_token:
         bot = create_bot(settings.bot_token)
-        dp = create_dispatcher()
+        sink = ChannelPublisher(bot, settings.channel_id)
+        reports_service = ManualReportsService(session_factory, sink, settings.auto_publish_reports)
+        dp = create_dispatcher(settings, reports_service)
         tasks.append(asyncio.create_task(dp.start_polling(bot, handle_signals=False), name="bot"))
         logger.info("starting", components=["api", "bot"])
     else:
