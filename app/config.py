@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     # AIS
     aisstream_api_key: str = ""
     vesselapi_api_key: str = ""
+    vesselapi_webhook_secret: str = ""  # пусто = вебхук выключен
+    # bbox "lat_min,lon_min,lat_max,lon_max" — уточняются без кода
+    ais_bbox_caspian: str = "36.5,47.0,47.0,54.5"
+    ais_bbox_black_sea: str = "41.0,40.5,43.5,42.5"
+    ais_min_save_interval_minutes: int = 5  # троттлинг записи позиций
 
     # Пороги ветра (м/с) для предиктора остановки портов.
     # Стартовые значения: их нужно калибровать по фактическим остановкам портов

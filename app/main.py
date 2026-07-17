@@ -1,11 +1,12 @@
-"""Общая точка входа: FastAPI + Telegram-бот в одном процессе.
+"""Общая точка входа: FastAPI + Telegram-бот + AIS-воркер в одном процессе.
 
-Планировщик фоновых задач и AIS-воркер подключаются сюда на последующих
-шагах. Если BOT_TOKEN не задан, поднимается только HTTP-часть — удобно для
-локальной отладки без Telegram.
+Планировщик фоновых задач подключается на шаге 9. Компоненты включаются по
+наличию конфигурации: без BOT_TOKEN — только HTTP, без AISSTREAM_API_KEY —
+без AIS-стрима.
 """
 
 import asyncio
+from datetime import timedelta
 
 import structlog
 import uvicorn
@@ -15,7 +16,10 @@ from app.bot.main import create_bot, create_dispatcher
 from app.bot.publisher import ChannelPublisher
 from app.config import get_settings
 from app.db.base import create_engine, create_session_factory
+from app.integrations.ais.aisstream import AISStreamClient
+from app.integrations.ais.base import BoundingBox
 from app.logging import configure_logging
+from app.services.ais_tracker import AISStreamWorker, AISTrackerService
 from app.services.manual_reports import ManualReportsService
 
 logger = structlog.get_logger(__name__)
@@ -28,12 +32,32 @@ async def run() -> None:
     engine = create_engine(settings.database_url)
     session_factory = create_session_factory(engine)
 
-    api_app = create_app(engine=engine)
+    ais_tracker = AISTrackerService(
+        session_factory,
+        min_save_interval=timedelta(minutes=settings.ais_min_save_interval_minutes),
+    )
+    ais_worker = None
+    if settings.aisstream_api_key:
+        boxes = [
+            BoundingBox.parse(settings.ais_bbox_caspian),
+            BoundingBox.parse(settings.ais_bbox_black_sea),
+        ]
+        ais_worker = AISStreamWorker(
+            AISStreamClient(settings.aisstream_api_key), ais_tracker, boxes
+        )
+
+    api_app = create_app(
+        engine=engine, settings=settings, ais_tracker=ais_tracker, ais_worker=ais_worker
+    )
     server = uvicorn.Server(
         uvicorn.Config(api_app, host="0.0.0.0", port=settings.port, log_config=None)
     )
 
     tasks: list[asyncio.Task[None]] = [asyncio.create_task(server.serve(), name="api")]
+    if ais_worker is not None:
+        tasks.append(asyncio.create_task(ais_worker.run(), name="ais"))
+    else:
+        logger.warning("aisstream_key_missing", detail="AISSTREAM_API_KEY не задан — AIS выключен")
 
     bot = None
     if settings.bot_token:
