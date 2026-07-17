@@ -10,17 +10,23 @@ from app.bot.handlers.reports import router as reports_router
 from app.bot.middlewares import TrustedSourceMiddleware
 from app.config import Settings
 from app.services.manual_reports import ManualReportsService
+from app.services.status_aggregator import StatusAggregatorService
 
 
 def create_bot(token: str) -> Bot:
     return Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 
-def create_dispatcher(settings: Settings, reports_service: ManualReportsService) -> Dispatcher:
+def create_dispatcher(
+    settings: Settings,
+    reports_service: ManualReportsService,
+    status_service: StatusAggregatorService,
+) -> Dispatcher:
     """Собирает диспетчер: зависимости в workflow data, whitelist на report-роутере."""
     dp = Dispatcher()
     dp["settings"] = settings
     dp["reports_service"] = reports_service
+    dp["status_service"] = status_service
 
     trusted = TrustedSourceMiddleware(reports_service)
     reports_router.message.middleware(trusted)

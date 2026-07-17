@@ -11,6 +11,7 @@ from typing import Any
 
 from app.db.models import AlertLevel, CorridorLeg, NewsItem, Port
 from app.integrations.weather.base import WindObservation
+from app.services.status_aggregator import CorridorStatus, PortStatus
 
 LEVEL_EMOJI = {
     AlertLevel.watch: "🌊",
@@ -107,3 +108,79 @@ def format_manual_report(
 def _truncate(text: str, limit: int) -> str:
     text = text.strip()
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+# --- Сводный статус коридора (/status) ----------------------------------------
+
+_LEG_TITLE = {
+    CorridorLeg.caspian: "Каспий",
+    CorridorLeg.black_sea: "Чёрное море",
+    CorridorLeg.rail_cis: "Ж/д (КЗ)",
+    CorridorLeg.rail_caucasus: "Ж/д (Кавказ)",
+    CorridorLeg.europe: "Европа",
+}
+
+
+def _port_line(port: "PortStatus") -> str:
+    if port.alert_level is not None:
+        marker = LEVEL_EMOJI[port.alert_level]
+        detail = port.alert_message or _LEVEL_TITLE[port.alert_level]
+    elif port.wind_speed is not None:
+        marker = "✅"
+        detail = f"ветер {port.wind_speed:.0f} м/с, порывы {port.wind_gust:.0f} м/с"
+    else:
+        marker = "⚪️"
+        detail = "нет данных о погоде"
+    return f"{marker} {port.name} — {detail}"
+
+
+def format_corridor_status(status: "CorridorStatus") -> str:
+    lines = ["🗺 <b>Средний коридор — сводка</b>"]
+
+    for leg in CorridorLeg:
+        leg_ports = [port for port in status.ports if port.leg == leg]
+        if not leg_ports:
+            continue
+        lines.append(f"\n<b>{_LEG_TITLE[leg]}</b>")
+        lines.extend(_port_line(port) for port in leg_ports)
+
+    lines.append("\n⛴ <b>Суда</b>")
+    with_data = [vessel for vessel in status.vessels if vessel.has_recent_data]
+    without_data = [vessel for vessel in status.vessels if not vessel.has_recent_data]
+    for vessel in with_data:
+        sog = f", {vessel.sog:.1f} уз" if vessel.sog is not None else ""
+        seen = f" ({_fmt_ts(vessel.ts)})" if vessel.ts else ""
+        lines.append(f"• {html.escape(vessel.name)} — в эфире{sog}{seen}")
+    if without_data:
+        if with_data:
+            lines.append(f"• нет данных: {len(without_data)} судов")
+        else:
+            lines.append("нет данных по судам — покрытие AIS на Каспии слабое")
+
+    lines.append("\n⚓️ <b>Оперативные данные</b>")
+    if status.recent_reports:
+        for report in status.recent_reports:
+            header = _REPORT_HEADER.get(report.report_type, "📌")
+            port_part = f" {html.escape(report.port_name)}" if report.port_name else ""
+            payload = ", ".join(f"{k}: {v}" for k, v in report.payload.items())
+            body = html.escape(payload or _truncate(report.note or "", 80))
+            lines.append(f"{header}{port_part}: {body} ({_fmt_ts(report.ts)})")
+    else:
+        lines.append("свежих сводок от источников нет")
+
+    lines.append(f"\n<i>Обновлено: {_fmt_ts(status.generated_at)}</i>")
+    return "\n".join(lines)
+
+
+def format_port_detail(port: "PortStatus") -> str:
+    lines = [f"<b>{port.name}</b> ({port.country}) · {_LEG_TITLE[port.leg]}"]
+    if port.alert_level is not None:
+        marker = LEVEL_EMOJI[port.alert_level]
+        lines.append(f"{marker} <b>{_LEVEL_TITLE[port.alert_level]}</b>")
+    if port.wind_speed is not None:
+        lines.append(f"Ветер {port.wind_speed:.0f} м/с, порывы до {port.wind_gust:.0f} м/с")
+        if port.weather_ts is not None:
+            lines.append(f"<i>Погода обновлена: {_fmt_ts(port.weather_ts)}</i>")
+    else:
+        lines.append("Данных о погоде пока нет")
+    return "\n".join(lines)

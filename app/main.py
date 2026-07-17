@@ -21,6 +21,7 @@ from app.integrations.ais.base import BoundingBox
 from app.logging import configure_logging
 from app.services.ais_tracker import AISStreamWorker, AISTrackerService
 from app.services.manual_reports import ManualReportsService
+from app.services.status_aggregator import StatusAggregatorService
 
 logger = structlog.get_logger(__name__)
 
@@ -64,7 +65,8 @@ async def run() -> None:
         bot = create_bot(settings.bot_token)
         sink = ChannelPublisher(bot, settings.channel_id)
         reports_service = ManualReportsService(session_factory, sink, settings.auto_publish_reports)
-        dp = create_dispatcher(settings, reports_service)
+        status_service = StatusAggregatorService(session_factory)
+        dp = create_dispatcher(settings, reports_service, status_service)
         tasks.append(asyncio.create_task(dp.start_polling(bot, handle_signals=False), name="bot"))
         logger.info("starting", components=["api", "bot"])
     else:
