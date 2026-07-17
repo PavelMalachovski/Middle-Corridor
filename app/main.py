@@ -1,0 +1,70 @@
+"""Общая точка входа: FastAPI + Telegram-бот в одном процессе.
+
+Планировщик фоновых задач и AIS-воркер подключаются сюда на последующих
+шагах. Если BOT_TOKEN не задан, поднимается только HTTP-часть — удобно для
+локальной отладки без Telegram.
+"""
+
+import asyncio
+
+import structlog
+import uvicorn
+
+from app.api.main import create_app
+from app.bot.main import create_bot, create_dispatcher
+from app.config import get_settings
+from app.db.base import create_engine
+from app.logging import configure_logging
+
+logger = structlog.get_logger(__name__)
+
+
+async def run() -> None:
+    settings = get_settings()
+    configure_logging(settings.log_level, settings.env)
+
+    engine = create_engine(settings.database_url)
+
+    api_app = create_app(engine=engine)
+    server = uvicorn.Server(
+        uvicorn.Config(api_app, host="0.0.0.0", port=settings.port, log_config=None)
+    )
+
+    tasks: list[asyncio.Task[None]] = [asyncio.create_task(server.serve(), name="api")]
+
+    bot = None
+    if settings.bot_token:
+        bot = create_bot(settings.bot_token)
+        dp = create_dispatcher()
+        tasks.append(asyncio.create_task(dp.start_polling(bot, handle_signals=False), name="bot"))
+        logger.info("starting", components=["api", "bot"])
+    else:
+        logger.warning("bot_token_missing", detail="BOT_TOKEN не задан — запускаю только API")
+
+    try:
+        # Если одна из компонент упала — гасим остальные и выходим,
+        # оркестратор (Railway/Docker) перезапустит процесс целиком.
+        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        for task in done:
+            if task.exception() is not None:
+                logger.error("component_failed", component=task.get_name())
+                raise task.exception()  # type: ignore[misc]
+    finally:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        if bot is not None:
+            await bot.session.close()
+        await engine.dispose()
+        logger.info("shutdown_complete")
+
+
+def main() -> None:
+    try:
+        asyncio.run(run())
+    except KeyboardInterrupt:
+        pass
+
+
+if __name__ == "__main__":
+    main()
