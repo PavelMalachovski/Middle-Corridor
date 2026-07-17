@@ -53,7 +53,7 @@ async def cmd_pending(message: Message, reports_service: ManualReportsService) -
         await message.answer(texts.PENDING_EMPTY)
         return
     lines = [texts.PENDING_HEADER] + [_pending_line(report) for report in reports]
-    lines.append("\n/approve <id> — опубликовать, /reject <id> — отклонить")
+    lines.append("\n/approve &lt;id&gt; — опубликовать, /reject &lt;id&gt; — отклонить")
     await message.answer("\n".join(lines))
 
 

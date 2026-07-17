@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     news_sources: Annotated[list[str], NoDecode] = Field(default_factory=list)
     weather_poll_minutes: int = 45
     news_poll_minutes: int = 60
+    news_max_per_run: int = 3  # троттлинг публикаций за прогон
+    news_max_age_days: int = 7  # старше — в архив без публикации
 
     # Runtime
     log_level: str = "INFO"

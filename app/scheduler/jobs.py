@@ -15,8 +15,10 @@ from app.bot.main import create_bot
 from app.bot.publisher import ChannelPublisher
 from app.config import get_settings
 from app.db.base import create_engine, create_session_factory
+from app.integrations.news.rss import RssNewsProvider
 from app.integrations.weather.open_meteo import OpenMeteoProvider
 from app.logging import configure_logging
+from app.services.news_feed import NewsFeedService
 from app.services.weather_predictor import WeatherPredictor, WindThresholds
 
 logger = structlog.get_logger(__name__)
@@ -42,7 +44,32 @@ async def poll_weather() -> None:
         await engine.dispose()
 
 
-JOBS = {"weather": poll_weather}
+async def poll_news() -> None:
+    """Один прогон новостной ленты: сбор источников + публикация с троттлингом."""
+    settings = get_settings()
+    engine = create_engine(settings.database_url)
+    session_factory = create_session_factory(engine)
+    bot = create_bot(settings.bot_token) if settings.bot_token else None
+    sink = ChannelPublisher(bot, settings.channel_id) if bot is not None else None
+    provider = RssNewsProvider()
+    service = NewsFeedService(
+        session_factory,
+        provider,
+        sources=settings.news_sources,
+        sink=sink,
+        max_per_run=settings.news_max_per_run,
+        max_age_days=settings.news_max_age_days,
+    )
+    try:
+        await service.run_once()
+    finally:
+        await provider.aclose()
+        if bot is not None:
+            await bot.session.close()
+        await engine.dispose()
+
+
+JOBS = {"weather": poll_weather, "news": poll_news}
 
 
 if __name__ == "__main__":

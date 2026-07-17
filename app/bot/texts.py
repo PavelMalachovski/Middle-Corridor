@@ -65,12 +65,12 @@ REPORT_FAILED = "⚠️ Не получилось сохранить: {error}"
 
 PENDING_EMPTY = "Нет сводок, ожидающих модерации."
 PENDING_HEADER = "<b>Сводки на модерации</b>\n"
-APPROVE_USAGE = "Использование: /approve <id>"
-REJECT_USAGE = "Использование: /reject <id>"
+APPROVE_USAGE = "Использование: /approve &lt;id&gt;"
+REJECT_USAGE = "Использование: /reject &lt;id&gt;"
 APPROVED = "✅ Сводка #{report_id} опубликована в канале."
 REJECTED = "🗑 Сводка #{report_id} отклонена."
 ADD_SOURCE_USAGE = (
-    "Использование: /add_source <tg_id> <role> <имя>\n"
+    "Использование: /add_source &lt;tg_id&gt; &lt;role&gt; &lt;имя&gt;\n"
     "Роли: port_agent, operator, forwarder. Пример:\n"
     "/add_source 123456789 operator Иван Петров"
 )
