@@ -14,6 +14,8 @@ from app.bot.keyboards import REPORT_TYPE_LABELS
 from app.config import Settings
 from app.db.models import ManualReport
 from app.services.manual_reports import ManualReportError, ManualReportsService
+from app.services.news_feed import NewsFeedService
+from app.services.weather_predictor import WeatherPredictor
 
 router = Router(name="admin")
 
@@ -87,6 +89,25 @@ async def cmd_reject(
         await message.answer(f"⚠️ {exc}")
         return
     await message.answer(texts.REJECTED.format(report_id=report_id))
+
+
+@router.message(Command("poll_weather"))
+async def cmd_poll_weather(message: Message, weather_predictor: WeatherPredictor) -> None:
+    progress = await message.answer(texts.POLL_WEATHER_RUNNING)
+    stats = await weather_predictor.poll_once()
+    text = texts.POLL_WEATHER_DONE.format(ports=stats.ports_polled, errors=stats.errors)
+    if stats.transitions:
+        text += "\nПереходы: " + "; ".join(stats.transitions)
+    await progress.edit_text(text)
+
+
+@router.message(Command("poll_news"))
+async def cmd_poll_news(message: Message, news_service: NewsFeedService) -> None:
+    progress = await message.answer(texts.POLL_NEWS_RUNNING)
+    stats = await news_service.run_once()
+    await progress.edit_text(
+        texts.POLL_NEWS_DONE.format(stored=stats.stored, published=stats.published)
+    )
 
 
 @router.message(Command("add_source"))

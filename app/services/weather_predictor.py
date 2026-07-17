@@ -15,7 +15,7 @@
 и есть уникальная ценность продукта.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -70,6 +70,15 @@ def _rank(level: AlertLevel | None) -> int:
     return _RANK[level] if level is not None else 0
 
 
+@dataclass(slots=True)
+class WeatherPollStats:
+    """Итог одного прогона — для ответа админу и логов."""
+
+    ports_polled: int = 0
+    errors: int = 0
+    transitions: list[str] = field(default_factory=list)  # "AKTAU: — → warning"
+
+
 class WeatherPredictor:
     """Опрос погоды по портам и жизненный цикл алертов."""
 
@@ -85,11 +94,12 @@ class WeatherPredictor:
         self._thresholds = thresholds
         self._sink = sink
 
-    async def poll_once(self) -> None:
+    async def poll_once(self) -> WeatherPollStats:
         """Один прогон предиктора по всем отслеживаемым портам.
 
         Ошибка по одному порту не прерывает обработку остальных.
         """
+        stats = WeatherPollStats()
         async with self._session_factory() as session:
             repo = WeatherRepository(session)
             ports = await repo.get_tracked_ports()
@@ -98,20 +108,26 @@ class WeatherPredictor:
                     obs = await self._provider.get_current_wind(port.lat, port.lon)
                 except Exception as exc:  # noqa: BLE001 — джоба не должна падать
                     logger.error("weather_fetch_failed", port=port.code, error=str(exc))
+                    stats.errors += 1
                     continue
                 await repo.add_snapshot(port.id, obs)
-                await self._apply_transition(repo, port, obs)
+                stats.ports_polled += 1
+                transition = await self._apply_transition(repo, port, obs)
+                if transition is not None:
+                    stats.transitions.append(transition)
             await session.commit()
+        return stats
 
     async def _apply_transition(
         self, repo: WeatherRepository, port: Port, obs: WindObservation
-    ) -> None:
+    ) -> str | None:
+        """Применяет переход уровня; возвращает его описание (или None без изменений)."""
         level = evaluate_level(obs.wind_speed, obs.wind_gust, self._thresholds)
         active = await repo.get_active_alert(port.id)
         active_level = active.level if active is not None else None
 
         if _rank(level) == _rank(active_level):
-            return  # уровень не изменился — антиспам, ничего не делаем
+            return None  # уровень не изменился — антиспам, ничего не делаем
 
         if active is not None:
             await repo.close_alert(active, ts=obs.ts)
@@ -135,6 +151,10 @@ class WeatherPredictor:
         elif _rank(active_level) >= warning_rank and _rank(level) < warning_rank:
             # условие ушло ниже warning — отбой
             await self._publish(format_weather_all_clear(port, obs))
+
+        old = active_level.value if active_level else "—"
+        new = level.value if level else "—"
+        return f"{port.code}: {old} → {new}"
 
     async def _publish(self, text: str) -> None:
         if self._sink is None:

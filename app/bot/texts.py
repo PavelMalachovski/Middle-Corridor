@@ -21,6 +21,8 @@ HELP = (
     "/report — прислать оперативные данные (очередь, ставка, простой на границе, заметка)\n"
     "/cancel — прервать ввод\n\n"
     "<b>Для админов</b>\n"
+    "/poll_weather — опросить погоду по портам (алерты уйдут в канал)\n"
+    "/poll_news — собрать и опубликовать новости\n"
     "/pending — сводки, ожидающие модерации\n"
     "/approve &lt;id&gt; — опубликовать сводку в канал\n"
     "/reject &lt;id&gt; — отклонить сводку\n"
@@ -78,3 +80,8 @@ ADD_SOURCE_USAGE = (
     "/add_source 123456789 operator Иван Петров"
 )
 SOURCE_ADDED = "✅ Источник «{name}» ({role}) добавлен в whitelist."
+
+POLL_WEATHER_RUNNING = "⏳ Опрашиваю погоду по портам…"
+POLL_WEATHER_DONE = "🌤 Готово. Портов опрошено: {ports}, ошибок: {errors}."
+POLL_NEWS_RUNNING = "⏳ Собираю новости…"
+POLL_NEWS_DONE = "📰 Готово. Новых: {stored}, опубликовано в канал: {published}."

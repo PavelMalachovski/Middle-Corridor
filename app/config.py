@@ -46,6 +46,7 @@ class Settings(BaseSettings):
 
     # Behaviour
     auto_publish_reports: bool = False
+    scheduler_enabled: bool = False  # false = погода/новости только по команде админа
     news_sources: Annotated[list[str], NoDecode] = Field(default_factory=list)
     weather_poll_minutes: int = 45
     news_poll_minutes: int = 60

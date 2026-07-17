@@ -1,8 +1,8 @@
 """Общая точка входа: FastAPI + Telegram-бот + AIS-воркер в одном процессе.
 
-Планировщик фоновых задач подключается на шаге 9. Компоненты включаются по
-наличию конфигурации: без BOT_TOKEN — только HTTP, без AISSTREAM_API_KEY —
-без AIS-стрима.
+Компоненты включаются по наличию конфигурации: без BOT_TOKEN — только HTTP,
+без AISSTREAM_API_KEY — без AIS-стрима. Планировщик (SCHEDULER_ENABLED=true)
+опционален: по умолчанию погода и новости запускаются админом из бота.
 """
 
 import asyncio
@@ -18,10 +18,15 @@ from app.config import get_settings
 from app.db.base import create_engine, create_session_factory
 from app.integrations.ais.aisstream import AISStreamClient
 from app.integrations.ais.base import BoundingBox
+from app.integrations.news.rss import RssNewsProvider
+from app.integrations.weather.open_meteo import OpenMeteoProvider
 from app.logging import configure_logging
+from app.scheduler.scheduler import create_scheduler
 from app.services.ais_tracker import AISStreamWorker, AISTrackerService
 from app.services.manual_reports import ManualReportsService
+from app.services.news_feed import NewsFeedService
 from app.services.status_aggregator import StatusAggregatorService
+from app.services.weather_predictor import WeatherPredictor, WindThresholds
 
 logger = structlog.get_logger(__name__)
 
@@ -61,13 +66,36 @@ async def run() -> None:
         logger.warning("aisstream_key_missing", detail="AISSTREAM_API_KEY не задан — AIS выключен")
 
     bot = None
+    weather_provider = OpenMeteoProvider()
+    news_provider = RssNewsProvider()
+    scheduler = None
     if settings.bot_token:
         bot = create_bot(settings.bot_token)
         sink = ChannelPublisher(bot, settings.channel_id)
         reports_service = ManualReportsService(session_factory, sink, settings.auto_publish_reports)
         status_service = StatusAggregatorService(session_factory)
-        dp = create_dispatcher(settings, reports_service, status_service)
+        weather_predictor = WeatherPredictor(
+            session_factory, weather_provider, WindThresholds.from_settings(settings), sink
+        )
+        news_service = NewsFeedService(
+            session_factory,
+            news_provider,
+            sources=settings.news_sources,
+            sink=sink,
+            max_per_run=settings.news_max_per_run,
+            max_age_days=settings.news_max_age_days,
+        )
+        dp = create_dispatcher(
+            settings, reports_service, status_service, weather_predictor, news_service
+        )
         tasks.append(asyncio.create_task(dp.start_polling(bot, handle_signals=False), name="bot"))
+
+        if settings.scheduler_enabled:
+            scheduler = create_scheduler(settings, weather_predictor, news_service)
+            scheduler.start()
+            logger.info("scheduler_started", weather_min=settings.weather_poll_minutes)
+        else:
+            logger.info("scheduler_disabled", detail="погода/новости — по командам админа")
         logger.info("starting", components=["api", "bot"])
     else:
         logger.warning("bot_token_missing", detail="BOT_TOKEN не задан — запускаю только API")
@@ -81,9 +109,13 @@ async def run() -> None:
                 logger.error("component_failed", component=task.get_name())
                 raise task.exception()  # type: ignore[misc]
     finally:
+        if scheduler is not None:
+            scheduler.shutdown(wait=False)
         for task in tasks:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+        await weather_provider.aclose()
+        await news_provider.aclose()
         if bot is not None:
             await bot.session.close()
         await engine.dispose()

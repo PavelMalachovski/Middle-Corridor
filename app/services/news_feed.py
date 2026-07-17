@@ -6,6 +6,7 @@ NEWS_MAX_AGE_DAYS сохраняются сразу как «отправлен�
 запуск на живых лентах не завалил канал старьём.
 """
 
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import structlog
@@ -17,6 +18,12 @@ from app.services.formatting import format_news_item
 from app.services.sinks import MessageSink
 
 logger = structlog.get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class NewsRunStats:
+    stored: int
+    published: int
 
 
 class NewsFeedService:
@@ -83,7 +90,8 @@ class NewsFeedService:
             logger.info("news_published", count=sent)
         return sent
 
-    async def run_once(self) -> None:
+    async def run_once(self) -> "NewsRunStats":
         """Полный цикл джобы: сбор + публикация."""
-        await self.fetch_and_store()
-        await self.publish_pending()
+        stored = await self.fetch_and_store()
+        published = await self.publish_pending()
+        return NewsRunStats(stored=stored, published=published)
