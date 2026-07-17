@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     bot_token: str = ""
     channel_id: str = ""  # -100... или @username; пусто = публикация в канал выключена
     admin_user_ids: Annotated[list[int], NoDecode] = Field(default_factory=list)
+    # Публичный HTTPS-адрес приложения (https://xxx.up.railway.app).
+    # Задан = бот работает через вебхук; пусто = long polling (локальная разработка)
+    bot_webhook_url: str = ""
+    bot_webhook_secret: str = ""  # пусто = выводится из токена
 
     # Database
     database_url: str = "postgresql+asyncpg://mc:mc@localhost:5433/mc_status"
@@ -34,6 +38,10 @@ class Settings(BaseSettings):
     ais_bbox_caspian: str = "36.5,47.0,47.0,54.5"
     ais_bbox_black_sea: str = "41.0,40.5,43.5,42.5"
     ais_min_save_interval_minutes: int = 5  # троттлинг записи позиций
+
+    # LLM (перевод/суммаризация новостей); пустой ключ = перевод выключен
+    anthropic_api_key: str = ""
+    llm_model: str = "claude-opus-4-8"
 
     # Пороги ветра (м/с) для предиктора остановки портов.
     # Стартовые значения: их нужно калибровать по фактическим остановкам портов

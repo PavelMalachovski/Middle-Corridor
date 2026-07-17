@@ -36,11 +36,24 @@ def _impact_phrase(port: Port) -> str:
     return "Возможны задержки судозаходов и грузовых операций"
 
 
-def format_weather_alert(port: Port, level: AlertLevel, obs: WindObservation) -> str:
+def format_weather_alert(
+    port: Port,
+    level: AlertLevel,
+    obs: WindObservation,
+    forecast_peak: WindObservation | None = None,
+) -> str:
+    """Алерт по текущим условиям или заблаговременный — по пику прогноза."""
+    if forecast_peak is not None:
+        body = (
+            f"Сейчас {obs.wind_speed:.0f} м/с; к {_fmt_ts(forecast_peak.ts)} ожидается "
+            f"усиление до {forecast_peak.wind_speed:.0f} м/с "
+            f"(порывы до {forecast_peak.wind_gust:.0f} м/с). "
+        )
+    else:
+        body = f"Ветер {obs.wind_speed:.0f} м/с, порывы до {obs.wind_gust:.0f} м/с. "
     return (
         f"{LEVEL_EMOJI[level]} <b>{port.name} — {_LEVEL_TITLE[level]}</b>\n"
-        f"Ветер {obs.wind_speed:.0f} м/с, порывы до {obs.wind_gust:.0f} м/с. "
-        f"{_impact_phrase(port)} в ближайшие 12–24 ч.\n"
+        f"{body}{_impact_phrase(port)} в ближайшие 12–24 ч.\n"
         f"<i>Обновлено: {_fmt_ts(obs.ts)}</i>"
     )
 
@@ -55,10 +68,12 @@ def format_weather_all_clear(port: Port, obs: WindObservation) -> str:
 
 
 def format_news_item(item: NewsItem) -> str:
-    """Новость для канала: заголовок, краткое содержание, ссылка на источник."""
-    lines = [f"📰 <b>{html.escape(item.title)}</b>"]
-    if item.summary:
-        lines.append(html.escape(_truncate(item.summary, 400)))
+    """Новость для канала: русский перевод (если есть), иначе оригинал."""
+    title = item.title_ru or item.title
+    summary = item.summary_ru or item.summary
+    lines = [f"📰 <b>{html.escape(title)}</b>"]
+    if summary:
+        lines.append(html.escape(_truncate(summary, 400)))
     lines.append(
         f'<a href="{html.escape(item.url, quote=True)}">Источник · {html.escape(item.source)}</a>'
     )

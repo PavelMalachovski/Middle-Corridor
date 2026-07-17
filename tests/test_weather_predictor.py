@@ -8,9 +8,14 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.db.models import AlertLevel, CorridorLeg, Port, WeatherAlert, WeatherSnapshot
-from app.integrations.weather.base import WeatherProviderError, WindObservation
+from app.integrations.weather.base import WeatherProviderError, WindObservation, WindReport
 from app.integrations.weather.open_meteo import OpenMeteoProvider
-from app.services.weather_predictor import WeatherPredictor, WindThresholds, evaluate_level
+from app.services.weather_predictor import (
+    WeatherPredictor,
+    WindThresholds,
+    evaluate_level,
+    forecast_peak,
+)
 
 THRESHOLDS = WindThresholds(
     watch_wind=10.0,
@@ -21,22 +26,30 @@ THRESHOLDS = WindThresholds(
 )
 
 
-def _obs(speed: float, gust: float) -> WindObservation:
-    return WindObservation(wind_speed=speed, wind_gust=gust, wind_dir=180.0, ts=datetime.now(UTC))
+def _obs(speed: float, gust: float, hours_ahead: float = 0) -> WindObservation:
+    from datetime import timedelta
+
+    return WindObservation(
+        wind_speed=speed,
+        wind_gust=gust,
+        wind_dir=180.0,
+        ts=datetime.now(UTC) + timedelta(hours=hours_ahead),
+    )
 
 
 class FakeProvider:
-    """Провайдер с заранее заданной погодой (или ошибкой)."""
+    """Провайдер с заранее заданной погодой/прогнозом (или ошибкой)."""
 
     def __init__(self) -> None:
         self.observation: WindObservation | None = None
+        self.forecast: list[WindObservation] = []
         self.error: Exception | None = None
 
-    async def get_current_wind(self, lat: float, lon: float) -> WindObservation:
+    async def get_wind(self, lat: float, lon: float) -> WindReport:
         if self.error is not None:
             raise self.error
         assert self.observation is not None
-        return self.observation
+        return WindReport(current=self.observation, forecast=self.forecast)
 
 
 class FakeSink:
@@ -260,32 +273,118 @@ async def test_publish_failure_does_not_lose_alert(
     assert alerts[0].level is AlertLevel.critical
 
 
+# --- Прогноз ------------------------------------------------------------------
+
+
+def test_forecast_peak_picks_highest_level_first_hour() -> None:
+    forecast = [
+        _obs(8.0, 10.0, hours_ahead=1),
+        _obs(15.0, 16.0, hours_ahead=6),  # warning
+        _obs(18.0, 22.0, hours_ahead=12),  # critical — пик
+        _obs(18.5, 23.0, hours_ahead=13),  # тоже critical, но позже
+    ]
+    peak = forecast_peak(forecast, THRESHOLDS)
+    assert peak is not None
+    level, hour = peak
+    assert level is AlertLevel.critical
+    assert hour.wind_speed == 18.0  # первый час достижения максимума
+
+
+def test_forecast_peak_none_when_calm() -> None:
+    assert forecast_peak([_obs(5.0, 7.0, hours_ahead=3)], THRESHOLDS) is None
+
+
+async def test_forecast_driven_alert_published_in_advance(
+    predictor: WeatherPredictor,
+    provider: FakeProvider,
+    sink: FakeSink,
+    session: AsyncSession,
+    port: Port,
+) -> None:
+    provider.observation = _obs(5.0, 7.0)  # сейчас штиль
+    provider.forecast = [_obs(16.0, 19.0, hours_ahead=8)]  # шторм к вечеру
+    await predictor.poll_once()
+
+    alerts = await _alerts(session)
+    assert len(alerts) == 1
+    assert alerts[0].level is AlertLevel.warning
+    assert "Прогноз" in alerts[0].message
+    assert len(sink.messages) == 1
+    assert "ожидается" in sink.messages[0]
+    assert "усиление до 16 м/с" in sink.messages[0]
+
+
+async def test_forecast_alert_not_reopened_while_forecast_holds(
+    predictor: WeatherPredictor,
+    provider: FakeProvider,
+    sink: FakeSink,
+    session: AsyncSession,
+    port: Port,
+) -> None:
+    provider.observation = _obs(5.0, 7.0)
+    provider.forecast = [_obs(16.0, 19.0, hours_ahead=8)]
+    await predictor.poll_once()
+    provider.forecast = [_obs(15.5, 18.0, hours_ahead=7)]  # всё ещё warning
+    await predictor.poll_once()
+
+    assert len(await _alerts(session)) == 1  # антиспам работает и для прогноза
+    assert len(sink.messages) == 1
+
+
+async def test_all_clear_when_forecast_calms_down(
+    predictor: WeatherPredictor,
+    provider: FakeProvider,
+    sink: FakeSink,
+    session: AsyncSession,
+    port: Port,
+) -> None:
+    provider.observation = _obs(5.0, 7.0)
+    provider.forecast = [_obs(16.0, 19.0, hours_ahead=8)]
+    await predictor.poll_once()
+    provider.forecast = [_obs(6.0, 8.0, hours_ahead=8)]  # прогноз улучшился
+    await predictor.poll_once()
+
+    alerts = await _alerts(session)
+    assert alerts[0].is_active is False
+    assert len(sink.messages) == 2
+    assert "отбой" in sink.messages[1].lower()
+
+
 # --- Парсер Open-Meteo --------------------------------------------------------
 
 
-async def test_open_meteo_parses_response() -> None:
+async def test_open_meteo_parses_response_with_forecast() -> None:
     payload = {
         "current": {
             "time": "2026-07-17T09:40",
             "wind_speed_10m": 15.2,
             "wind_gusts_10m": 19.4,
             "wind_direction_10m": 210,
-        }
+        },
+        "hourly": {
+            "time": ["2026-07-17T09:00", "2026-07-17T10:00", "2026-07-17T11:00"],
+            "wind_speed_10m": [14.0, 16.5, None],  # null в хвосте — пропускается
+            "wind_gusts_10m": [17.0, 20.1, None],
+            "wind_direction_10m": [200, 215, None],
+        },
     }
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.params["wind_speed_unit"] == "ms"
+        assert "hourly" in request.url.params
         return httpx.Response(200, json=payload)
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     provider = OpenMeteoProvider(client=client)
-    obs = await provider.get_current_wind(43.63, 51.25)
+    report = await provider.get_wind(43.63, 51.25)
 
-    assert obs.wind_speed == 15.2
-    assert obs.wind_gust == 19.4
-    assert obs.wind_dir == 210.0
-    assert obs.ts == datetime(2026, 7, 17, 9, 40, tzinfo=UTC)
-    assert obs.raw == payload
+    assert report.current.wind_speed == 15.2
+    assert report.current.ts == datetime(2026, 7, 17, 9, 40, tzinfo=UTC)
+    assert report.current.raw == payload
+    # 09:00 — в прошлом (до current.ts), null-час отброшен → остаётся 10:00
+    assert len(report.forecast) == 1
+    assert report.forecast[0].wind_speed == 16.5
+    assert report.forecast[0].ts == datetime(2026, 7, 17, 10, 0, tzinfo=UTC)
     await client.aclose()
 
 
@@ -296,5 +395,5 @@ async def test_open_meteo_malformed_response_raises() -> None:
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     provider = OpenMeteoProvider(client=client)
     with pytest.raises(WeatherProviderError):
-        await provider.get_current_wind(43.63, 51.25)
+        await provider.get_wind(43.63, 51.25)
     await client.aclose()

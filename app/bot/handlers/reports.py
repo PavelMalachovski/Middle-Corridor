@@ -38,6 +38,7 @@ _VALUE_PROMPTS = {
 
 
 @router.message(Command("report"))
+@router.message(F.text == texts.BTN_REPORT)
 async def cmd_report(message: Message, state: FSMContext) -> None:
     await state.clear()
     await state.set_state(ReportForm.choosing_type)

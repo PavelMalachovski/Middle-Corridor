@@ -182,6 +182,10 @@ class NewsItem(Base):
     external_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
     title: Mapped[str] = mapped_column(String(512))
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Перевод/суммаризация на русский (LLM); NULL = оригинал уже русский
+    # или перевод ещё не выполнялся
+    title_ru: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    summary_ru: Mapped[str | None] = mapped_column(Text, nullable=True)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_sent: Mapped[bool] = mapped_column(default=False, index=True)
 

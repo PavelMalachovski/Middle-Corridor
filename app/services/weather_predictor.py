@@ -1,8 +1,9 @@
 """Погодный предиктор остановки портов — ядро продукта (§7.1).
 
 Каждый прогон: по всем портам с is_weather_tracked=true запрашивается
-текущий ветер, сохраняется снимок, вычисляется уровень риска и применяется
-переход жизненного цикла алерта.
+текущий ветер И почасовой прогноз. Уровень риска — максимум из текущих
+условий и пика прогноза в горизонте (продукт предупреждает «порт встанет
+завтра», а не констатирует шторм постфактум). Снимок в БД — текущий ветер.
 
 Антиспам через жизненный цикл: активный алерт «живёт», пока держится
 условие. Публикации в канал:
@@ -23,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.config import Settings
 from app.db.models import AlertLevel, Port
 from app.db.repositories.weather import WeatherRepository
-from app.integrations.weather.base import WeatherProvider, WindObservation
+from app.integrations.weather.base import WeatherProvider, WindObservation, WindReport
 from app.services.formatting import format_weather_alert, format_weather_all_clear
 from app.services.sinks import MessageSink
 
@@ -70,6 +71,20 @@ def _rank(level: AlertLevel | None) -> int:
     return _RANK[level] if level is not None else 0
 
 
+def forecast_peak(
+    forecast: list[WindObservation], thresholds: WindThresholds
+) -> tuple[AlertLevel, WindObservation] | None:
+    """Самый высокий уровень в прогнозе и первый час, когда он достигается."""
+    peak: tuple[AlertLevel, WindObservation] | None = None
+    for hour in forecast:
+        level = evaluate_level(hour.wind_speed, hour.wind_gust, thresholds)
+        if level is None:
+            continue
+        if peak is None or _rank(level) > _rank(peak[0]):
+            peak = (level, hour)
+    return peak
+
+
 @dataclass(slots=True)
 class WeatherPollStats:
     """Итог одного прогона — для ответа админу и логов."""
@@ -105,24 +120,34 @@ class WeatherPredictor:
             ports = await repo.get_tracked_ports()
             for port in ports:
                 try:
-                    obs = await self._provider.get_current_wind(port.lat, port.lon)
+                    report = await self._provider.get_wind(port.lat, port.lon)
                 except Exception as exc:  # noqa: BLE001 — джоба не должна падать
                     logger.error("weather_fetch_failed", port=port.code, error=str(exc))
                     stats.errors += 1
                     continue
-                await repo.add_snapshot(port.id, obs)
+                await repo.add_snapshot(port.id, report.current)
                 stats.ports_polled += 1
-                transition = await self._apply_transition(repo, port, obs)
+                transition = await self._apply_transition(repo, port, report)
                 if transition is not None:
                     stats.transitions.append(transition)
             await session.commit()
         return stats
 
     async def _apply_transition(
-        self, repo: WeatherRepository, port: Port, obs: WindObservation
+        self, repo: WeatherRepository, port: Port, report: WindReport
     ) -> str | None:
         """Применяет переход уровня; возвращает его описание (или None без изменений)."""
-        level = evaluate_level(obs.wind_speed, obs.wind_gust, self._thresholds)
+        obs = report.current
+        current_level = evaluate_level(obs.wind_speed, obs.wind_gust, self._thresholds)
+        peak = forecast_peak(report.forecast, self._thresholds)
+
+        # Эффективный уровень: максимум текущих условий и пика прогноза.
+        # Алерт «звучит» заранее и держится, пока не стихнет и прогноз.
+        level = current_level
+        peak_obs: WindObservation | None = None
+        if peak is not None and _rank(peak[0]) > _rank(current_level):
+            level, peak_obs = peak
+
         active = await repo.get_active_alert(port.id)
         active_level = active.level if active is not None else None
 
@@ -132,7 +157,13 @@ class WeatherPredictor:
         if active is not None:
             await repo.close_alert(active, ts=obs.ts)
         if level is not None:
-            summary = f"Ветер {obs.wind_speed:.0f} м/с, порывы до {obs.wind_gust:.0f} м/с"
+            if peak_obs is not None:
+                summary = (
+                    f"Прогноз: ветер до {peak_obs.wind_speed:.0f} м/с, "
+                    f"порывы до {peak_obs.wind_gust:.0f} м/с к {peak_obs.ts:%H:%M} UTC"
+                )
+            else:
+                summary = f"Ветер {obs.wind_speed:.0f} м/с, порывы до {obs.wind_gust:.0f} м/с"
             await repo.open_alert(port.id, level, summary, ts=obs.ts)
 
         logger.info(
@@ -142,19 +173,23 @@ class WeatherPredictor:
             to_level=level.value if level else None,
             wind=obs.wind_speed,
             gust=obs.wind_gust,
+            forecast_driven=peak_obs is not None,
         )
 
         warning_rank = _RANK[AlertLevel.warning]
         if _rank(level) > _rank(active_level) and _rank(level) >= warning_rank:
             # уровень вырос до warning/critical — алерт в канал
-            await self._publish(format_weather_alert(port, level, obs))  # type: ignore[arg-type]
+            await self._publish(
+                format_weather_alert(port, level, obs, forecast_peak=peak_obs)  # type: ignore[arg-type]
+            )
         elif _rank(active_level) >= warning_rank and _rank(level) < warning_rank:
-            # условие ушло ниже warning — отбой
+            # условие ушло ниже warning (и по прогнозу тоже) — отбой
             await self._publish(format_weather_all_clear(port, obs))
 
         old = active_level.value if active_level else "—"
         new = level.value if level else "—"
-        return f"{port.code}: {old} → {new}"
+        suffix = " (по прогнозу)" if peak_obs is not None else ""
+        return f"{port.code}: {old} → {new}{suffix}"
 
     async def _publish(self, text: str) -> None:
         if self._sink is None:

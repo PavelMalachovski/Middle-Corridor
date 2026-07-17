@@ -5,12 +5,12 @@
 
 import html
 
-from aiogram import Router
+from aiogram import F, Router
 from aiogram.filters import Command, CommandObject, Filter
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 
 from app.bot import texts
-from app.bot.keyboards import REPORT_TYPE_LABELS
+from app.bot.keyboards import REPORT_TYPE_LABELS, moderation_kb
 from app.config import Settings
 from app.db.models import ManualReport
 from app.services.manual_reports import ManualReportError, ManualReportsService
@@ -21,11 +21,12 @@ router = Router(name="admin")
 
 
 class AdminFilter(Filter):
-    async def __call__(self, message: Message, settings: Settings) -> bool:
-        return message.from_user is not None and message.from_user.id in settings.admin_user_ids
+    async def __call__(self, event: Message | CallbackQuery, settings: Settings) -> bool:
+        return event.from_user is not None and event.from_user.id in settings.admin_user_ids
 
 
 router.message.filter(AdminFilter())
+router.callback_query.filter(AdminFilter())
 
 
 def _parse_id(command: CommandObject) -> int | None:
@@ -54,9 +55,36 @@ async def cmd_pending(message: Message, reports_service: ManualReportsService) -
     if not reports:
         await message.answer(texts.PENDING_EMPTY)
         return
-    lines = [texts.PENDING_HEADER] + [_pending_line(report) for report in reports]
-    lines.append("\n/approve &lt;id&gt; — опубликовать, /reject &lt;id&gt; — отклонить")
-    await message.answer("\n".join(lines))
+    await message.answer(texts.PENDING_HEADER.strip())
+    shown = reports[:10]
+    for report in shown:
+        # карточка с кнопками — модерация в один тап
+        await message.answer(_pending_line(report), reply_markup=moderation_kb(report.id))
+    if len(reports) > len(shown):
+        await message.answer(
+            f"…и ещё {len(reports) - len(shown)} — повторите /pending после разбора"
+        )
+
+
+@router.callback_query(F.data.startswith("mod:"))
+async def moderation_callback(
+    callback: CallbackQuery, reports_service: ManualReportsService
+) -> None:
+    _, action, raw_id = callback.data.split(":", 2)
+    report_id = int(raw_id)
+    try:
+        if action == "approve":
+            await reports_service.approve(report_id)
+            result = texts.APPROVED.format(report_id=report_id)
+        else:
+            await reports_service.reject(report_id)
+            result = texts.REJECTED.format(report_id=report_id)
+    except ManualReportError as exc:
+        await callback.answer(str(exc), show_alert=True)
+        return
+    await callback.answer("Готово")
+    # убираем кнопки и фиксируем итог прямо в карточке
+    await callback.message.edit_text(f"{callback.message.html_text}\n\n{result}")
 
 
 @router.message(Command("approve"))

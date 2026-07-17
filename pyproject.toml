@@ -22,6 +22,7 @@ dependencies = [
     "selectolax>=0.3.21",
     "websockets>=13",
     "structlog>=24.4",
+    "anthropic>=0.116",
 ]
 
 [project.optional-dependencies]

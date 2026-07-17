@@ -11,13 +11,21 @@ from typing import Any, Protocol
 
 @dataclass(frozen=True, slots=True)
 class WindObservation:
-    """Текущий ветер в точке."""
+    """Ветер в точке в конкретный момент (наблюдение или час прогноза)."""
 
     wind_speed: float  # устойчивый ветер, м/с
     wind_gust: float  # порывы, м/с
     wind_dir: float  # направление, градусы
-    ts: datetime  # время наблюдения (UTC)
+    ts: datetime  # время наблюдения/прогноза (UTC)
     raw: dict[str, Any] | None = None  # сырой ответ провайдера
+
+
+@dataclass(frozen=True, slots=True)
+class WindReport:
+    """Текущий ветер + почасовой прогноз (отсортирован по времени)."""
+
+    current: WindObservation
+    forecast: list[WindObservation]
 
 
 class WeatherProviderError(RuntimeError):
@@ -25,4 +33,4 @@ class WeatherProviderError(RuntimeError):
 
 
 class WeatherProvider(Protocol):
-    async def get_current_wind(self, lat: float, lon: float) -> WindObservation: ...
+    async def get_wind(self, lat: float, lon: float) -> WindReport: ...

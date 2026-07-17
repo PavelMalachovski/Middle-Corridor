@@ -1,7 +1,8 @@
 """Провайдер погоды Open-Meteo (бесплатный, без ключа).
 
-https://open-meteo.com/en/docs — запрашиваем текущий ветер на высоте 10 м
-в м/с. Ретраи с экспоненциальным backoff на сетевые ошибки и 429/5xx.
+https://open-meteo.com/en/docs — текущий ветер на высоте 10 м плюс
+почасовой прогноз на forecast_hours вперёд, всё в м/с. Ретраи с
+экспоненциальным backoff на 429/5xx и сетевые ошибки.
 """
 
 import asyncio
@@ -10,27 +11,37 @@ from datetime import UTC, datetime
 import httpx
 import structlog
 
-from app.integrations.weather.base import WeatherProviderError, WindObservation
+from app.integrations.weather.base import WeatherProviderError, WindObservation, WindReport
 
 logger = structlog.get_logger(__name__)
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 _RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+_WIND_VARS = "wind_speed_10m,wind_gusts_10m,wind_direction_10m"
 
 
 class OpenMeteoProvider:
     """Реализация WeatherProvider на Open-Meteo."""
 
-    def __init__(self, client: httpx.AsyncClient | None = None, retries: int = 3) -> None:
+    def __init__(
+        self,
+        client: httpx.AsyncClient | None = None,
+        retries: int = 3,
+        forecast_hours: int = 24,
+    ) -> None:
         self._owns_client = client is None
         self._client = client or httpx.AsyncClient(timeout=httpx.Timeout(10.0))
         self._retries = retries
+        self._forecast_hours = forecast_hours
 
-    async def get_current_wind(self, lat: float, lon: float) -> WindObservation:
+    async def get_wind(self, lat: float, lon: float) -> WindReport:
         params = {
             "latitude": lat,
             "longitude": lon,
-            "current": "wind_speed_10m,wind_gusts_10m,wind_direction_10m",
+            "current": _WIND_VARS,
+            "hourly": _WIND_VARS,
+            # +1 час, чтобы после отсечения прошедшего часа остался полный горизонт
+            "forecast_hours": self._forecast_hours + 1,
             "wind_speed_unit": "ms",
             "timezone": "UTC",
         }
@@ -54,17 +65,43 @@ class OpenMeteoProvider:
         raise WeatherProviderError("Open-Meteo недоступен") from last_error
 
     @staticmethod
-    def _parse(data: dict) -> WindObservation:
+    def _parse_ts(raw: str) -> datetime:
+        return datetime.fromisoformat(raw).replace(tzinfo=UTC)
+
+    @classmethod
+    def _parse(cls, data: dict) -> WindReport:
         try:
-            current = data["current"]
-            ts = datetime.fromisoformat(current["time"]).replace(tzinfo=UTC)
-            return WindObservation(
-                wind_speed=float(current["wind_speed_10m"]),
-                wind_gust=float(current["wind_gusts_10m"]),
-                wind_dir=float(current["wind_direction_10m"]),
-                ts=ts,
+            current_raw = data["current"]
+            current = WindObservation(
+                wind_speed=float(current_raw["wind_speed_10m"]),
+                wind_gust=float(current_raw["wind_gusts_10m"]),
+                wind_dir=float(current_raw["wind_direction_10m"]),
+                ts=cls._parse_ts(current_raw["time"]),
                 raw=data,
             )
+            forecast: list[WindObservation] = []
+            hourly = data.get("hourly") or {}
+            for time_raw, speed, gust, direction in zip(
+                hourly.get("time", []),
+                hourly.get("wind_speed_10m", []),
+                hourly.get("wind_gusts_10m", []),
+                hourly.get("wind_direction_10m", []),
+                strict=False,
+            ):
+                if speed is None or gust is None:
+                    continue  # у Open-Meteo бывают null в хвосте прогноза
+                ts = cls._parse_ts(time_raw)
+                if ts <= current.ts:
+                    continue  # прошедшие часы не интересны
+                forecast.append(
+                    WindObservation(
+                        wind_speed=float(speed),
+                        wind_gust=float(gust),
+                        wind_dir=float(direction) if direction is not None else 0.0,
+                        ts=ts,
+                    )
+                )
+            return WindReport(current=current, forecast=forecast)
         except (KeyError, TypeError, ValueError) as exc:
             raise WeatherProviderError(f"Некорректный ответ Open-Meteo: {exc}") from exc
 

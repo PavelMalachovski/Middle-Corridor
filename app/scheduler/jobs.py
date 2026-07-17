@@ -15,6 +15,9 @@ from app.bot.main import create_bot
 from app.bot.publisher import ChannelPublisher
 from app.config import get_settings
 from app.db.base import create_engine, create_session_factory
+from app.integrations.llm.claude import ClaudeNewsTranslator
+from app.integrations.news.composite import CompositeNewsProvider
+from app.integrations.news.middlecorridor import MiddleCorridorScraper
 from app.integrations.news.rss import RssNewsProvider
 from app.integrations.weather.open_meteo import OpenMeteoProvider
 from app.logging import configure_logging
@@ -45,13 +48,18 @@ async def poll_weather() -> None:
 
 
 async def poll_news() -> None:
-    """Один прогон новостной ленты: сбор источников + публикация с троттлингом."""
+    """Один прогон новостной ленты: сбор источников + перевод + публикация."""
     settings = get_settings()
     engine = create_engine(settings.database_url)
     session_factory = create_session_factory(engine)
     bot = create_bot(settings.bot_token) if settings.bot_token else None
     sink = ChannelPublisher(bot, settings.channel_id) if bot is not None else None
-    provider = RssNewsProvider()
+    provider = CompositeNewsProvider(RssNewsProvider(), MiddleCorridorScraper())
+    translator = (
+        ClaudeNewsTranslator(settings.anthropic_api_key, settings.llm_model)
+        if settings.anthropic_api_key
+        else None
+    )
     service = NewsFeedService(
         session_factory,
         provider,
@@ -59,11 +67,14 @@ async def poll_news() -> None:
         sink=sink,
         max_per_run=settings.news_max_per_run,
         max_age_days=settings.news_max_age_days,
+        translator=translator,
     )
     try:
         await service.run_once()
     finally:
         await provider.aclose()
+        if translator is not None:
+            await translator.aclose()
         if bot is not None:
             await bot.session.close()
         await engine.dispose()

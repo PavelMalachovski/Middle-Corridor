@@ -30,6 +30,14 @@ HELP = (
     "Вопросы и подключение источников — напишите администратору канала."
 )
 
+# Кнопки главного меню (ReplyKeyboard)
+BTN_STATUS = "📊 Статус"
+BTN_WEATHER = "🌤 Погода"
+BTN_REPORT = "📝 Сообщить"
+BTN_HELP = "ℹ️ Помощь"
+
+WEATHER_CHOOSE_PORT = "По какому порту показать погоду?"
+
 STATUS_PORT_NOT_FOUND = (
     "Не нашёл порт «{query}». Попробуйте: /status aktau, /status курык, "
     "/status батуми — по коду или названию."
