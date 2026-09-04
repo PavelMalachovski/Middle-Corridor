@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Snapshot } from "../api";
 import type { LiveMode } from "../live";
 import type { LayerToggles } from "../map/MapView";
+import { fmtTs } from "../format";
 
 const MODE_LABEL: Record<LiveMode, string> = { stream: "поток", poll: "поллинг", replay: "replay" };
 
@@ -76,6 +77,10 @@ export function TopBar({ snapshot, error, fetchedAt, mode, layers, windAvailable
           <span title={error}>нет связи с API{errorCode ? ` · ${errorCode}` : ""}</span>
         ) : ageSec == null ? (
           <span>загрузка…</span>
+        ) : mode === "replay" && snapshot ? (
+          <span title="Снимок на выбранный момент; живые данные — кнопка LIVE на шкале времени">
+            <i className="dot-live dot-live--replay" /> replay · {fmtTs(snapshot.generated_at)}
+          </span>
         ) : (
           <span>
             <i className="dot-live" /> обновлено {ageSec} с назад · {MODE_LABEL[mode]}

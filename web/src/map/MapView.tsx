@@ -79,7 +79,7 @@ function viewportPadding(sheetPx: number) {
 
 /** Время «доезда» до новой позиции: интервал обновления, в replay — короткое. */
 function tweenDuration(snapshot: Snapshot): number {
-  if (snapshot.replay) return 350;
+  if (snapshot.replay) return 400; // шаг воспроизведения на шкале времени
   return Math.min(Math.max(snapshot.live.refresh_s * 1000, 2000), 10000);
 }
 

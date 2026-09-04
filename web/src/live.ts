@@ -31,7 +31,7 @@ export interface LiveData {
 const WIND_POLL_MS = 60_000;
 const WIND_STEP_DEG = 1; // мельче стрелок: пригодится частицам
 const SCRUB_DEBOUNCE_MS = 120;
-const WIND_SCRUB_DEBOUNCE_MS = 400;
+const WIND_SCRUB_MIN_MS = 1500; // поле ветра тяжёлое: в replay не чаще раза в полторы секунды
 const STREAM_FAILURES_BEFORE_POLL = 3;
 
 export function useLiveData(replayAt: Date | null): LiveData {
@@ -42,6 +42,7 @@ export function useLiveData(replayAt: Date | null): LiveData {
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
   const [mode, setMode] = useState<LiveMode>("poll");
   const streamBroken = useRef(false); // SSE не поднялся — до перезагрузки только поллинг
+  const windFetchedAt = useRef(0);
 
   const applySnapshot = useCallback((data: Snapshot) => {
     setSnapshot(data);
@@ -72,9 +73,14 @@ export function useLiveData(replayAt: Date | null): LiveData {
         if (alive) setError(e instanceof Error ? e.message : String(e));
       }
     }, SCRUB_DEBOUNCE_MS);
+    // троттлинг с хвостом: при воспроизведении replayAt меняется каждые ~400 мс,
+    // дебаунс никогда бы не сработал — а так ветер обновляется раз в WIND_SCRUB_MIN_MS
+    const wait = Math.max(0, WIND_SCRUB_MIN_MS - (Date.now() - windFetchedAt.current));
     const t2 = setTimeout(() => {
-      if (alive) void loadWind(replayAt);
-    }, WIND_SCRUB_DEBOUNCE_MS);
+      if (!alive) return;
+      windFetchedAt.current = Date.now();
+      void loadWind(replayAt);
+    }, wait);
     return () => {
       alive = false;
       clearTimeout(t1);

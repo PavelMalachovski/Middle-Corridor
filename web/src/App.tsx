@@ -1,11 +1,13 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { useLiveData } from "./live";
+import { useReplay } from "./replay";
 import { MapView, type Focus, type LayerToggles } from "./map/MapView";
 import { BASEMAPS, DEFAULT_BASEMAP, type BasemapId } from "./map/style";
 import { TopBar } from "./components/TopBar";
 import { Legend } from "./components/Legend";
 import { MapControls } from "./components/MapControls";
 import { Sidebar, type Tab } from "./components/Sidebar";
+import { Timeline } from "./components/Timeline";
 
 // Настройки карты живут в localStorage — только удобство, без них всё работает
 const PREFS_KEY = "mc-map-prefs";
@@ -38,8 +40,9 @@ function savePrefs(prefs: MapPrefs): void {
 }
 
 export function App() {
-  const [replayAt] = useState<Date | null>(null); // шкала времени — следующий шаг
-  const { snapshot, wind, windAvailable, error, fetchedAt, mode } = useLiveData(replayAt);
+  const replay = useReplay();
+  const { snapshot, wind, windAvailable, error, fetchedAt, mode } = useLiveData(replay.replayAt);
+  useEffect(() => replay.sync(snapshot, fetchedAt), [replay, snapshot, fetchedAt]);
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
   const [followRef, setFollowRef] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
@@ -102,7 +105,7 @@ export function App() {
   );
 
   return (
-    <div className="app">
+    <div className="app" style={{ "--sheet-h": `${sheetHeight}px` } as CSSProperties}>
       <MapView
         snapshot={snapshot}
         wind={wind}
@@ -140,6 +143,7 @@ export function App() {
           onTerrain={(terrain) => updatePrefs({ terrain })}
         />
       </div>
+      <Timeline replay={replay} disabled={!snapshot} />
       <Sidebar
         snapshot={snapshot}
         error={error}
