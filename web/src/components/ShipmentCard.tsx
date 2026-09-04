@@ -1,14 +1,14 @@
 import type { Shipment, Snapshot } from "../api";
 import {
-  LEVEL_COLOR,
-  LEVEL_ICON,
-  LEVEL_LABEL,
   findNearestNode,
   fmtDir,
   fmtHours,
   fmtRelative,
   fmtTs,
   fmtWind,
+  LEVEL_COLOR,
+  LEVEL_ICON,
+  LEVEL_LABEL,
   levelOf,
 } from "../format";
 import { StatePill } from "./ShipmentList";
@@ -32,7 +32,9 @@ function positionText(s: Shipment, snapshot: Snapshot): { title: string; detail:
   if (p.source === "event") {
     return {
       title: `В узле ${nodeName(p.from_code)}`,
-      detail: p.to_code ? `Подтверждено событием · далее ${nodeName(p.to_code)}` : "Подтверждено событием",
+      detail: p.to_code
+        ? `Подтверждено событием · далее ${nodeName(p.to_code)}`
+        : "Подтверждено событием",
     };
   }
   if (p.source === "ais") {
@@ -41,10 +43,16 @@ function positionText(s: Shipment, snapshot: Snapshot): { title: string; detail:
     const age = vessel?.ts ? `AIS ${fmtRelative(vessel.ts, new Date(snapshot.generated_at))}` : "";
     return {
       title: `На пароме «${p.on_vessel}»`,
-      detail: [`${nodeName(p.from_code)} → ${nodeName(p.to_code)}`, sog, age].filter(Boolean).join(" · "),
+      detail: [`${nodeName(p.from_code)} → ${nodeName(p.to_code)}`, sog, age]
+        .filter(Boolean)
+        .join(" · "),
     };
   }
-  const vehicle = p.on_vessel ? `на судне «${p.on_vessel}»` : p.mode === "sea" ? "в море" : "по железной дороге";
+  const vehicle = p.on_vessel
+    ? `на судне «${p.on_vessel}»`
+    : p.mode === "sea"
+      ? "в море"
+      : "по железной дороге";
   return {
     title: `${nodeName(p.from_code)} → ${nodeName(p.to_code)}, ${Math.round(p.leg_progress * 100)}% плеча`,
     detail: `Оценка по расписанию (${vehicle}) — живой позиции нет`,
@@ -134,7 +142,9 @@ export function ShipmentCard({
           <div className="block__title">Погода рядом · {near.name}</div>
           <div className="weather">
             <span className="weather__level" style={{ color: LEVEL_COLOR[nearLevel] }}>
-              {near.alert_level ? `${LEVEL_ICON[near.alert_level]} ${LEVEL_LABEL[near.alert_level]}` : "норма"}
+              {near.alert_level
+                ? `${LEVEL_ICON[near.alert_level]} ${LEVEL_LABEL[near.alert_level]}`
+                : "норма"}
             </span>
             <span>
               {fmtWind(near.wind_speed, near.wind_gust)} {fmtDir(near.wind_dir)}

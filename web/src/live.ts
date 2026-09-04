@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  fetchSnapshot,
-  fetchWind,
-  streamUrl,
-  type Snapshot,
-  type WindField,
-} from "./api";
+import { fetchSnapshot, fetchWind, type Snapshot, streamUrl, type WindField } from "./api";
 
 /**
  * Живые данные карты.

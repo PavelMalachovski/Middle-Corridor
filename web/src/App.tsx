@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
-import { useLiveData } from "./live";
-import { useReplay } from "./replay";
-import { MapView, type Focus, type LayerToggles } from "./map/MapView";
-import { BASEMAPS, DEFAULT_BASEMAP, type BasemapId } from "./map/style";
-import { TopBar } from "./components/TopBar";
+import { type CSSProperties, useCallback, useEffect, useState } from "react";
 import { Legend } from "./components/Legend";
 import { MapControls } from "./components/MapControls";
+import { hasWebGL2, MapFallback } from "./components/MapFallback";
 import { Sidebar, type Tab } from "./components/Sidebar";
 import { Timeline } from "./components/Timeline";
-import { MapFallback, hasWebGL2 } from "./components/MapFallback";
+import { TopBar } from "./components/TopBar";
+import { useLiveData } from "./live";
+import { type Focus, type LayerToggles, MapView } from "./map/MapView";
+import { BASEMAPS, type BasemapId, DEFAULT_BASEMAP } from "./map/style";
+import { useReplay } from "./replay";
 
 // Настройки карты живут в localStorage — только удобство, без них всё работает
 const PREFS_KEY = "mc-map-prefs";
@@ -29,12 +29,10 @@ function loadPrefs(): MapPrefs {
     const raw = localStorage.getItem(PREFS_KEY);
     if (raw) {
       const saved = JSON.parse(raw) as Partial<MapPrefs>;
-      if (saved.basemap && saved.basemap in BASEMAPS)
-        prefs.basemap = saved.basemap;
+      if (saved.basemap && saved.basemap in BASEMAPS) prefs.basemap = saved.basemap;
       if (typeof saved.globe === "boolean") prefs.globe = saved.globe;
       if (typeof saved.terrain === "boolean") prefs.terrain = saved.terrain;
-      if (typeof saved.terrain3d === "boolean")
-        prefs.terrain3d = saved.terrain3d;
+      if (typeof saved.terrain3d === "boolean") prefs.terrain3d = saved.terrain3d;
     }
   } catch {
     /* приватный режим и т.п. */
@@ -53,13 +51,8 @@ const WEBGL2 = hasWebGL2(); // один раз на загрузку: конте
 
 export function App() {
   const replay = useReplay();
-  const { snapshot, wind, windAvailable, error, fetchedAt, mode } = useLiveData(
-    replay.replayAt,
-  );
-  useEffect(
-    () => replay.sync(snapshot, fetchedAt),
-    [replay, snapshot, fetchedAt],
-  );
+  const { snapshot, wind, windAvailable, error, fetchedAt, mode } = useLiveData(replay.replayAt);
+  useEffect(() => replay.sync(snapshot, fetchedAt), [replay, snapshot, fetchedAt]);
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
   const [followRef, setFollowRef] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
@@ -124,10 +117,7 @@ export function App() {
   );
 
   return (
-    <div
-      className="app"
-      style={{ "--sheet-h": `${sheetHeight}px` } as CSSProperties}
-    >
+    <div className="app" style={{ "--sheet-h": `${sheetHeight}px` } as CSSProperties}>
       {WEBGL2 ? (
         <MapView
           snapshot={snapshot}

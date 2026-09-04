@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import * as maplibregl from "maplibre-gl";
-import { type GeoJSONSource, type Map as MLMap, Marker, Popup } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
+import * as maplibregl from "maplibre-gl";
+import { type GeoJSONSource, Marker, type Map as MLMap, Popup } from "maplibre-gl";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Snapshot, VesselStatus, WindField } from "../api";
 import { fmtRelative } from "../format";
-import { windArrow } from "./icons";
-import { splitTrack, type LonLat } from "./geo";
 import { Interpolator, type Pose } from "./animate";
+import { type LonLat, splitTrack } from "./geo";
+import { windArrow } from "./icons";
 import {
   nodeMarkerElement,
   renderNodeMarker,
@@ -17,12 +17,12 @@ import {
 } from "./markers";
 import {
   BASEMAPS,
+  type BasemapId,
   BOOT_STYLE,
   CORRIDOR_BOUNDS,
   DEM_SOURCE,
   isDarkBasemap,
   resolveStyle,
-  type BasemapId,
 } from "./style";
 
 export interface LayerToggles {
@@ -303,7 +303,7 @@ export function MapView({
   terrain3dRef.current = terrain3d;
 
   /** Кадр анимации: двигаем маркеры к целям, при слежении держим груз в центре. */
-  const tick = () => {
+  const tick = useCallback(() => {
     const map = mapRef.current;
     rafRef.current = null;
     if (!map) return;
@@ -330,10 +330,10 @@ export function MapView({
     if (interp.current.active(now) || follow.ref) {
       rafRef.current = requestAnimationFrame(tick);
     }
-  };
-  const ensureLoop = () => {
+  }, []);
+  const ensureLoop = useCallback(() => {
     if (rafRef.current == null) rafRef.current = requestAnimationFrame(tick);
-  };
+  }, [tick]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -394,7 +394,6 @@ export function MapView({
       vesselMarkers.current.clear();
       setStyleVersion(0);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // --- подложка: подбираем доступный стиль и применяем ----------------------------
@@ -578,8 +577,7 @@ export function MapView({
       }
     }
     ensureLoop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot, styleVersion, selectedRef, followRef]);
+  }, [snapshot, styleVersion, selectedRef, followRef, ensureLoop]);
 
   // --- слежение за грузом ----------------------------------------------------------
   useEffect(() => {
@@ -601,8 +599,7 @@ export function MapView({
       });
     }
     ensureLoop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [followRef]);
+  }, [followRef, ensureLoop]);
 
   // --- выбранный груз: трек и подлёт ---------------------------------------------
   useEffect(() => {

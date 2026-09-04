@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { fmtTs } from "../format";
-import { SPEEDS, type ReplayControl } from "../replay";
+import { type ReplayControl, SPEEDS } from "../replay";
 
 interface Props {
   replay: ReplayControl;
@@ -29,7 +29,8 @@ export function Timeline({ replay, disabled }: Props) {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (e.code !== "Space" || disabled) return;
-      if (t && (t.tagName === "INPUT" || t.tagName === "BUTTON" || t.tagName === "TEXTAREA")) return;
+      if (t && (t.tagName === "INPUT" || t.tagName === "BUTTON" || t.tagName === "TEXTAREA"))
+        return;
       e.preventDefault();
       replay.togglePlay();
     };
@@ -41,19 +42,28 @@ export function Timeline({ replay, disabled }: Props) {
   for (let h = -win.pastHours; h <= win.futureHours; h += 24) ticks.push(h);
 
   return (
-    <div className={`timeline ${live ? "timeline--live" : "timeline--replay"} ${playing ? "is-playing" : ""}`}>
+    <div
+      className={`timeline ${live ? "timeline--live" : "timeline--replay"} ${playing ? "is-playing" : ""}`}
+    >
       <div className="timeline__controls">
         <button
           type="button"
           className="timeline__play"
           onClick={replay.togglePlay}
           disabled={disabled}
-          title={playing ? "Пауза (пробел)" : live ? "Воспроизвести последние сутки (пробел)" : "Воспроизвести (пробел)"}
+          title={
+            playing
+              ? "Пауза (пробел)"
+              : live
+                ? "Воспроизвести последние сутки (пробел)"
+                : "Воспроизвести (пробел)"
+          }
           aria-label={playing ? "Пауза" : "Воспроизвести"}
         >
           {playing ? "❚❚" : "▶"}
         </button>
-        <div className="timeline__speeds" role="group" aria-label="Скорость">
+        <fieldset className="timeline__speeds">
+          <legend className="sr-only">Скорость</legend>
           {SPEEDS.map((s) => (
             <button
               key={s}
@@ -66,14 +76,17 @@ export function Timeline({ replay, disabled }: Props) {
               ×{s}
             </button>
           ))}
-        </div>
+        </fieldset>
       </div>
 
       <div className="timeline__track-wrap">
         <div className="timeline__track" aria-hidden="true">
           <div className="timeline__past" style={{ width: `${nowPct}%` }} />
           <div className="timeline__future" style={{ left: `${nowPct}%` }} />
-          <div className="timeline__fill" style={{ left: `${Math.min(nowPct, posPct)}%`, width: `${Math.abs(posPct - nowPct)}%` }} />
+          <div
+            className="timeline__fill"
+            style={{ left: `${Math.min(nowPct, posPct)}%`, width: `${Math.abs(posPct - nowPct)}%` }}
+          />
           <div className="timeline__now" style={{ left: `${nowPct}%` }} />
           {ticks.map((h, i) => (
             <div
@@ -95,7 +108,9 @@ export function Timeline({ replay, disabled }: Props) {
           disabled={disabled}
           onChange={(e) => replay.scrubHours(Number(e.target.value))}
           aria-label="Момент времени"
-          aria-valuetext={live ? "сейчас" : `${fmtTs(replayAt.toISOString())}, ${fmtOffset(offsetHours)}`}
+          aria-valuetext={
+            live ? "сейчас" : `${fmtTs(replayAt.toISOString())}, ${fmtOffset(offsetHours)}`
+          }
         />
       </div>
 
@@ -107,7 +122,11 @@ export function Timeline({ replay, disabled }: Props) {
         ) : (
           <span className="timeline__time mono" title={fmtOffset(offsetHours)}>
             {fmtTs(replayAt.toISOString()).replace(" UTC", "")}
-            <b className={offsetHours > 0 ? "timeline__offset timeline__offset--future" : "timeline__offset"}>
+            <b
+              className={
+                offsetHours > 0 ? "timeline__offset timeline__offset--future" : "timeline__offset"
+              }
+            >
               {fmtOffset(offsetHours)}
             </b>
           </span>

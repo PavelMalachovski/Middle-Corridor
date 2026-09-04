@@ -61,7 +61,10 @@ export function useReplay(): ReplayControl {
       futureHours: snapshot.live.replay_future_hours,
     };
   }, []);
-  const serverNow = useCallback(() => clock.current.serverMs + (Date.now() - clock.current.wallMs), []);
+  const serverNow = useCallback(
+    () => clock.current.serverMs + (Date.now() - clock.current.wallMs),
+    [],
+  );
 
   const clamp = useCallback(
     (ms: number) => {

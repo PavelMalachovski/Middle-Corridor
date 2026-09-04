@@ -53,13 +53,23 @@ export function MapControls({
           />
           <span>Рельеф</span>
         </label>
-        <label className="switch" title="Объёмный рельеф и наклон камеры; вращение — правой кнопкой или компасом">
-          <input type="checkbox" checked={terrain3d} onChange={(e) => onTerrain3d(e.target.checked)} />
+        <label
+          className="switch"
+          title="Объёмный рельеф и наклон камеры; вращение — правой кнопкой или компасом"
+        >
+          <input
+            type="checkbox"
+            checked={terrain3d}
+            onChange={(e) => onTerrain3d(e.target.checked)}
+          />
           <span>3D</span>
         </label>
       </div>
       {fallback && (
-        <div className="mapctl__hint" title="Векторные тайлы не ответили — включена растровая подложка">
+        <div
+          className="mapctl__hint"
+          title="Векторные тайлы не ответили — включена растровая подложка"
+        >
           векторный стиль недоступен · растр
         </div>
       )}

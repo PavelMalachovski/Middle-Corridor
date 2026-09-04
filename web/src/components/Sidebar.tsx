@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import type { Snapshot } from "../api";
+import { NewsPanel } from "./NewsPanel";
+import { PortsPanel } from "./PortsPanel";
 import { ShipmentCard } from "./ShipmentCard";
 import { ShipmentList } from "./ShipmentList";
-import { PortsPanel } from "./PortsPanel";
-import { NewsPanel } from "./NewsPanel";
 
 export type Tab = "shipments" | "ports" | "news";
 
@@ -34,8 +34,7 @@ function useIsMobile(): boolean {
 }
 
 const fullHeight = () => window.innerHeight * SHEET_VH.full;
-const visibleFor = (s: SheetState) =>
-  s === "peek" ? HEADER_PX : window.innerHeight * SHEET_VH[s];
+const visibleFor = (s: SheetState) => (s === "peek" ? HEADER_PX : window.innerHeight * SHEET_VH[s]);
 const offsetFor = (s: SheetState) => fullHeight() - visibleFor(s);
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 

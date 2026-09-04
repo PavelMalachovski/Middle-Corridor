@@ -1,5 +1,5 @@
 import type { Shipment, Snapshot } from "../api";
-import { STATE_LABEL, fmtHours, fmtRelative } from "../format";
+import { fmtHours, fmtRelative, STATE_LABEL } from "../format";
 
 const ORDER: Record<Shipment["state"], number> = {
   waiting: 0,
@@ -40,22 +40,27 @@ export function ShipmentList({
   return (
     <ul className="list">
       {items.map((s) => (
-        <li key={s.ref} className="card card--clickable" onClick={() => onSelect(s.ref)}>
-          <div className="card__head">
-            <b className="mono">{s.ref}</b>
-            <StatePill shipment={s} />
-          </div>
-          <div className="card__route">
-            {s.origin} → {s.destination}
-          </div>
-          <div className="progress">
-            <div className="progress__bar" style={{ width: `${Math.round(s.progress * 100)}%` }} />
-          </div>
-          <div className="card__meta">
-            <span>{s.last_event}</span>
-            <span className="muted">{fmtRelative(s.last_event_at, ref)}</span>
-          </div>
-          {s.hold_reason && <div className="hold">⚠ {s.hold_reason}</div>}
+        <li key={s.ref}>
+          <button type="button" className="card card--clickable" onClick={() => onSelect(s.ref)}>
+            <div className="card__head">
+              <b className="mono">{s.ref}</b>
+              <StatePill shipment={s} />
+            </div>
+            <div className="card__route">
+              {s.origin} → {s.destination}
+            </div>
+            <div className="progress">
+              <div
+                className="progress__bar"
+                style={{ width: `${Math.round(s.progress * 100)}%` }}
+              />
+            </div>
+            <div className="card__meta">
+              <span>{s.last_event}</span>
+              <span className="muted">{fmtRelative(s.last_event_at, ref)}</span>
+            </div>
+            {s.hold_reason && <div className="hold">⚠ {s.hold_reason}</div>}
+          </button>
         </li>
       ))}
     </ul>

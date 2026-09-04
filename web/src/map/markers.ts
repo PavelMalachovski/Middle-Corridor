@@ -76,7 +76,11 @@ export function vesselMarkerElement(): HTMLDivElement {
   return el;
 }
 
-export function renderVesselMarker(el: HTMLDivElement, v: VesselStatus, heading: number | null): void {
+export function renderVesselMarker(
+  el: HTMLDivElement,
+  v: VesselStatus,
+  heading: number | null,
+): void {
   setOwnClasses(el, ["vessel-marker", v.sog != null && v.sog > 0.5 ? "is-moving" : "is-moored"]);
   el.title = `${v.name}${v.route ? ` · ${v.route}` : ""}`;
   (el.querySelector(".vessel-marker__icon") as HTMLElement).style.transform =

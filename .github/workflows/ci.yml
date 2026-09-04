@@ -40,5 +40,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Install
         run: npm ci --no-audit --no-fund
+      - name: Lint and format (Biome)
+        run: npm run lint
       - name: Typecheck and build
         run: npm run build
