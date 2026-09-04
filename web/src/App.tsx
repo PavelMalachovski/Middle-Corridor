@@ -8,6 +8,7 @@ import { Legend } from "./components/Legend";
 import { MapControls } from "./components/MapControls";
 import { Sidebar, type Tab } from "./components/Sidebar";
 import { Timeline } from "./components/Timeline";
+import { MapFallback, hasWebGL2 } from "./components/MapFallback";
 
 // Настройки карты живут в localStorage — только удобство, без них всё работает
 const PREFS_KEY = "mc-map-prefs";
@@ -18,15 +19,22 @@ interface MapPrefs {
   terrain3d: boolean;
 }
 function loadPrefs(): MapPrefs {
-  const prefs: MapPrefs = { basemap: DEFAULT_BASEMAP, globe: true, terrain: false, terrain3d: false };
+  const prefs: MapPrefs = {
+    basemap: DEFAULT_BASEMAP,
+    globe: true,
+    terrain: false,
+    terrain3d: false,
+  };
   try {
     const raw = localStorage.getItem(PREFS_KEY);
     if (raw) {
       const saved = JSON.parse(raw) as Partial<MapPrefs>;
-      if (saved.basemap && saved.basemap in BASEMAPS) prefs.basemap = saved.basemap;
+      if (saved.basemap && saved.basemap in BASEMAPS)
+        prefs.basemap = saved.basemap;
       if (typeof saved.globe === "boolean") prefs.globe = saved.globe;
       if (typeof saved.terrain === "boolean") prefs.terrain = saved.terrain;
-      if (typeof saved.terrain3d === "boolean") prefs.terrain3d = saved.terrain3d;
+      if (typeof saved.terrain3d === "boolean")
+        prefs.terrain3d = saved.terrain3d;
     }
   } catch {
     /* приватный режим и т.п. */
@@ -41,10 +49,17 @@ function savePrefs(prefs: MapPrefs): void {
   }
 }
 
+const WEBGL2 = hasWebGL2(); // один раз на загрузку: контекст не появится позже
+
 export function App() {
   const replay = useReplay();
-  const { snapshot, wind, windAvailable, error, fetchedAt, mode } = useLiveData(replay.replayAt);
-  useEffect(() => replay.sync(snapshot, fetchedAt), [replay, snapshot, fetchedAt]);
+  const { snapshot, wind, windAvailable, error, fetchedAt, mode } = useLiveData(
+    replay.replayAt,
+  );
+  useEffect(
+    () => replay.sync(snapshot, fetchedAt),
+    [replay, snapshot, fetchedAt],
+  );
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
   const [followRef, setFollowRef] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
@@ -87,44 +102,56 @@ export function App() {
     [snapshot],
   );
 
-  const selectNodeFromMap = useCallback(
-    (code: string) => {
-      setSelectedNode(code);
-      setTab("ports");
-      setSelectedRef(null);
-    },
-    [],
-  );
+  const selectNodeFromMap = useCallback((code: string) => {
+    setSelectedNode(code);
+    setTab("ports");
+    setSelectedRef(null);
+  }, []);
 
   const focusShipment = useCallback(
     (ref: string) => {
       const s = snapshot?.shipments.find((x) => x.ref === ref);
       if (!s) return;
       setSelectedRef(ref);
-      setFocus({ lon: s.position.lon, lat: s.position.lat, zoom: 6, key: Date.now() });
+      setFocus({
+        lon: s.position.lon,
+        lat: s.position.lat,
+        zoom: 6,
+        key: Date.now(),
+      });
     },
     [snapshot],
   );
 
   return (
-    <div className="app" style={{ "--sheet-h": `${sheetHeight}px` } as CSSProperties}>
-      <MapView
-        snapshot={snapshot}
-        wind={wind}
-        layers={layers}
-        basemap={prefs.basemap}
-        globe={prefs.globe}
-        terrain={prefs.terrain}
-        terrain3d={prefs.terrain3d}
-        sheetHeight={sheetHeight}
-        selectedRef={selectedRef}
-        followRef={followRef}
-        focus={focus}
-        onSelectShipment={selectShipment}
-        onSelectNode={selectNodeFromMap}
-        onStyleResolved={setStyleFallback}
-        onFollowBroken={() => setFollowRef(null)}
-      />
+    <div
+      className="app"
+      style={{ "--sheet-h": `${sheetHeight}px` } as CSSProperties}
+    >
+      {WEBGL2 ? (
+        <MapView
+          snapshot={snapshot}
+          wind={wind}
+          layers={layers}
+          basemap={prefs.basemap}
+          globe={prefs.globe}
+          terrain={prefs.terrain}
+          terrain3d={prefs.terrain3d}
+          sheetHeight={sheetHeight}
+          selectedRef={selectedRef}
+          followRef={followRef}
+          focus={focus}
+          onSelectShipment={selectShipment}
+          onSelectNode={selectNodeFromMap}
+          onStyleResolved={setStyleFallback}
+          onFollowBroken={() => setFollowRef(null)}
+        />
+      ) : (
+        <MapFallback
+          title="Карта недоступна в этом браузере"
+          detail="Нужен WebGL 2: обновите браузер или откройте ссылку в Chrome, Safari 15+ или Firefox. Список грузов, порты и новости работают и без карты."
+        />
+      )}
       <TopBar
         snapshot={snapshot}
         error={error}

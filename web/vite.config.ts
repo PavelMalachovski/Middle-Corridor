@@ -9,5 +9,9 @@ export default defineConfig({
     port: 5173,
     proxy: { "/api": "http://localhost:8000" },
   },
+  // Dev-оптимизатор (Rolldown) дублирует maplibre-gl-shared в пребандле: два
+  // экземпляра style-spec, и валидатор не знает line-layer-opacity. Отдаём
+  // maplibre как есть — он и так ESM.
+  optimizeDeps: { exclude: ["maplibre-gl"] },
   build: { outDir: "dist", sourcemap: false },
 });

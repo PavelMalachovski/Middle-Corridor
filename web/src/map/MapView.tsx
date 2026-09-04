@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import maplibregl, { type GeoJSONSource, type Map as MLMap, Marker, Popup } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import { type GeoJSONSource, type Map as MLMap, Marker, Popup } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
 import type { Snapshot, VesselStatus, WindField } from "../api";
 import { fmtRelative } from "../format";
@@ -131,7 +132,7 @@ function setupLayers(map: MLMap): void {
       "line-color": CORRIDOR_COLOR,
       "line-width": ["interpolate", ["linear"], ["zoom"], 2, 10, 5, 22, 9, 48],
       "line-blur": ["interpolate", ["linear"], ["zoom"], 2, 5, 9, 16],
-      "line-opacity": 0.22,
+      "line-layer-opacity": 0.22, // на весь слой: стыки сегментов не «двоятся» (MapLibre 6)
     },
   });
   map.addLayer({
@@ -143,7 +144,7 @@ function setupLayers(map: MLMap): void {
       "line-color": CORRIDOR_COLOR,
       "line-width": ["interpolate", ["linear"], ["zoom"], 2, 3, 5, 6, 9, 12],
       "line-blur": ["interpolate", ["linear"], ["zoom"], 2, 1.5, 9, 4],
-      "line-opacity": 0.45,
+      "line-layer-opacity": 0.45,
     },
   });
   map.addLayer({
