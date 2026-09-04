@@ -1,0 +1,19 @@
+# Зеркало [project].dependencies из pyproject.toml — для платформ, которые
+# ставят зависимости только из requirements.txt (Vercel Python runtime).
+# Источник истины — pyproject.toml; тест test_requirements_mirror_pyproject
+# не даст им разъехаться. Локально: pip install -e ".[dev]".
+aiogram>=3.15,<4
+fastapi>=0.115
+uvicorn>=0.32
+sqlalchemy[asyncio]>=2.0.36
+asyncpg>=0.30
+alembic>=1.14
+httpx>=0.28
+apscheduler>=3.10,<4
+pydantic>=2.9
+pydantic-settings>=2.6
+feedparser>=6.0
+selectolax>=0.3.21
+websockets>=13
+structlog>=24.4
+anthropic>=0.116

@@ -91,6 +91,7 @@ python -m app.main
 | `VESSELAPI_WEBHOOK_SECRET` | пусто = вебхук `/webhooks/vesselapi` выключен |
 | `MOCK_DATA`, `MOCK_TIME_SCALE` | `true` = JSON-API карты отдаёт синтетику без БД; ускорение мок-времени для демо |
 | `WEB_DIST_DIR` | собранный фронт (`web/dist`); нет каталога = раздача выключена |
+| `CORS_ORIGINS` | origin'ы фронта на другом домене (Vercel) через запятую; пусто = CORS выключен |
 
 ## Тесты и линт
 
@@ -155,6 +156,43 @@ Google Maps намеренно не подключён: тайлы Google нел
 рендерером без Map Tiles API с сессионными токенами и биллингом, а их JS-SDK
 потребовал бы переписать все слои; при необходимости добавляется отдельным
 пресетом.
+
+## Деплой на Vercel
+
+Vercel — это статика + serverless-функции, а не постоянный процесс: бот
+(long polling), AIS-стрим по WebSocket и планировщик там жить не могут.
+Поэтому два варианта.
+
+**A. Демо целиком на Vercel (мок-данные).** Фронт раздаётся CDN, а
+`/api/v1/*` и `/health` — Python-функция [api/index.py](api/index.py) с тем
+же FastAPI (маршрутизацию задаёт [vercel.json](vercel.json)).
+
+1. vercel.com → Add New → Project → импортировать репозиторий. Root Directory
+   оставить корнем репо, Framework Preset — Other (команды сборки уже в
+   `vercel.json`).
+2. Environment Variables: `MOCK_DATA=true`. Больше ничего не нужно —
+   ни БД, ни ключей.
+3. Deploy. Проверка: `https://<проект>.vercel.app/health` →
+   `{"status":"ok","db":false,...}`, карта — на корне.
+
+Зависимости Python ставятся из [requirements.txt](requirements.txt)
+(зеркало `pyproject.toml`, тест следит, чтобы не разъехались). Если указать
+`DATABASE_URL` (Neon/Supabase, лучше pooler-адрес) и убрать `MOCK_DATA`,
+функция отдаст боевые порты/суда/новости из БД — но наполнять её будет
+некому без второго варианта.
+
+**B. Продакшен: фронт на Vercel, бэкенд на Railway.** Бот, AIS, погода и
+новости крутятся на Railway (ниже), Vercel раздаёт только `web/`.
+
+1. Vercel → Add New → Project, тот же репозиторий, **Root Directory = `web`**,
+   Framework Preset — Vite.
+2. Environment Variables: `VITE_API_BASE=https://<сервис>.up.railway.app`
+   (без завершающего слэша) — фронт ходит в API напрямую.
+3. На Railway добавить `CORS_ORIGINS=https://<проект>.vercel.app` (через
+   запятую можно и preview-домены) — иначе браузер заблокирует запросы.
+
+В обоих вариантах вся конфигурация карты (подложки, `VITE_MAP_STYLE`)
+задаётся переменными сборки Vercel.
 
 ## Деплой (Railway)
 

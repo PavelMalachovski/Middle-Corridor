@@ -139,6 +139,26 @@ async def test_api_endpoints(mock_service: MapSnapshotService) -> None:
         assert (await client.get("/api/v1/snapshot")).status_code == 503
 
 
+async def test_cors_enabled_only_with_origins(mock_service: MapSnapshotService) -> None:
+    app = create_app(
+        settings=_settings(cors_origins=["https://mc.vercel.app"]), map_service=mock_service
+    )
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        allowed = await client.get("/api/v1/snapshot", headers={"Origin": "https://mc.vercel.app"})
+        assert allowed.headers.get("access-control-allow-origin") == "https://mc.vercel.app"
+        other = await client.get("/api/v1/snapshot", headers={"Origin": "https://evil.example"})
+        assert "access-control-allow-origin" not in other.headers
+
+    plain = create_app(settings=_settings(), map_service=mock_service)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=plain), base_url="http://test"
+    ) as client:
+        response = await client.get("/api/v1/snapshot", headers={"Origin": "https://mc.vercel.app"})
+        assert "access-control-allow-origin" not in response.headers
+
+
 def test_real_mode_requires_db() -> None:
     with pytest.raises(ValueError):
         build_map_service(Settings(_env_file=None, mock_data=False), None)
