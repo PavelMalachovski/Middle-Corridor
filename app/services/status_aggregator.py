@@ -3,7 +3,7 @@
 Собирает сводную картину: по каждому плечу — погодные алерты и последний
 ветер по портам, свежесть AIS-данных по судам (честное «нет данных»),
 свежие одобренные ручные сводки. Возвращает pydantic-модель — форматтеры
-превращают её в текст для Telegram (и в фазе 2 — в JSON для Mini App).
+превращают её в текст для Telegram, map_snapshot — в JSON для карты.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -28,10 +28,13 @@ class PortStatus(BaseModel):
     name: str
     country: str
     leg: CorridorLeg
+    lat: float
+    lon: float
     alert_level: AlertLevel | None = None
     alert_message: str | None = None
     wind_speed: float | None = None
     wind_gust: float | None = None
+    wind_dir: float | None = None
     weather_ts: datetime | None = None
 
 
@@ -116,10 +119,13 @@ class StatusAggregatorService:
             name=port.name,
             country=port.country,
             leg=port.leg,
+            lat=port.lat,
+            lon=port.lon,
             alert_level=alert.level if alert is not None else None,
             alert_message=alert.message if alert is not None else None,
             wind_speed=snapshot.wind_speed if snapshot is not None else None,
             wind_gust=snapshot.wind_gust if snapshot is not None else None,
+            wind_dir=snapshot.wind_dir if snapshot is not None else None,
             weather_ts=_ensure_utc(snapshot.ts) if snapshot is not None else None,
         )
 
