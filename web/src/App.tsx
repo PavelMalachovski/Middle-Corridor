@@ -1,12 +1,44 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchSnapshot, fetchWind, type Snapshot, type WindField } from "./api";
 import { MapView, type Focus, type LayerToggles } from "./map/MapView";
+import { BASEMAPS, DEFAULT_BASEMAP, type BasemapId } from "./map/style";
 import { TopBar } from "./components/TopBar";
 import { Legend } from "./components/Legend";
+import { MapControls } from "./components/MapControls";
 import { Sidebar, type Tab } from "./components/Sidebar";
 
 const SNAPSHOT_MS = 10_000;
 const WIND_MS = 60_000;
+
+// Настройки карты живут в localStorage — только удобство, без них всё работает
+const PREFS_KEY = "mc-map-prefs";
+interface MapPrefs {
+  basemap: BasemapId;
+  globe: boolean;
+  terrain: boolean;
+}
+function loadPrefs(): MapPrefs {
+  const prefs: MapPrefs = { basemap: DEFAULT_BASEMAP, globe: true, terrain: false };
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw) as Partial<MapPrefs>;
+      if (saved.basemap && saved.basemap in BASEMAPS) prefs.basemap = saved.basemap;
+      if (typeof saved.globe === "boolean") prefs.globe = saved.globe;
+      if (typeof saved.terrain === "boolean") prefs.terrain = saved.terrain;
+    }
+  } catch {
+    /* приватный режим и т.п. */
+  }
+  return prefs;
+}
+function savePrefs(prefs: MapPrefs): void {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    /* ignore */
+  }
+}
 
 export function App() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -24,7 +56,17 @@ export function App() {
     routes: true,
   });
   const [focus, setFocus] = useState<Focus | null>(null);
+  const [prefs, setPrefs] = useState<MapPrefs>(loadPrefs);
+  const [styleFallback, setStyleFallback] = useState(false);
   const [, setTick] = useState(0); // перерисовка «N с назад» раз в секунду
+
+  const updatePrefs = useCallback((patch: Partial<MapPrefs>) => {
+    setPrefs((p) => {
+      const next = { ...p, ...patch };
+      savePrefs(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -106,10 +148,14 @@ export function App() {
         snapshot={snapshot}
         wind={wind}
         layers={layers}
+        basemap={prefs.basemap}
+        globe={prefs.globe}
+        terrain={prefs.terrain}
         selectedRef={selectedRef}
         focus={focus}
         onSelectShipment={selectShipment}
         onSelectNode={selectNodeFromMap}
+        onStyleResolved={setStyleFallback}
       />
       <TopBar
         snapshot={snapshot}
@@ -119,7 +165,18 @@ export function App() {
         windAvailable={windAvailable}
         onToggle={(key) => setLayers((l) => ({ ...l, [key]: !l[key] }))}
       />
-      <Legend />
+      <div className="left-stack">
+        <Legend />
+        <MapControls
+          basemap={prefs.basemap}
+          globe={prefs.globe}
+          terrain={prefs.terrain}
+          fallback={styleFallback}
+          onBasemap={(basemap) => updatePrefs({ basemap })}
+          onGlobe={(globe) => updatePrefs({ globe })}
+          onTerrain={(terrain) => updatePrefs({ terrain })}
+        />
+      </div>
       <Sidebar
         snapshot={snapshot}
         tab={tab}

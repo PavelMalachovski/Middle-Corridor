@@ -5,7 +5,15 @@ import type { NodeStatus, Shipment, Snapshot, VesselStatus, WindField } from "..
 import { LEVEL_ICON, fmtRelative, fmtWind, levelOf } from "../format";
 import { shipIcon, windArrow } from "./icons";
 import { splitTrack, type LonLat } from "./geo";
-import { CORRIDOR_BOUNDS, MAP_STYLE } from "./style";
+import {
+  BASEMAPS,
+  BOOT_STYLE,
+  CORRIDOR_BOUNDS,
+  DEM_SOURCE,
+  isDarkBasemap,
+  resolveStyle,
+  type BasemapId,
+} from "./style";
 
 export interface LayerToggles {
   wind: boolean;
@@ -25,10 +33,14 @@ interface Props {
   snapshot: Snapshot | null;
   wind: WindField | null;
   layers: LayerToggles;
+  basemap: BasemapId;
+  globe: boolean;
+  terrain: boolean;
   selectedRef: string | null;
   focus: Focus | null;
   onSelectShipment: (ref: string | null) => void;
   onSelectNode: (code: string) => void;
+  onStyleResolved: (fallback: boolean) => void;
 }
 
 // Сила ветра → одна синяя шкала (тёмная подложка: слабый = темнее, сильный = светлее)
@@ -36,6 +48,7 @@ const WIND_BUCKETS = [4, 8, 12, 16, 20];
 const WIND_COLORS = ["#1c5cab", "#2a78d6", "#3987e5", "#6da7ec", "#9ec5f4", "#cde2fb"];
 const VESSEL_COLOR = "#eb6834";
 const TRACK_COLOR = "#2fd39a";
+const FIRST_OVERLAY_LAYER = "routes-rail"; // рельеф вставляется под него
 
 const SIDEBAR_PADDING = { top: 90, bottom: 40, left: 40, right: 420 };
 
@@ -60,14 +73,18 @@ function tintIcon(
   return { width: image.width, height: image.height, data };
 }
 
+/** Наши источники и слои поверх любой подложки. Вызывается на каждый style.load. */
 function setupLayers(map: MLMap): void {
   const arrow = windArrow(32);
-  WIND_COLORS.forEach((color, i) => map.addImage(`wind-${i}`, tintIcon(arrow, color)));
-  map.addImage("ship", tintIcon(shipIcon(36), VESSEL_COLOR));
+  WIND_COLORS.forEach((color, i) => {
+    if (!map.hasImage(`wind-${i}`)) map.addImage(`wind-${i}`, tintIcon(arrow, color));
+  });
+  if (!map.hasImage("ship")) map.addImage("ship", tintIcon(shipIcon(36), VESSEL_COLOR));
 
   for (const id of ["routes", "wind", "vessels", "track-rest", "track-done"]) {
-    map.addSource(id, { type: "geojson", data: emptyFC() });
+    if (!map.getSource(id)) map.addSource(id, { type: "geojson", data: emptyFC() });
   }
+  if (map.getLayer(FIRST_OVERLAY_LAYER)) return;
 
   map.addLayer({
     id: "routes-rail",
@@ -156,6 +173,32 @@ function setupLayers(map: MLMap): void {
   });
 }
 
+function applyHillshade(map: MLMap, on: boolean, dark: boolean): void {
+  if (!map.getLayer(FIRST_OVERLAY_LAYER)) return;
+  if (!on) {
+    if (map.getLayer("hillshade")) map.removeLayer("hillshade");
+    if (map.getSource("dem")) map.removeSource("dem");
+    return;
+  }
+  if (!map.getSource("dem")) map.addSource("dem", DEM_SOURCE);
+  if (!map.getLayer("hillshade")) {
+    map.addLayer(
+      {
+        id: "hillshade",
+        type: "hillshade",
+        source: "dem",
+        paint: {
+          "hillshade-exaggeration": dark ? 0.45 : 0.3,
+          "hillshade-shadow-color": dark ? "#000000" : "#4a4a45",
+          "hillshade-highlight-color": dark ? "#7a8ea3" : "#ffffff",
+          "hillshade-accent-color": dark ? "#0b1220" : "#8a8a80",
+        },
+      },
+      FIRST_OVERLAY_LAYER,
+    );
+  }
+}
+
 /** Меняет наши классы, не трогая maplibregl-marker* — иначе маркер выпадает из абсолютного позиционирования. */
 function setOwnClasses(el: HTMLElement, classes: string[]): void {
   for (const cls of Array.from(el.classList)) {
@@ -217,10 +260,14 @@ export function MapView({
   snapshot,
   wind,
   layers,
+  basemap,
+  globe,
+  terrain,
   selectedRef,
   focus,
   onSelectShipment,
   onSelectNode,
+  onStyleResolved,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MLMap | null>(null);
@@ -228,11 +275,14 @@ export function MapView({
   const shipMarkers = useRef(new Map<string, Marker>());
   const popupRef = useRef<Popup | null>(null);
   const flownRef = useRef<string | null>(null);
-  const [ready, setReady] = useState(false);
+  const styleRequest = useRef(0);
+  // 0 = подложка ещё не загружена; растёт на каждый style.load — эффекты
+  // переприменяют источники/слои после смены подложки
+  const [styleVersion, setStyleVersion] = useState(0);
 
   // колбэки в ref, чтобы обработчики карты не пересоздавались
-  const callbacks = useRef({ onSelectShipment, onSelectNode });
-  callbacks.current = { onSelectShipment, onSelectNode };
+  const callbacks = useRef({ onSelectShipment, onSelectNode, onStyleResolved });
+  callbacks.current = { onSelectShipment, onSelectNode, onStyleResolved };
   const snapshotRef = useRef(snapshot);
   snapshotRef.current = snapshot;
 
@@ -240,10 +290,10 @@ export function MapView({
     if (!containerRef.current) return;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: MAP_STYLE,
+      style: BOOT_STYLE,
       bounds: CORRIDOR_BOUNDS,
       fitBoundsOptions: { padding: SIDEBAR_PADDING },
-      minZoom: 2,
+      minZoom: 1.5,
       maxZoom: 12,
       attributionControl: { compact: true },
     });
@@ -259,31 +309,34 @@ export function MapView({
     map.on("zoom", updateZoomBand);
     updateZoomBand();
 
+    map.on("click", "vessels", (e) => {
+      const feature = e.features?.[0];
+      const snap = snapshotRef.current;
+      if (!feature || !snap) return;
+      const vessel = snap.vessels.find((v) => v.name === feature.properties?.name);
+      if (!vessel) return;
+      popupRef.current?.remove();
+      popupRef.current = new Popup({ closeButton: false, offset: 12 })
+        .setLngLat(e.lngLat)
+        .setHTML(vesselPopupHtml(vessel, new Date(snap.generated_at)))
+        .addTo(map);
+    });
+    map.on("mouseenter", "vessels", () => (map.getCanvas().style.cursor = "pointer"));
+    map.on("mouseleave", "vessels", () => (map.getCanvas().style.cursor = ""));
+    map.on("click", (e) => {
+      // клик по пустой карте снимает выбор
+      const hits = map.getLayer("vessels")
+        ? map.queryRenderedFeatures(e.point, { layers: ["vessels"] })
+        : [];
+      if (!hits.length) callbacks.current.onSelectShipment(null);
+    });
+
     // style.load, а не load: load ждёт тайлы подложки, а они могут не грузиться
-    // (офлайн, прокси) — оверлеи должны появляться независимо от подложки
-    map.once("style.load", () => {
+    // (офлайн, прокси) — оверлеи должны появляться независимо от подложки.
+    // Срабатывает на каждую смену подложки: слои пересоздаются заново.
+    map.on("style.load", () => {
       setupLayers(map);
-      map.on("click", "vessels", (e) => {
-        const feature = e.features?.[0];
-        const snap = snapshotRef.current;
-        if (!feature || !snap) return;
-        const vessel = snap.vessels.find((v) => v.name === feature.properties?.name);
-        if (!vessel) return;
-        popupRef.current?.remove();
-        popupRef.current = new Popup({ closeButton: false, offset: 12 })
-          .setLngLat(e.lngLat)
-          .setHTML(vesselPopupHtml(vessel, new Date(snap.generated_at)))
-          .addTo(map);
-      });
-      map.on("mouseenter", "vessels", () => (map.getCanvas().style.cursor = "pointer"));
-      map.on("mouseleave", "vessels", () => (map.getCanvas().style.cursor = ""));
-      map.on("click", (e) => {
-        // клик по пустой карте снимает выбор
-        if (!map.queryRenderedFeatures(e.point, { layers: ["vessels"] }).length) {
-          callbacks.current.onSelectShipment(null);
-        }
-      });
-      setReady(true);
+      setStyleVersion((v) => v + 1);
     });
 
     return () => {
@@ -291,14 +344,44 @@ export function MapView({
       mapRef.current = null;
       nodeMarkers.current.clear();
       shipMarkers.current.clear();
-      setReady(false);
+      setStyleVersion(0);
     };
   }, []);
+
+  // --- подложка: подбираем доступный стиль и применяем ----------------------------
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const request = ++styleRequest.current;
+    void resolveStyle(BASEMAPS[basemap]).then(({ style, fallback }) => {
+      if (request !== styleRequest.current || !mapRef.current) return; // уже выбрали другую
+      map.setStyle(style, { diff: false });
+      callbacks.current.onStyleResolved(fallback);
+    });
+    containerRef.current?.setAttribute("data-basemap", isDarkBasemap(basemap) ? "dark" : "light");
+  }, [basemap]);
+
+  // --- глобус и атмосфера ---------------------------------------------------------
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !styleVersion) return;
+    map.setProjection({ type: globe ? "globe" : "mercator" });
+    map.setSky({
+      "atmosphere-blend": globe ? ["interpolate", ["linear"], ["zoom"], 0, 1, 4, 0.7, 7, 0] : 0,
+    });
+  }, [globe, styleVersion]);
+
+  // --- рельеф (hillshade поверх подложки, под оверлеями) --------------------------
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !styleVersion) return;
+    applyHillshade(map, terrain, isDarkBasemap(basemap));
+  }, [terrain, basemap, styleVersion]);
 
   // --- данные снимка: маршрут, суда, узлы, грузы ---------------------------------
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready || !snapshot) return;
+    if (!map || !styleVersion || !snapshot || !map.getSource("routes")) return;
 
     (map.getSource("routes") as GeoJSONSource).setData({
       type: "FeatureCollection",
@@ -378,12 +461,12 @@ export function MapView({
         shipMarkers.current.delete(ref);
       }
     }
-  }, [snapshot, ready, selectedRef]);
+  }, [snapshot, styleVersion, selectedRef]);
 
   // --- выбранный груз: трек и подлёт ---------------------------------------------
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready) return;
+    if (!map || !styleVersion || !map.getSource("track-done")) return;
     const shipment = snapshot?.shipments.find((s) => s.ref === selectedRef) ?? null;
     const done = map.getSource("track-done") as GeoJSONSource;
     const rest = map.getSource("track-rest") as GeoJSONSource;
@@ -398,7 +481,13 @@ export function MapView({
       type: "FeatureCollection",
       features:
         coords.length > 1
-          ? [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: coords } }]
+          ? [
+              {
+                type: "Feature",
+                properties: {},
+                geometry: { type: "LineString", coordinates: coords },
+              },
+            ]
           : [],
     });
     done.setData(line(parts.done));
@@ -412,12 +501,12 @@ export function MapView({
         duration: 900,
       });
     }
-  }, [snapshot, ready, selectedRef]);
+  }, [snapshot, styleVersion, selectedRef]);
 
   // --- ветер -----------------------------------------------------------------------
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready) return;
+    if (!map || !styleVersion || !map.getSource("wind")) return;
     (map.getSource("wind") as GeoJSONSource).setData({
       type: "FeatureCollection",
       features: (wind?.points ?? []).map((p) => ({
@@ -426,12 +515,12 @@ export function MapView({
         geometry: { type: "Point", coordinates: [p.lon, p.lat] },
       })),
     });
-  }, [wind, ready]);
+  }, [wind, styleVersion]);
 
   // --- видимость слоёв ------------------------------------------------------------
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready) return;
+    if (!map || !styleVersion || !map.getLayer("wind")) return;
     const vis = (on: boolean) => (on ? "visible" : "none");
     map.setLayoutProperty("wind", "visibility", vis(layers.wind));
     map.setLayoutProperty("vessels", "visibility", vis(layers.vessels));
@@ -439,21 +528,21 @@ export function MapView({
     map.setLayoutProperty("routes-sea", "visibility", vis(layers.routes));
     containerRef.current?.classList.toggle("hide-shipments", !layers.shipments);
     if (!layers.vessels) popupRef.current?.remove();
-  }, [layers, ready]);
+  }, [layers, styleVersion]);
 
   // --- подлёт по запросу сайдбара -------------------------------------------------
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready || !focus) return;
+    if (!map || !focus) return;
     map.flyTo({
       center: [focus.lon, focus.lat],
       zoom: focus.zoom ?? Math.max(map.getZoom(), 6),
       padding: SIDEBAR_PADDING,
       duration: 900,
     });
-  }, [focus, ready]);
+  }, [focus]);
 
-  return <div ref={containerRef} className="map" data-zoom="far" />;
+  return <div ref={containerRef} className="map" data-zoom="far" data-basemap="dark" />;
 }
 
 export { fmtWind };
