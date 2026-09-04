@@ -1,7 +1,12 @@
-import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  type PointerEvent as ReactPointerEvent,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { Snapshot } from "../api";
-import { NewsPanel } from "./NewsPanel";
-import { PortsPanel } from "./PortsPanel";
 import { ShipmentCard } from "./ShipmentCard";
 import { ShipmentList } from "./ShipmentList";
 
@@ -23,6 +28,11 @@ import {
   visibleFor as sheetVisibleFor,
   snapSheet,
 } from "./sheet";
+
+// Вкладки, которые открывают не первыми, — отдельные чанки
+const PortsPanel = lazy(() => import("./PortsPanel").then((m) => ({ default: m.PortsPanel })));
+const NewsPanel = lazy(() => import("./NewsPanel").then((m) => ({ default: m.NewsPanel })));
+const PanelLoading = () => <div className="muted small panel-loading">загрузка…</div>;
 
 export type { SheetState } from "./sheet";
 
@@ -215,9 +225,13 @@ export function Sidebar({
             <ShipmentList snapshot={snapshot} onSelect={onFocusShipment} />
           )
         ) : tab === "ports" ? (
-          <PortsPanel snapshot={snapshot} selectedNode={selectedNode} onFocusNode={onFocusNode} />
+          <Suspense fallback={<PanelLoading />}>
+            <PortsPanel snapshot={snapshot} selectedNode={selectedNode} onFocusNode={onFocusNode} />
+          </Suspense>
         ) : (
-          <NewsPanel snapshot={snapshot} />
+          <Suspense fallback={<PanelLoading />}>
+            <NewsPanel snapshot={snapshot} />
+          </Suspense>
         )}
       </div>
     </aside>

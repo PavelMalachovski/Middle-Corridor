@@ -39,7 +39,9 @@ body,
   overflow: hidden;
 }
 
-.map {
+/* Специфичность выше, чем у .maplibregl-map { position: relative }: CSS MapLibre
+   приезжает вместе с ленивым чанком карты, то есть позже наших стилей. */
+.app .map {
   position: absolute;
   inset: 0;
 }
@@ -908,7 +910,7 @@ button.card:focus-visible {
   }
 }
 
-.maplibregl-popup-content {
+.map .maplibregl-popup-content {
   background: var(--panel-solid);
   color: var(--text);
   border: 1px solid var(--line);
@@ -916,20 +918,20 @@ button.card:focus-visible {
   padding: 8px 10px;
   font-size: 12px;
 }
-.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+.map .maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
   border-top-color: var(--panel-solid);
 }
-.maplibregl-popup-anchor-top .maplibregl-popup-tip {
+.map .maplibregl-popup-anchor-top .maplibregl-popup-tip {
   border-bottom-color: var(--panel-solid);
 }
 .popup b {
   display: block;
   margin-bottom: 2px;
 }
-.maplibregl-ctrl-group {
+.map .maplibregl-ctrl-group {
   background: var(--panel-solid);
 }
-.maplibregl-ctrl-group button + button {
+.map .maplibregl-ctrl-group button + button {
   border-top-color: var(--line);
 }
 .map .maplibregl-ctrl-attrib,
@@ -938,7 +940,7 @@ button.card:focus-visible {
   color: var(--muted);
   font-size: 10px;
 }
-.maplibregl-ctrl-attrib a {
+.map .maplibregl-ctrl-attrib a {
   color: var(--text-2);
 }
 
@@ -1316,4 +1318,13 @@ button.card:focus-visible {
   border-radius: 999px;
   padding: 6px 12px;
   cursor: pointer;
+}
+
+/* --- ленивые чанки ---------------------------------------------------------------- */
+
+.map--loading {
+  background: var(--bg);
+}
+.panel-loading {
+  padding: 16px 4px;
 }

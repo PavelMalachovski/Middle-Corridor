@@ -1,4 +1,4 @@
-import { type CSSProperties, useCallback, useEffect, useState } from "react";
+import { type CSSProperties, lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Legend } from "./components/Legend";
 import { MapControls } from "./components/MapControls";
@@ -7,7 +7,11 @@ import { Sidebar, type Tab } from "./components/Sidebar";
 import { Timeline } from "./components/Timeline";
 import { TopBar } from "./components/TopBar";
 import { useLiveData } from "./live";
-import { type Focus, type LayerToggles, MapView } from "./map/MapView";
+import type { Focus, LayerToggles } from "./map/MapView";
+
+// Карта с MapLibre — отдельный чанк: первый экран (панель, топбар) не ждёт её.
+const MapView = lazy(() => import("./map/MapView").then((m) => ({ default: m.MapView })));
+
 import { BASEMAPS, type BasemapId, DEFAULT_BASEMAP } from "./map/style";
 import { useReplay } from "./replay";
 
@@ -130,23 +134,25 @@ export function App() {
             />
           )}
         >
-          <MapView
-            snapshot={snapshot}
-            wind={wind}
-            layers={layers}
-            basemap={prefs.basemap}
-            globe={prefs.globe}
-            terrain={prefs.terrain}
-            terrain3d={prefs.terrain3d}
-            sheetHeight={sheetHeight}
-            selectedRef={selectedRef}
-            followRef={followRef}
-            focus={focus}
-            onSelectShipment={selectShipment}
-            onSelectNode={selectNodeFromMap}
-            onStyleResolved={setStyleFallback}
-            onFollowBroken={() => setFollowRef(null)}
-          />
+          <Suspense fallback={<div className="map map--loading" aria-busy="true" />}>
+            <MapView
+              snapshot={snapshot}
+              wind={wind}
+              layers={layers}
+              basemap={prefs.basemap}
+              globe={prefs.globe}
+              terrain={prefs.terrain}
+              terrain3d={prefs.terrain3d}
+              sheetHeight={sheetHeight}
+              selectedRef={selectedRef}
+              followRef={followRef}
+              focus={focus}
+              onSelectShipment={selectShipment}
+              onSelectNode={selectNodeFromMap}
+              onStyleResolved={setStyleFallback}
+              onFollowBroken={() => setFollowRef(null)}
+            />
+          </Suspense>
         </ErrorBoundary>
       ) : (
         <MapFallback

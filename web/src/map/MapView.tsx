@@ -1,5 +1,6 @@
 import type { FeatureCollection } from "geojson";
 import * as maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { type GeoJSONSource, Marker, type Map as MLMap, Popup } from "maplibre-gl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Snapshot, VesselStatus, WindField } from "../api";
