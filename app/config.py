@@ -16,6 +16,9 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        # Пустая переменная = не задана (берём default). Иначе Vercel, импортируя
+        # .env.example с пустыми значениями, роняет Settings() на int/float/bool.
+        env_ignore_empty=True,
     )
 
     # Telegram

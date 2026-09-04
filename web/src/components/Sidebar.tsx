@@ -230,9 +230,11 @@ function ApiError({ error }: { error: string }) {
   const hint =
     code === "404"
       ? "На этом домене нет бэкенда: фронт задеплоен отдельно (Root Directory = web?), а VITE_API_BASE не задан."
-      : code?.startsWith("5")
-        ? "Бэкенд отвечает ошибкой — смотри логи функции/сервера."
-        : "Сервер не отвечает или блокирует запрос (сеть, CORS).";
+      : code === "503"
+        ? "Бэкенд жив, но источник данных недоступен. На Vercel-демо: MOCK_DATA=true в Environment Variables и Redeploy."
+        : code?.startsWith("5")
+          ? "Бэкенд падает при запросе. На Vercel: проверь MOCK_DATA=true и логи функции (Deployments → Functions)."
+          : "Сервер не отвечает или блокирует запрос (сеть, CORS).";
   return (
     <div className="empty empty--error">
       <div>

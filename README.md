@@ -180,6 +180,12 @@ Settings → General → Root Directory стоит `web`: для вариант�
 должно быть пустым (корень репо), затем Redeploy. Команды в `vercel.json`
 переживают оба значения, но Python-функция и `/api` есть только из корня.
 
+Если фронт открылся, а `/api/v1/snapshot` отвечает 503/500 — открой
+`/health`: `"mock": false` значит, что `MOCK_DATA` не `true` (Vercel при
+импорте подтягивает `MOCK_DATA=false` из `.env.example`). Поправь переменную
+для Production и сделай Redeploy: изменения переменных вступают в силу
+только с новым деплоем.
+
 Зависимости Python ставятся из [requirements.txt](requirements.txt)
 (зеркало `pyproject.toml`, тест следит, чтобы не разъехались). Если указать
 `DATABASE_URL` (Neon/Supabase, лучше pooler-адрес) и убрать `MOCK_DATA`,

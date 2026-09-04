@@ -10,7 +10,11 @@ router = APIRouter()
 
 @router.get("/health")
 async def health(request: Request) -> dict[str, object]:
-    """Liveness всегда ok; db=true, если БД доступна; возраст последнего AIS-сообщения."""
+    """Liveness всегда ok; db=true, если БД доступна; возраст последнего AIS-сообщения.
+
+    mock=true — API карты отдаёт синтетику (MOCK_DATA); с mock=false и db=false
+    /api/v1 ответит 503 — самый частый случай на демо-деплое без Postgres.
+    """
     engine = request.app.state.engine
     db_ok = False
     if engine is not None:
@@ -26,4 +30,9 @@ async def health(request: Request) -> dict[str, object]:
     if worker is not None and worker.last_message_at is not None:
         ais_age_s = int((datetime.now(UTC) - worker.last_message_at).total_seconds())
 
-    return {"status": "ok", "db": db_ok, "ais_last_message_age_s": ais_age_s}
+    return {
+        "status": "ok",
+        "db": db_ok,
+        "mock": bool(request.app.state.settings.mock_data),
+        "ais_last_message_age_s": ais_age_s,
+    }

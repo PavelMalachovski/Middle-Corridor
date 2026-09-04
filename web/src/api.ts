@@ -146,12 +146,22 @@ export interface WindField {
 // VITE_API_BASE=https://mc-status.up.railway.app (на бэкенде — CORS_ORIGINS).
 const API_BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? "").replace(/\/$/, "");
 
+/** Текст ошибки: путь, код и, если бэкенд объяснил причину (detail), — причина. */
+async function httpError(url: string, response: Response): Promise<Error> {
+  let detail = "";
+  try {
+    const body = (await response.json()) as { detail?: unknown };
+    if (typeof body.detail === "string") detail = ` · ${body.detail}`;
+  } catch {
+    /* тело не JSON — достаточно кода */
+  }
+  return new Error(`${url}: HTTP ${response.status}${detail}`);
+}
+
 async function getJson<T>(path: string): Promise<T> {
   const url = `${API_BASE}${path}`;
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`${url}: HTTP ${response.status}`);
-  }
+  if (!response.ok) throw await httpError(url, response);
   return (await response.json()) as T;
 }
 
@@ -162,6 +172,6 @@ export async function fetchWind(): Promise<WindField | null> {
   const url = `${API_BASE}/api/v1/wind`;
   const response = await fetch(url, { cache: "no-store" });
   if (response.status === 404) return null;
-  if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+  if (!response.ok) throw await httpError(url, response);
   return (await response.json()) as WindField;
 }

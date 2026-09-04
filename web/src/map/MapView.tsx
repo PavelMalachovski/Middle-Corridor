@@ -49,7 +49,9 @@ const WIND_BUCKETS = [4, 8, 12, 16, 20];
 const WIND_COLORS = ["#1c5cab", "#2a78d6", "#3987e5", "#6da7ec", "#9ec5f4", "#cde2fb"];
 const VESSEL_COLOR = "#eb6834";
 const TRACK_COLOR = "#2fd39a";
-const FIRST_OVERLAY_LAYER = "routes-rail"; // рельеф вставляется под него
+const CORRIDOR_COLOR = "#8f86e6"; // лента коридора: не спорит ни с ветром, ни с грузами, ни со статусами
+const FIRST_OVERLAY_LAYER = "corridor-glow"; // рельеф вставляется под него
+const CORRIDOR_LAYERS = ["corridor-glow", "corridor-band", "routes-rail", "routes-sea"];
 
 const SIDEBAR_PADDING = { top: 90, bottom: 40, left: 40, right: 420 };
 const MOBILE_MAX_WIDTH = 900;
@@ -97,12 +99,39 @@ function setupLayers(map: MLMap): void {
   }
   if (map.getLayer(FIRST_OVERLAY_LAYER)) return;
 
+  // Коридор как светящаяся лента: широкое размытое свечение + плотная полоса,
+  // поверх — сами нитки маршрута (рельсы сплошные, море пунктиром)
+  map.addLayer({
+    id: "corridor-glow",
+    type: "line",
+    source: "routes",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": CORRIDOR_COLOR,
+      "line-width": ["interpolate", ["linear"], ["zoom"], 2, 10, 5, 22, 9, 48],
+      "line-blur": ["interpolate", ["linear"], ["zoom"], 2, 5, 9, 16],
+      "line-opacity": 0.22,
+    },
+  });
+  map.addLayer({
+    id: "corridor-band",
+    type: "line",
+    source: "routes",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": CORRIDOR_COLOR,
+      "line-width": ["interpolate", ["linear"], ["zoom"], 2, 3, 5, 6, 9, 12],
+      "line-blur": ["interpolate", ["linear"], ["zoom"], 2, 1.5, 9, 4],
+      "line-opacity": 0.45,
+    },
+  });
   map.addLayer({
     id: "routes-rail",
     type: "line",
     source: "routes",
     filter: ["==", ["get", "mode"], "rail"],
-    paint: { "line-color": "#8a8f99", "line-width": 1.4, "line-opacity": 0.55 },
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": "#e4e7ee", "line-width": 1.6, "line-opacity": 0.85 },
   });
   map.addLayer({
     id: "routes-sea",
@@ -110,9 +139,9 @@ function setupLayers(map: MLMap): void {
     source: "routes",
     filter: ["==", ["get", "mode"], "sea"],
     paint: {
-      "line-color": "#8fb3d9",
-      "line-width": 1.4,
-      "line-opacity": 0.6,
+      "line-color": "#cfe0f5",
+      "line-width": 1.6,
+      "line-opacity": 0.85,
       "line-dasharray": [2, 2],
     },
   });
@@ -539,8 +568,7 @@ export function MapView({
     const vis = (on: boolean) => (on ? "visible" : "none");
     map.setLayoutProperty("wind", "visibility", vis(layers.wind));
     map.setLayoutProperty("vessels", "visibility", vis(layers.vessels));
-    map.setLayoutProperty("routes-rail", "visibility", vis(layers.routes));
-    map.setLayoutProperty("routes-sea", "visibility", vis(layers.routes));
+    for (const id of CORRIDOR_LAYERS) map.setLayoutProperty(id, "visibility", vis(layers.routes));
     containerRef.current?.classList.toggle("hide-shipments", !layers.shipments);
     if (!layers.vessels) popupRef.current?.remove();
   }, [layers, styleVersion]);
