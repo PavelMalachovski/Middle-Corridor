@@ -21,3 +21,5 @@ dist/
 # Web (React + Vite)
 web/node_modules/
 web/dist/
+web/test-results/
+web/playwright-report/
