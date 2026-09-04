@@ -19,6 +19,10 @@ export function Legend() {
       </div>
       <div className="legend__sep" />
       <div className="legend__row">
+        <span className="legend__ribbon" />
+        Средний коридор: рельсы сплошные, море пунктир
+      </div>
+      <div className="legend__row">
         <span className="legend__dot legend__dot--cargo" />
         груз: подтверждённая позиция
       </div>

@@ -244,6 +244,14 @@ body,
   background: transparent;
   border: 2px dashed var(--accent);
 }
+.legend__ribbon {
+  width: 14px;
+  height: 6px;
+  border-radius: 3px;
+  background: #8f86e6;
+  box-shadow: 0 0 6px 2px rgba(143, 134, 230, 0.55);
+  flex: none;
+}
 .legend__ship {
   color: var(--vessel);
   width: 10px;

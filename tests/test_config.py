@@ -1,5 +1,7 @@
 """Тесты конфигурации: разбор списков из ENV-строк."""
 
+import pytest
+
 from app.config import Settings
 
 
@@ -50,3 +52,15 @@ def test_requirements_mirror_pyproject() -> None:
         if line.strip() and not line.startswith("#")
     ]
     assert listed == declared
+
+
+def test_empty_env_values_fall_back_to_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Vercel импортирует .env.example с пустыми значениями — это не должно ронять старт."""
+    for name in ("WEATHER_WATCH_WIND", "PORT", "SCHEDULER_ENABLED", "MOCK_TIME_SCALE", "MOCK_DATA"):
+        monkeypatch.setenv(name, "")
+    settings = _settings()
+    assert settings.weather_watch_wind == 10.0
+    assert settings.port == 8000
+    assert settings.scheduler_enabled is False
+    assert settings.mock_time_scale == 1.0
+    assert settings.mock_data is False

@@ -14,7 +14,7 @@ const TOGGLES: { key: keyof LayerToggles; label: string }[] = [
   { key: "shipments", label: "Грузы" },
   { key: "vessels", label: "Паромы" },
   { key: "wind", label: "Ветер" },
-  { key: "routes", label: "Маршрут" },
+  { key: "routes", label: "Коридор" },
 ];
 
 export function TopBar({ snapshot, error, fetchedAt, layers, windAvailable, onToggle }: Props) {
