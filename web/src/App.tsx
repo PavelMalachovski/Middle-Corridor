@@ -15,9 +15,10 @@ interface MapPrefs {
   basemap: BasemapId;
   globe: boolean;
   terrain: boolean;
+  terrain3d: boolean;
 }
 function loadPrefs(): MapPrefs {
-  const prefs: MapPrefs = { basemap: DEFAULT_BASEMAP, globe: true, terrain: false };
+  const prefs: MapPrefs = { basemap: DEFAULT_BASEMAP, globe: true, terrain: false, terrain3d: false };
   try {
     const raw = localStorage.getItem(PREFS_KEY);
     if (raw) {
@@ -25,6 +26,7 @@ function loadPrefs(): MapPrefs {
       if (saved.basemap && saved.basemap in BASEMAPS) prefs.basemap = saved.basemap;
       if (typeof saved.globe === "boolean") prefs.globe = saved.globe;
       if (typeof saved.terrain === "boolean") prefs.terrain = saved.terrain;
+      if (typeof saved.terrain3d === "boolean") prefs.terrain3d = saved.terrain3d;
     }
   } catch {
     /* приватный режим и т.п. */
@@ -113,6 +115,7 @@ export function App() {
         basemap={prefs.basemap}
         globe={prefs.globe}
         terrain={prefs.terrain}
+        terrain3d={prefs.terrain3d}
         sheetHeight={sheetHeight}
         selectedRef={selectedRef}
         followRef={followRef}
@@ -137,10 +140,12 @@ export function App() {
           basemap={prefs.basemap}
           globe={prefs.globe}
           terrain={prefs.terrain}
+          terrain3d={prefs.terrain3d}
           fallback={styleFallback}
           onBasemap={(basemap) => updatePrefs({ basemap })}
           onGlobe={(globe) => updatePrefs({ globe })}
           onTerrain={(terrain) => updatePrefs({ terrain })}
+          onTerrain3d={(terrain3d) => updatePrefs({ terrain3d })}
         />
       </div>
       <Timeline replay={replay} disabled={!snapshot} />

@@ -44,7 +44,8 @@ interface Props {
   layers: LayerToggles;
   basemap: BasemapId;
   globe: boolean;
-  terrain: boolean;
+  terrain: boolean; // светотень рельефа (hillshade)
+  terrain3d: boolean; // объёмный рельеф + наклон камеры
   sheetHeight: number; // видимая высота мобильной шторки, px (0 на десктопе)
   selectedRef: string | null;
   followRef: string | null; // груз, за которым едет камера
@@ -66,6 +67,9 @@ const CORRIDOR_LAYERS = ["corridor-glow", "corridor-band", "routes-rail", "route
 const SIDEBAR_PADDING = { top: 90, bottom: 40, left: 40, right: 420 };
 const MOBILE_MAX_WIDTH = 900;
 const FOLLOW_ZOOM = 6;
+const PITCH_3D = 55; // наклон камеры при включении объёмного рельефа
+const MAX_PITCH = 75;
+const TERRAIN_EXAGGERATION = 1.6; // горы Кавказа и Тянь-Шаня читаются с зума 5
 const FOLLOW_SETTLE_MS = 900; // пока камера подлетает к грузу, покадровое центрирование не мешает
 
 /** Отступы для fitBounds/flyTo: справа сайдбар на десктопе, снизу шторка на мобильном. */
@@ -222,7 +226,7 @@ function applyHillshade(map: MLMap, on: boolean, dark: boolean): void {
   if (!map.getLayer(FIRST_OVERLAY_LAYER)) return;
   if (!on) {
     if (map.getLayer("hillshade")) map.removeLayer("hillshade");
-    if (map.getSource("dem")) map.removeSource("dem");
+    if (map.getSource("dem") && !map.getTerrain()) map.removeSource("dem");
     return;
   }
   if (!map.getSource("dem")) map.addSource("dem", DEM_SOURCE);
@@ -257,6 +261,7 @@ export function MapView({
   basemap,
   globe,
   terrain,
+  terrain3d,
   sheetHeight,
   selectedRef,
   followRef,
@@ -293,6 +298,8 @@ export function MapView({
   snapshotRef.current = snapshot;
   const sheetRef = useRef(sheetHeight);
   sheetRef.current = sheetHeight;
+  const terrain3dRef = useRef(terrain3d);
+  terrain3dRef.current = terrain3d;
 
   /** Кадр анимации: двигаем маркеры к целям, при слежении держим груз в центре. */
   const tick = () => {
@@ -337,9 +344,10 @@ export function MapView({
       fitBoundsOptions: { padding: viewportPadding(window.innerHeight * 0.45) },
       minZoom: 1.5,
       maxZoom: 12,
+      maxPitch: MAX_PITCH,
       attributionControl: { compact: true },
     });
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-left");
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-left");
     map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
     mapRef.current = map;
     (window as unknown as { __mcMap?: MLMap }).__mcMap = map; // отладка из консоли
@@ -395,6 +403,7 @@ export function MapView({
     const request = ++styleRequest.current;
     void resolveStyle(BASEMAPS[basemap]).then(({ style, fallback }) => {
       if (request !== styleRequest.current || !mapRef.current) return; // уже выбрали другую
+      if (map.getTerrain()) map.setTerrain(null); // на время смены стиля: иначе MapLibre падает в кадре без проекции
       map.setStyle(style, { diff: false });
       callbacks.current.onStyleResolved(fallback);
     });
@@ -406,17 +415,43 @@ export function MapView({
     const map = mapRef.current;
     if (!map || !styleVersion) return;
     map.setProjection({ type: globe ? "globe" : "mercator" });
+    // небо и туман видны при наклоне камеры (3D) и на глобусе
+    const dark = isDarkBasemap(basemap);
     map.setSky({
+      "sky-color": dark ? "#0a1220" : "#b9d1ee",
+      "horizon-color": dark ? "#1b2842" : "#e4ecf6",
+      "fog-color": dark ? "#0f1216" : "#eef0ec",
+      "fog-ground-blend": 0.55,
+      "horizon-fog-blend": 0.8,
+      "sky-horizon-blend": 0.6,
       "atmosphere-blend": globe ? ["interpolate", ["linear"], ["zoom"], 0, 1, 4, 0.7, 7, 0] : 0,
     });
-  }, [globe, styleVersion]);
+  }, [globe, basemap, styleVersion]);
 
-  // --- рельеф (hillshade поверх подложки, под оверлеями) --------------------------
+  // --- рельеф: светотень поверх подложки под оверлеями; объём — terrain на том же DEM
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !styleVersion) return;
-    applyHillshade(map, terrain, isDarkBasemap(basemap));
-  }, [terrain, basemap, styleVersion]);
+    if (!terrain3d && map.getTerrain()) map.setTerrain(null); // раньше hillshade: иначе источник dem не удалить
+    applyHillshade(map, terrain || terrain3d, isDarkBasemap(basemap));
+    if (terrain3d) {
+      if (!map.getSource("dem")) map.addSource("dem", DEM_SOURCE);
+      map.setTerrain({ source: "dem", exaggeration: TERRAIN_EXAGGERATION });
+    }
+  }, [terrain, terrain3d, basemap, styleVersion]);
+
+  // наклон камеры — только по переключению пользователем, не при смене подложки
+  const prev3d = useRef(terrain3d);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || prev3d.current === terrain3d) return;
+    prev3d.current = terrain3d;
+    if (terrain3d) {
+      if (map.getPitch() < 20) map.easeTo({ pitch: PITCH_3D, duration: 1200 });
+    } else {
+      map.easeTo({ pitch: 0, bearing: 0, duration: 800 });
+    }
+  }, [terrain3d]);
 
   // --- данные снимка: маршрут, узлы, паромы, грузы ---------------------------------
   useEffect(() => {
@@ -559,6 +594,7 @@ export function MapView({
       map.easeTo({
         center: [pose.lon, pose.lat],
         zoom: Math.max(map.getZoom(), FOLLOW_ZOOM),
+        pitch: terrain3dRef.current ? PITCH_3D : map.getPitch(),
         padding: viewportPadding(sheetRef.current),
         duration: FOLLOW_SETTLE_MS - 100,
       });
@@ -601,6 +637,7 @@ export function MapView({
       map.flyTo({
         center: [shipment.position.lon, shipment.position.lat],
         zoom: Math.max(map.getZoom(), 5.5),
+        pitch: terrain3dRef.current ? PITCH_3D : map.getPitch(),
         padding: viewportPadding(sheetRef.current),
         duration: 900,
       });
@@ -640,6 +677,7 @@ export function MapView({
     map.flyTo({
       center: [focus.lon, focus.lat],
       zoom: focus.zoom ?? Math.max(map.getZoom(), 6),
+      pitch: terrain3dRef.current ? PITCH_3D : map.getPitch(),
       padding: viewportPadding(sheetRef.current),
       duration: 900,
     });
