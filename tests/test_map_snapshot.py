@@ -23,7 +23,7 @@ NOW = datetime(2026, 9, 4, 12, 0, tzinfo=UTC)
 
 
 def _settings(**overrides: object) -> Settings:
-    return Settings(_env_file=None, mock_data=True, web_dist_dir="", **overrides)
+    return Settings(_env_file=None, **{"mock_data": True, "web_dist_dir": "", **overrides})
 
 
 @pytest.fixture
@@ -131,6 +131,7 @@ async def test_api_endpoints(mock_service: MapSnapshotService) -> None:
         one = await client.get("/api/v1/shipments/mc-26-0412")
         assert one.status_code == 200 and one.json()["ref"] == "MC-26-0412"
         assert (await client.get("/api/v1/shipments/NOPE")).status_code == 404
+        assert (await client.get("/health")).json()["mock"] is True
 
     bare = create_app(settings=_settings())
     async with httpx.AsyncClient(
@@ -157,6 +158,30 @@ async def test_cors_enabled_only_with_origins(mock_service: MapSnapshotService) 
     ) as client:
         response = await client.get("/api/v1/snapshot", headers={"Origin": "https://mc.vercel.app"})
         assert "access-control-allow-origin" not in response.headers
+
+
+class _DeadNodes:
+    """Источник узлов, у которого «упала БД» — как на демо без Postgres."""
+
+    async def list_nodes(self):  # noqa: ANN202
+        raise OSError("connection refused")
+
+
+async def test_unavailable_source_is_503_not_500(mock_service: MapSnapshotService) -> None:
+    broken = MapSnapshotService(
+        nodes=_DeadNodes(),
+        vessels=mock_service._vessels,  # noqa: SLF001
+        thresholds=WindThresholds.from_settings(_settings()),
+    )
+    app = create_app(settings=_settings(mock_data=False), map_service=broken)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.get("/api/v1/snapshot")
+        assert response.status_code == 503
+        assert "MOCK_DATA" in response.json()["detail"]
+        health = await client.get("/health")
+        assert health.json()["mock"] is False and health.json()["db"] is False
 
 
 def test_real_mode_requires_db() -> None:
