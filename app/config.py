@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     mock_data: bool = False
     mock_time_scale: float = 1.0
     web_dist_dir: str = "web/dist"  # собранный фронт; нет каталога = не раздаём
+    # Origin'ы фронта, живущего на другом домене (например, Vercel при бэкенде
+    # на Railway), через запятую. Пусто = CORS выключен (фронт раздаёт сам API).
+    cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=list)
 
     # Runtime
     log_level: str = "INFO"
@@ -79,9 +82,9 @@ class Settings(BaseSettings):
             return [int(part) for part in value.replace(" ", "").split(",") if part]
         return value
 
-    @field_validator("news_sources", mode="before")
+    @field_validator("news_sources", "cors_origins", mode="before")
     @classmethod
-    def _parse_news_sources(cls, value: object) -> object:
+    def _parse_csv(cls, value: object) -> object:
         if isinstance(value, str):
             return [part.strip() for part in value.split(",") if part.strip()]
         return value

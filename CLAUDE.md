@@ -35,6 +35,7 @@ db/            модели SQLAlchemy 2 async + repositories (запросы т
 scheduler/     джобы; APScheduler опционален (SCHEDULER_ENABLED, по умолчанию false)
 integrations/mock/  синтетические источники для карты (MOCK_DATA=true); реализуют те же Protocol'ы
 web/           фронт карты: React + Vite + TS + MapLibre; ходит только в /api/v1, типы в src/api.ts
+api/index.py   точка входа Vercel (serverless FastAPI: только /api/v1 и /health); vercel.json — маршрутизация
 ```
 
 - Сервисы публикуют в канал через Protocol `MessageSink` (`services/sinks.py`);
@@ -68,6 +69,9 @@ web/           фронт карты: React + Vite + TS + MapLibre; ходит �
   Отсутствие позиции = «нет данных», не «судно стоит». MMSI паромов ASCO в
   сидax NULL — заполнять руками, когда суда появятся в эфире.
 - Один инстанс бота: два polling-процесса конфликтуют по getUpdates.
+- Vercel — только статика + функции: бот/AIS/планировщик там не живут, это
+  Railway. `requirements.txt` — зеркало pyproject (тест следит); фронт на
+  другом домене ходит в API через `VITE_API_BASE` + `CORS_ORIGINS`.
 - Положение груза без живой позиции — ПРОЕКЦИЯ, не факт: не рисовать её как
   подтверждённую (`position.confirmed=false`, пунктир на карте).
 - Фронт: подписи узлов/грузов — HTML-маркеры (без glyph-сервера), иконки

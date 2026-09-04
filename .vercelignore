@@ -1,0 +1,10 @@
+.venv
+.git
+.pytest_cache
+.ruff_cache
+__pycache__
+tests
+web/node_modules
+web/dist
+docker-compose.yml
+Dockerfile

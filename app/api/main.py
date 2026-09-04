@@ -4,6 +4,7 @@ from pathlib import Path
 
 from aiogram import Bot, Dispatcher
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -35,6 +36,14 @@ def create_app(
     app.state.dispatcher = dispatcher
     app.state.telegram_webhook_secret = telegram_webhook_secret
     app.state.map_service = map_service
+    if app.state.settings.cors_origins:
+        # фронт на другом домене (Vercel) ходит в /api/v1 напрямую
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=app.state.settings.cors_origins,
+            allow_methods=["GET"],
+            allow_headers=["*"],
+        )
     app.include_router(health_router)
     app.include_router(webhooks_router)
     app.include_router(telegram_router)

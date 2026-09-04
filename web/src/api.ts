@@ -141,7 +141,13 @@ export interface WindField {
   points: WindPoint[];
 }
 
-async function getJson<T>(url: string): Promise<T> {
+// Пусто = тот же origin (FastAPI раздаёт фронт сам, или Vercel переписывает
+// /api на функцию). Задаётся при сборке, когда бэкенд живёт на другом домене:
+// VITE_API_BASE=https://mc-status.up.railway.app (на бэкенде — CORS_ORIGINS).
+const API_BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? "").replace(/\/$/, "");
+
+async function getJson<T>(path: string): Promise<T> {
+  const url = `${API_BASE}${path}`;
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`${url}: HTTP ${response.status}`);
@@ -153,8 +159,9 @@ export const fetchSnapshot = () => getJson<Snapshot>("/api/v1/snapshot");
 
 /** null — поле ветра недоступно (в проде без источника отдаёт 404). */
 export async function fetchWind(): Promise<WindField | null> {
-  const response = await fetch("/api/v1/wind", { cache: "no-store" });
+  const url = `${API_BASE}/api/v1/wind`;
+  const response = await fetch(url, { cache: "no-store" });
   if (response.status === 404) return null;
-  if (!response.ok) throw new Error(`/api/v1/wind: HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
   return (await response.json()) as WindField;
 }
