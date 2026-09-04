@@ -36,6 +36,7 @@ interface Props {
   basemap: BasemapId;
   globe: boolean;
   terrain: boolean;
+  sheetHeight: number; // видимая высота мобильной шторки, px (0 на десктопе)
   selectedRef: string | null;
   focus: Focus | null;
   onSelectShipment: (ref: string | null) => void;
@@ -51,6 +52,16 @@ const TRACK_COLOR = "#2fd39a";
 const FIRST_OVERLAY_LAYER = "routes-rail"; // рельеф вставляется под него
 
 const SIDEBAR_PADDING = { top: 90, bottom: 40, left: 40, right: 420 };
+const MOBILE_MAX_WIDTH = 900;
+
+/** Отступы для fitBounds/flyTo: справа сайдбар на десктопе, снизу шторка на мобильном. */
+function viewportPadding(sheetPx: number) {
+  if (window.innerWidth <= MOBILE_MAX_WIDTH) {
+    const bottom = Math.min(sheetPx, window.innerHeight * 0.5) + 16;
+    return { top: 170, bottom, left: 16, right: 16 };
+  }
+  return SIDEBAR_PADDING;
+}
 
 function emptyFC(): FeatureCollection {
   return { type: "FeatureCollection", features: [] };
@@ -263,6 +274,7 @@ export function MapView({
   basemap,
   globe,
   terrain,
+  sheetHeight,
   selectedRef,
   focus,
   onSelectShipment,
@@ -285,6 +297,8 @@ export function MapView({
   callbacks.current = { onSelectShipment, onSelectNode, onStyleResolved };
   const snapshotRef = useRef(snapshot);
   snapshotRef.current = snapshot;
+  const sheetRef = useRef(sheetHeight);
+  sheetRef.current = sheetHeight;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -292,7 +306,8 @@ export function MapView({
       container: containerRef.current,
       style: BOOT_STYLE,
       bounds: CORRIDOR_BOUNDS,
-      fitBoundsOptions: { padding: SIDEBAR_PADDING },
+      // на старте шторка ещё не отчиталась о высоте — берём её положение по умолчанию
+      fitBoundsOptions: { padding: viewportPadding(window.innerHeight * 0.45) },
       minZoom: 1.5,
       maxZoom: 12,
       attributionControl: { compact: true },
@@ -497,7 +512,7 @@ export function MapView({
       map.flyTo({
         center: [shipment.position.lon, shipment.position.lat],
         zoom: Math.max(map.getZoom(), 5.5),
-        padding: SIDEBAR_PADDING,
+        padding: viewportPadding(sheetRef.current),
         duration: 900,
       });
     }
@@ -537,7 +552,7 @@ export function MapView({
     map.flyTo({
       center: [focus.lon, focus.lat],
       zoom: focus.zoom ?? Math.max(map.getZoom(), 6),
-      padding: SIDEBAR_PADDING,
+      padding: viewportPadding(sheetRef.current),
       duration: 900,
     });
   }, [focus]);
