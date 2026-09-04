@@ -14,13 +14,20 @@ export type Tab = "shipments" | "ports" | "news";
  * сворачивает/разворачивает. Видимая высота отдаётся наверх, чтобы карта
  * учитывала её в отступах при подлёте.
  */
-export type SheetState = "peek" | "half" | "full";
+import {
+  clamp,
+  HEADER_PX,
+  type SheetState,
+  fullHeight as sheetFullHeight,
+  offsetFor as sheetOffsetFor,
+  visibleFor as sheetVisibleFor,
+  snapSheet,
+} from "./sheet";
+
+export type { SheetState } from "./sheet";
 
 const MOBILE_QUERY = "(max-width: 900px)";
-const SHEET_VH: Record<SheetState, number> = { peek: 0, half: 0.45, full: 0.88 };
-const HEADER_PX = 64; // ручка + вкладки — столько остаётся видно в peek
 const TAP_PX = 6;
-const FLICK_PX_PER_MS = 0.4;
 
 function useIsMobile(): boolean {
   const [mobile, setMobile] = useState(() => window.matchMedia(MOBILE_QUERY).matches);
@@ -33,10 +40,9 @@ function useIsMobile(): boolean {
   return mobile;
 }
 
-const fullHeight = () => window.innerHeight * SHEET_VH.full;
-const visibleFor = (s: SheetState) => (s === "peek" ? HEADER_PX : window.innerHeight * SHEET_VH[s]);
-const offsetFor = (s: SheetState) => fullHeight() - visibleFor(s);
-const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+const fullHeight = () => sheetFullHeight(window.innerHeight);
+const visibleFor = (s: SheetState) => sheetVisibleFor(s, window.innerHeight);
+const offsetFor = (s: SheetState) => sheetOffsetFor(s, window.innerHeight);
 
 interface Props {
   snapshot: Snapshot | null;
@@ -136,19 +142,7 @@ export function Sidebar({
     }
     lastDragEnd.current = performance.now();
     const offset = clamp(d.startOffset + (e.clientY - d.startY), 0, fullHeight() - HEADER_PX);
-    const order: SheetState[] = ["full", "half", "peek"];
-    const idx = order.indexOf(sheet);
-    let next: SheetState;
-    if (d.vy > FLICK_PX_PER_MS) {
-      next = order[Math.min(idx + 1, order.length - 1)];
-    } else if (d.vy < -FLICK_PX_PER_MS) {
-      next = order[Math.max(idx - 1, 0)];
-    } else {
-      next = order.reduce((best, s) =>
-        Math.abs(offsetFor(s) - offset) < Math.abs(offsetFor(best) - offset) ? s : best,
-      );
-    }
-    setSheet(next);
+    setSheet(snapSheet(sheet, offset, d.vy, window.innerHeight));
   };
 
   // Клик остаётся для клавиатуры и десктопа; на мобильном после захвата он

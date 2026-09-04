@@ -42,5 +42,7 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Lint and format (Biome)
         run: npm run lint
+      - name: Unit tests (Vitest)
+        run: npm test
       - name: Typecheck and build
         run: npm run build

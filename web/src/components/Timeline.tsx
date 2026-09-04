@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { fmtTs } from "../format";
 import { type ReplayControl, SPEEDS } from "../replay";
+import { fmtOffset } from "../replayClock";
 
 interface Props {
   replay: ReplayControl;
@@ -8,14 +9,6 @@ interface Props {
 }
 
 const STEP_H = 0.25;
-
-function fmtOffset(hours: number): string {
-  const abs = Math.abs(hours);
-  const sign = hours < 0 ? "−" : "+";
-  if (abs < 1) return `${sign}${Math.round(abs * 60)} мин`;
-  if (abs < 48) return `${sign}${abs < 10 ? abs.toFixed(1).replace(".0", "") : Math.round(abs)} ч`;
-  return `${sign}${(abs / 24).toFixed(1).replace(".0", "")} дн`;
-}
 
 export function Timeline({ replay, disabled }: Props) {
   const { replayAt, playing, speed, window: win, offsetHours } = replay;

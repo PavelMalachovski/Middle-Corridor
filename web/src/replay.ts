@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Snapshot } from "./api";
+import {
+  clampToWindow,
+  estimateServerNow,
+  HOUR_MS,
+  offsetHours,
+  type ReplayWindow,
+  type ServerClock,
+} from "./replayClock";
 
 /**
  * Шкала времени: replayAt — момент, на который запрашивается снимок
@@ -9,20 +17,17 @@ import type { Snapshot } from "./api";
  * «Сейчас» считаем по серверным часам: server_time последнего снимка плюс
  * прошедшее с его получения время. В моке с ускоренным временем это
  * расходится с часами клиента — поэтому опора обновляется каждым снимком.
+ * Арифметика — в replayClock.ts (чистые функции под юнит-тесты).
  */
 
 export const SPEEDS = [60, 600, 3600] as const;
 export type Speed = (typeof SPEEDS)[number];
 
-const H = 3_600_000;
 const TICK_MS = 400;
-const EDGE_MARGIN_MS = 15 * 60_000; // не подходить к краю окна вплотную: сервер отдаст 400
 const PLAY_FROM_LIVE_H = 24; // «play» из живого режима — сутки назад
+const DEFAULT_WINDOW: ReplayWindow = { pastHours: 72, futureHours: 24 };
 
-export interface ReplayWindow {
-  pastHours: number;
-  futureHours: number;
-}
+export type { ReplayWindow } from "./replayClock";
 
 export interface ReplayControl {
   replayAt: Date | null;
@@ -40,8 +45,6 @@ export interface ReplayControl {
   setSpeed: (s: Speed) => void;
 }
 
-const DEFAULT_WINDOW: ReplayWindow = { pastHours: 72, futureHours: 24 };
-
 export function useReplay(): ReplayControl {
   const [replayAt, setReplayAt] = useState<Date | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -49,7 +52,7 @@ export function useReplay(): ReplayControl {
   const replayRef = useRef<Date | null>(null);
   replayRef.current = replayAt;
 
-  const clock = useRef({ serverMs: Date.now(), wallMs: Date.now() });
+  const clock = useRef<ServerClock>({ serverMs: Date.now(), wallMs: Date.now() });
   const windowRef = useRef<ReplayWindow>(DEFAULT_WINDOW);
   /** Каждый полученный снимок подстраивает серверные часы и окно replay. */
   const sync = useCallback((snapshot: Snapshot | null, fetchedAt: Date | null) => {
@@ -61,18 +64,9 @@ export function useReplay(): ReplayControl {
       futureHours: snapshot.live.replay_future_hours,
     };
   }, []);
-  const serverNow = useCallback(
-    () => clock.current.serverMs + (Date.now() - clock.current.wallMs),
-    [],
-  );
-
+  const serverNow = useCallback(() => estimateServerNow(clock.current), []);
   const clamp = useCallback(
-    (ms: number) => {
-      const now = serverNow();
-      const lo = now - windowRef.current.pastHours * H + EDGE_MARGIN_MS;
-      const hi = now + windowRef.current.futureHours * H - EDGE_MARGIN_MS;
-      return Math.min(Math.max(ms, lo), hi);
-    },
+    (ms: number) => clampToWindow(ms, serverNow(), windowRef.current),
     [serverNow],
   );
 
@@ -90,7 +84,7 @@ export function useReplay(): ReplayControl {
   const scrubHours = useCallback(
     (hours: number) => {
       if (Math.abs(hours) < 0.01) scrub(null);
-      else scrub(new Date(serverNow() + hours * H));
+      else scrub(new Date(serverNow() + hours * HOUR_MS));
     },
     [scrub, serverNow],
   );
@@ -99,7 +93,7 @@ export function useReplay(): ReplayControl {
   const togglePlay = useCallback(() => {
     setPlaying((p) => {
       if (!p && !replayRef.current) {
-        setReplayAt(new Date(clamp(serverNow() - PLAY_FROM_LIVE_H * H)));
+        setReplayAt(new Date(clamp(serverNow() - PLAY_FROM_LIVE_H * HOUR_MS)));
       }
       return !p;
     });
@@ -113,7 +107,7 @@ export function useReplay(): ReplayControl {
       const now = performance.now();
       const dt = now - last;
       last = now;
-      const base = replayRef.current?.getTime() ?? serverNow() - PLAY_FROM_LIVE_H * H;
+      const base = replayRef.current?.getTime() ?? serverNow() - PLAY_FROM_LIVE_H * HOUR_MS;
       const next = base + dt * speed;
       const end = clamp(Number.POSITIVE_INFINITY);
       if (next >= end) {
@@ -126,8 +120,6 @@ export function useReplay(): ReplayControl {
     return () => clearInterval(timer);
   }, [playing, speed, clamp, serverNow]);
 
-  const offsetHours = replayAt ? (replayAt.getTime() - serverNow()) / H : 0;
-
   return {
     replayAt,
     playing,
@@ -135,7 +127,7 @@ export function useReplay(): ReplayControl {
     window: windowRef.current,
     serverNow,
     sync,
-    offsetHours,
+    offsetHours: replayAt ? offsetHours(replayAt.getTime(), serverNow()) : 0,
     scrub,
     scrubHours,
     goLive,
