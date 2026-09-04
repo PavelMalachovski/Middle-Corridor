@@ -1,10 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl, { type GeoJSONSource, type Map as MLMap, Marker, Popup } from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
-import type { NodeStatus, Shipment, Snapshot, VesselStatus, WindField } from "../api";
-import { LEVEL_ICON, fmtRelative, fmtWind, levelOf } from "../format";
-import { shipIcon, windArrow } from "./icons";
+import type { Snapshot, VesselStatus, WindField } from "../api";
+import { fmtRelative } from "../format";
+import { windArrow } from "./icons";
 import { splitTrack, type LonLat } from "./geo";
+import { Interpolator, type Pose } from "./animate";
+import {
+  nodeMarkerElement,
+  renderNodeMarker,
+  renderShipmentMarker,
+  renderVesselMarker,
+  shipmentMarkerElement,
+  vesselMarkerElement,
+} from "./markers";
 import {
   BASEMAPS,
   BOOT_STYLE,
@@ -38,16 +47,17 @@ interface Props {
   terrain: boolean;
   sheetHeight: number; // видимая высота мобильной шторки, px (0 на десктопе)
   selectedRef: string | null;
+  followRef: string | null; // груз, за которым едет камера
   focus: Focus | null;
   onSelectShipment: (ref: string | null) => void;
   onSelectNode: (code: string) => void;
   onStyleResolved: (fallback: boolean) => void;
+  onFollowBroken: () => void; // пользователь сам подвинул карту — слежение снимаем
 }
 
 // Сила ветра → одна синяя шкала (тёмная подложка: слабый = темнее, сильный = светлее)
 const WIND_BUCKETS = [4, 8, 12, 16, 20];
 const WIND_COLORS = ["#1c5cab", "#2a78d6", "#3987e5", "#6da7ec", "#9ec5f4", "#cde2fb"];
-const VESSEL_COLOR = "#eb6834";
 const TRACK_COLOR = "#2fd39a";
 const CORRIDOR_COLOR = "#8f86e6"; // лента коридора: не спорит ни с ветром, ни с грузами, ни со статусами
 const FIRST_OVERLAY_LAYER = "corridor-glow"; // рельеф вставляется под него
@@ -55,6 +65,8 @@ const CORRIDOR_LAYERS = ["corridor-glow", "corridor-band", "routes-rail", "route
 
 const SIDEBAR_PADDING = { top: 90, bottom: 40, left: 40, right: 420 };
 const MOBILE_MAX_WIDTH = 900;
+const FOLLOW_ZOOM = 6;
+const FOLLOW_SETTLE_MS = 900; // пока камера подлетает к грузу, покадровое центрирование не мешает
 
 /** Отступы для fitBounds/flyTo: справа сайдбар на десктопе, снизу шторка на мобильном. */
 function viewportPadding(sheetPx: number) {
@@ -63,6 +75,12 @@ function viewportPadding(sheetPx: number) {
     return { top: 170, bottom, left: 16, right: 16 };
   }
   return SIDEBAR_PADDING;
+}
+
+/** Время «доезда» до новой позиции: интервал обновления, в replay — короткое. */
+function tweenDuration(snapshot: Snapshot): number {
+  if (snapshot.replay) return 350;
+  return Math.min(Math.max(snapshot.live.refresh_s * 1000, 2000), 10000);
 }
 
 function emptyFC(): FeatureCollection {
@@ -92,9 +110,8 @@ function setupLayers(map: MLMap): void {
   WIND_COLORS.forEach((color, i) => {
     if (!map.hasImage(`wind-${i}`)) map.addImage(`wind-${i}`, tintIcon(arrow, color));
   });
-  if (!map.hasImage("ship")) map.addImage("ship", tintIcon(shipIcon(36), VESSEL_COLOR));
 
-  for (const id of ["routes", "wind", "vessels", "track-rest", "track-done"]) {
+  for (const id of ["routes", "wind", "track-rest", "track-done"]) {
     if (!map.getSource(id)) map.addSource(id, { type: "geojson", data: emptyFC() });
   }
   if (map.getLayer(FIRST_OVERLAY_LAYER)) return;
@@ -199,18 +216,6 @@ function setupLayers(map: MLMap): void {
     source: "track-done",
     paint: { "line-color": TRACK_COLOR, "line-width": 3 },
   });
-  map.addLayer({
-    id: "vessels",
-    type: "symbol",
-    source: "vessels",
-    layout: {
-      "icon-image": "ship",
-      "icon-rotate": ["coalesce", ["get", "cog"], 0],
-      "icon-rotation-alignment": "map",
-      "icon-allow-overlap": true,
-      "icon-size": ["interpolate", ["linear"], ["zoom"], 3, 0.45, 8, 0.9],
-    },
-  });
 }
 
 function applyHillshade(map: MLMap, on: boolean, dark: boolean): void {
@@ -239,57 +244,6 @@ function applyHillshade(map: MLMap, on: boolean, dark: boolean): void {
   }
 }
 
-/** Меняет наши классы, не трогая maplibregl-marker* — иначе маркер выпадает из абсолютного позиционирования. */
-function setOwnClasses(el: HTMLElement, classes: string[]): void {
-  for (const cls of Array.from(el.classList)) {
-    if (!cls.startsWith("maplibregl-")) el.classList.remove(cls);
-  }
-  el.classList.add(...classes.filter(Boolean));
-}
-
-function nodeMarkerElement(): HTMLDivElement {
-  const el = document.createElement("div");
-  el.className = "node-marker";
-  el.innerHTML =
-    '<div class="node-marker__dot"><i></i></div>' +
-    '<div class="node-marker__label"><b></b><span></span></div>';
-  return el;
-}
-
-function renderNodeMarker(el: HTMLDivElement, node: NodeStatus): void {
-  const level = levelOf(node);
-  setOwnClasses(el, ["node-marker", `node-marker--${node.kind}`, `level-${level}`]);
-  el.title = node.alert_message ?? node.name;
-  const label = el.querySelector("b")!;
-  const sub = el.querySelector("span")!;
-  label.textContent = node.name;
-  if (node.is_weather_tracked && node.wind_speed != null) {
-    const icon = node.alert_level ? `${LEVEL_ICON[node.alert_level]} ` : "";
-    sub.textContent = `${icon}${node.wind_speed.toFixed(0)} м/с`;
-  } else {
-    sub.textContent = "";
-  }
-}
-
-function shipmentMarkerElement(): HTMLDivElement {
-  const el = document.createElement("div");
-  el.className = "ship-marker";
-  el.innerHTML = '<div class="ship-marker__dot"></div><div class="ship-marker__label"></div>';
-  return el;
-}
-
-function renderShipmentMarker(el: HTMLDivElement, s: Shipment, selected: boolean): void {
-  setOwnClasses(el, [
-    "ship-marker",
-    `ship-marker--${s.state}`,
-    `ship-marker--${s.position.source}`,
-    selected ? "is-selected" : "",
-    s.delay_hours > 0 ? "is-delayed" : "",
-  ]);
-  el.title = `${s.ref}: ${s.last_event}`;
-  el.querySelector(".ship-marker__label")!.textContent = s.ref;
-}
-
 function vesselPopupHtml(v: VesselStatus, ref: Date): string {
   const age = v.ts ? fmtRelative(v.ts, ref) : "нет данных";
   const sog = v.sog != null ? `${v.sog.toFixed(1)} уз` : "—";
@@ -305,15 +259,18 @@ export function MapView({
   terrain,
   sheetHeight,
   selectedRef,
+  followRef,
   focus,
   onSelectShipment,
   onSelectNode,
   onStyleResolved,
+  onFollowBroken,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MLMap | null>(null);
   const nodeMarkers = useRef(new Map<string, Marker>());
   const shipMarkers = useRef(new Map<string, Marker>());
+  const vesselMarkers = useRef(new Map<string, Marker>());
   const popupRef = useRef<Popup | null>(null);
   const flownRef = useRef<string | null>(null);
   const styleRequest = useRef(0);
@@ -321,13 +278,54 @@ export function MapView({
   // переприменяют источники/слои после смены подложки
   const [styleVersion, setStyleVersion] = useState(0);
 
+  // движение между снимками
+  const interp = useRef(new Interpolator());
+  const rafRef = useRef<number | null>(null);
+  const followState = useRef<{ ref: string | null; settleUntil: number }>({
+    ref: null,
+    settleUntil: 0,
+  });
+
   // колбэки в ref, чтобы обработчики карты не пересоздавались
-  const callbacks = useRef({ onSelectShipment, onSelectNode, onStyleResolved });
-  callbacks.current = { onSelectShipment, onSelectNode, onStyleResolved };
+  const callbacks = useRef({ onSelectShipment, onSelectNode, onStyleResolved, onFollowBroken });
+  callbacks.current = { onSelectShipment, onSelectNode, onStyleResolved, onFollowBroken };
   const snapshotRef = useRef(snapshot);
   snapshotRef.current = snapshot;
   const sheetRef = useRef(sheetHeight);
   sheetRef.current = sheetHeight;
+
+  /** Кадр анимации: двигаем маркеры к целям, при слежении держим груз в центре. */
+  const tick = () => {
+    const map = mapRef.current;
+    rafRef.current = null;
+    if (!map) return;
+    const now = performance.now();
+    for (const [ref, marker] of shipMarkers.current) {
+      const pose = interp.current.pose(`s:${ref}`, now);
+      if (pose) marker.setLngLat([pose.lon, pose.lat]);
+    }
+    for (const [name, marker] of vesselMarkers.current) {
+      const pose = interp.current.pose(`v:${name}`, now);
+      if (!pose) continue;
+      marker.setLngLat([pose.lon, pose.lat]);
+      const icon = marker.getElement().querySelector(".vessel-marker__icon") as HTMLElement | null;
+      if (icon) icon.style.transform = `rotate(${pose.heading ?? 0}deg)`;
+    }
+    const follow = followState.current;
+    if (follow.ref && now > follow.settleUntil) {
+      const pose = interp.current.pose(`s:${follow.ref}`, now);
+      const c = map.getCenter();
+      if (pose && (Math.abs(c.lng - pose.lon) > 1e-7 || Math.abs(c.lat - pose.lat) > 1e-7)) {
+        map.jumpTo({ center: [pose.lon, pose.lat] });
+      }
+    }
+    if (interp.current.active(now) || follow.ref) {
+      rafRef.current = requestAnimationFrame(tick);
+    }
+  };
+  const ensureLoop = () => {
+    if (rafRef.current == null) rafRef.current = requestAnimationFrame(tick);
+  };
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -353,27 +351,22 @@ export function MapView({
     map.on("zoom", updateZoomBand);
     updateZoomBand();
 
-    map.on("click", "vessels", (e) => {
-      const feature = e.features?.[0];
-      const snap = snapshotRef.current;
-      if (!feature || !snap) return;
-      const vessel = snap.vessels.find((v) => v.name === feature.properties?.name);
-      if (!vessel) return;
-      popupRef.current?.remove();
-      popupRef.current = new Popup({ closeButton: false, offset: 12 })
-        .setLngLat(e.lngLat)
-        .setHTML(vesselPopupHtml(vessel, new Date(snap.generated_at)))
-        .addTo(map);
-    });
-    map.on("mouseenter", "vessels", () => (map.getCanvas().style.cursor = "pointer"));
-    map.on("mouseleave", "vessels", () => (map.getCanvas().style.cursor = ""));
-    map.on("click", (e) => {
-      // клик по пустой карте снимает выбор
-      const hits = map.getLayer("vessels")
-        ? map.queryRenderedFeatures(e.point, { layers: ["vessels"] })
-        : [];
-      if (!hits.length) callbacks.current.onSelectShipment(null);
-    });
+    // клик по пустой карте снимает выбор; жест пользователя снимает слежение.
+    // Снимаем синхронно: покадровый jumpTo вызывает map.stop(), который сбрасывает
+    // обработчики жестов — ждать React-состояния нельзя, иначе drag превращается в click.
+    map.on("click", () => callbacks.current.onSelectShipment(null));
+    const breakFollow = (ev?: { originalEvent?: unknown }) => {
+      if (ev && "originalEvent" in ev && !ev.originalEvent) return; // наша же анимация
+      if (!followState.current.ref) return;
+      followState.current = { ref: null, settleUntil: 0 };
+      callbacks.current.onFollowBroken();
+    };
+    map.on("dragstart", breakFollow);
+    map.on("wheel", breakFollow);
+    map.on("dblclick", breakFollow);
+    map.on("zoomstart", breakFollow);
+    map.on("rotatestart", breakFollow);
+    map.on("pitchstart", breakFollow);
 
     // style.load, а не load: load ждёт тайлы подложки, а они могут не грузиться
     // (офлайн, прокси) — оверлеи должны появляться независимо от подложки.
@@ -384,12 +377,15 @@ export function MapView({
     });
 
     return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       map.remove();
       mapRef.current = null;
       nodeMarkers.current.clear();
       shipMarkers.current.clear();
+      vesselMarkers.current.clear();
       setStyleVersion(0);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // --- подложка: подбираем доступный стиль и применяем ----------------------------
@@ -422,10 +418,12 @@ export function MapView({
     applyHillshade(map, terrain, isDarkBasemap(basemap));
   }, [terrain, basemap, styleVersion]);
 
-  // --- данные снимка: маршрут, суда, узлы, грузы ---------------------------------
+  // --- данные снимка: маршрут, узлы, паромы, грузы ---------------------------------
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !styleVersion || !snapshot || !map.getSource("routes")) return;
+    const now = performance.now();
+    const duration = tweenDuration(snapshot);
 
     (map.getSource("routes") as GeoJSONSource).setData({
       type: "FeatureCollection",
@@ -434,17 +432,6 @@ export function MapView({
         properties: { mode: seg.mode },
         geometry: { type: "LineString", coordinates: seg.coordinates },
       })),
-    });
-
-    (map.getSource("vessels") as GeoJSONSource).setData({
-      type: "FeatureCollection",
-      features: snapshot.vessels
-        .filter((v) => v.has_recent_data && v.lat != null && v.lon != null)
-        .map((v) => ({
-          type: "Feature",
-          properties: { name: v.name, cog: v.cog ?? 0 },
-          geometry: { type: "Point", coordinates: [v.lon!, v.lat!] },
-        })),
     });
 
     const seenNodes = new Set<string>();
@@ -472,10 +459,52 @@ export function MapView({
       }
     }
 
+    // паромы с живой позицией — HTML-маркеры, чтобы ехать плавно вместе с грузами
+    const seenVessels = new Set<string>();
+    for (const v of snapshot.vessels) {
+      if (!v.has_recent_data || v.lat == null || v.lon == null) continue;
+      seenVessels.add(v.name);
+      const pose: Pose = { lon: v.lon, lat: v.lat, heading: v.cog };
+      let marker = vesselMarkers.current.get(v.name);
+      if (!marker) {
+        const el = vesselMarkerElement();
+        el.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          const snap = snapshotRef.current;
+          const vessel = snap?.vessels.find((x) => x.name === v.name);
+          const m = vesselMarkers.current.get(v.name);
+          if (!snap || !vessel || !m) return;
+          popupRef.current?.remove();
+          popupRef.current = new Popup({ closeButton: false, offset: 14 })
+            .setLngLat(m.getLngLat())
+            .setHTML(vesselPopupHtml(vessel, new Date(snap.generated_at)))
+            .addTo(map);
+        });
+        marker = new Marker({ element: el, anchor: "center" }).setLngLat([v.lon, v.lat]).addTo(map);
+        vesselMarkers.current.set(v.name, marker);
+        interp.current.snap(`v:${v.name}`, pose, now);
+      } else {
+        interp.current.setTarget(`v:${v.name}`, pose, now, duration);
+      }
+      renderVesselMarker(
+        marker.getElement() as HTMLDivElement,
+        v,
+        interp.current.pose(`v:${v.name}`, now)?.heading ?? v.cog,
+      );
+    }
+    for (const [name, marker] of vesselMarkers.current) {
+      if (!seenVessels.has(name)) {
+        marker.remove();
+        vesselMarkers.current.delete(name);
+        interp.current.remove(`v:${name}`);
+      }
+    }
+
     const seenShips = new Set<string>();
     const atNodeCount = new Map<string, number>(); // грузы в одном узле — веером вниз
     for (const s of snapshot.shipments) {
       seenShips.add(s.ref);
+      const pose: Pose = { lon: s.position.lon, lat: s.position.lat, heading: s.position.heading };
       let marker = shipMarkers.current.get(s.ref);
       if (!marker) {
         const el = shipmentMarkerElement();
@@ -487,8 +516,9 @@ export function MapView({
           .setLngLat([s.position.lon, s.position.lat])
           .addTo(map);
         shipMarkers.current.set(s.ref, marker);
+        interp.current.snap(`s:${s.ref}`, pose, now);
       } else {
-        marker.setLngLat([s.position.lon, s.position.lat]);
+        interp.current.setTarget(`s:${s.ref}`, pose, now, duration);
       }
       if (s.position.source === "event") {
         const idx = atNodeCount.get(s.position.from_code) ?? 0;
@@ -497,15 +527,45 @@ export function MapView({
       } else {
         marker.setOffset([-7, 0]);
       }
-      renderShipmentMarker(marker.getElement() as HTMLDivElement, s, s.ref === selectedRef);
+      renderShipmentMarker(
+        marker.getElement() as HTMLDivElement,
+        s,
+        s.ref === selectedRef,
+        s.ref === followRef,
+      );
     }
     for (const [ref, marker] of shipMarkers.current) {
       if (!seenShips.has(ref)) {
         marker.remove();
         shipMarkers.current.delete(ref);
+        interp.current.remove(`s:${ref}`);
       }
     }
-  }, [snapshot, styleVersion, selectedRef]);
+    ensureLoop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot, styleVersion, selectedRef, followRef]);
+
+  // --- слежение за грузом ----------------------------------------------------------
+  useEffect(() => {
+    const map = mapRef.current;
+    const prev = followState.current.ref;
+    followState.current = {
+      ref: followRef,
+      settleUntil: followRef && followRef !== prev ? performance.now() + FOLLOW_SETTLE_MS : 0,
+    };
+    if (!map || !followRef || followRef === prev) return;
+    const pose = interp.current.pose(`s:${followRef}`, performance.now());
+    if (pose) {
+      map.easeTo({
+        center: [pose.lon, pose.lat],
+        zoom: Math.max(map.getZoom(), FOLLOW_ZOOM),
+        padding: viewportPadding(sheetRef.current),
+        duration: FOLLOW_SETTLE_MS - 100,
+      });
+    }
+    ensureLoop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followRef]);
 
   // --- выбранный груз: трек и подлёт ---------------------------------------------
   useEffect(() => {
@@ -536,7 +596,7 @@ export function MapView({
     });
     done.setData(line(parts.done));
     rest.setData(line(parts.rest));
-    if (flownRef.current !== shipment.ref) {
+    if (flownRef.current !== shipment.ref && followRef !== shipment.ref) {
       flownRef.current = shipment.ref;
       map.flyTo({
         center: [shipment.position.lon, shipment.position.lat],
@@ -545,7 +605,7 @@ export function MapView({
         duration: 900,
       });
     }
-  }, [snapshot, styleVersion, selectedRef]);
+  }, [snapshot, styleVersion, selectedRef, followRef]);
 
   // --- ветер -----------------------------------------------------------------------
   useEffect(() => {
@@ -567,9 +627,9 @@ export function MapView({
     if (!map || !styleVersion || !map.getLayer("wind")) return;
     const vis = (on: boolean) => (on ? "visible" : "none");
     map.setLayoutProperty("wind", "visibility", vis(layers.wind));
-    map.setLayoutProperty("vessels", "visibility", vis(layers.vessels));
     for (const id of CORRIDOR_LAYERS) map.setLayoutProperty(id, "visibility", vis(layers.routes));
     containerRef.current?.classList.toggle("hide-shipments", !layers.shipments);
+    containerRef.current?.classList.toggle("hide-vessels", !layers.vessels);
     if (!layers.vessels) popupRef.current?.remove();
   }, [layers, styleVersion]);
 
@@ -587,5 +647,3 @@ export function MapView({
 
   return <div ref={containerRef} className="map" data-zoom="far" data-basemap="dark" />;
 }
-
-export { fmtWind };

@@ -16,8 +16,10 @@ import { StatePill } from "./ShipmentList";
 interface Props {
   shipment: Shipment;
   snapshot: Snapshot;
+  following: boolean;
   onBack: () => void;
   onFocus: () => void;
+  onToggleFollow: () => void;
 }
 
 function positionText(s: Shipment, snapshot: Snapshot): { title: string; detail: string } {
@@ -49,7 +51,14 @@ function positionText(s: Shipment, snapshot: Snapshot): { title: string; detail:
   };
 }
 
-export function ShipmentCard({ shipment: s, snapshot, onBack, onFocus }: Props) {
+export function ShipmentCard({
+  shipment: s,
+  snapshot,
+  following,
+  onBack,
+  onFocus,
+  onToggleFollow,
+}: Props) {
   const ref = new Date(snapshot.generated_at);
   const pos = positionText(s, snapshot);
   const near = findNearestNode(snapshot.nodes, s.position.lat, s.position.lon);
@@ -61,9 +70,21 @@ export function ShipmentCard({ shipment: s, snapshot, onBack, onFocus }: Props) 
         <button type="button" className="link" onClick={onBack}>
           ← все грузы
         </button>
-        <button type="button" className="link" onClick={onFocus}>
-          показать на карте
-        </button>
+        <span className="detail__actions">
+          <button type="button" className="link" onClick={onFocus}>
+            показать на карте
+          </button>
+          {s.state !== "delivered" && (
+            <button
+              type="button"
+              className={`link ${following ? "link--active" : ""}`}
+              onClick={onToggleFollow}
+              title="Камера едет за грузом; любое движение карты снимает слежение"
+            >
+              {following ? "◉ следим" : "◎ следить"}
+            </button>
+          )}
+        </span>
       </div>
       <div className="card__head">
         <b className="mono detail__ref">{s.ref}</b>

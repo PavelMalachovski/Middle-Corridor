@@ -45,8 +45,10 @@ interface Props {
   tab: Tab;
   onTab: (tab: Tab) => void;
   selectedRef: string | null;
+  followRef: string | null;
   selectedNode: string | null;
   onSelectShipment: (ref: string | null) => void;
+  onToggleFollow: (ref: string) => void;
   onFocusShipment: (ref: string) => void;
   onFocusNode: (code: string) => void;
   onSheetChange: (visiblePx: number) => void;
@@ -68,8 +70,10 @@ export function Sidebar({
   tab,
   onTab,
   selectedRef,
+  followRef,
   selectedNode,
   onSelectShipment,
+  onToggleFollow,
   onFocusShipment,
   onFocusNode,
   onSheetChange,
@@ -209,8 +213,10 @@ export function Sidebar({
             <ShipmentCard
               shipment={selected}
               snapshot={snapshot}
+              following={followRef === selected.ref}
               onBack={() => onSelectShipment(null)}
               onFocus={() => onFocusShipment(selected.ref)}
+              onToggleFollow={() => onToggleFollow(selected.ref)}
             />
           ) : (
             <ShipmentList snapshot={snapshot} onSelect={onFocusShipment} />

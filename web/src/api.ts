@@ -111,9 +111,19 @@ export interface Thresholds {
   critical_gust: number;
 }
 
+export interface LiveInfo {
+  stream: boolean; // бэкенд умеет SSE /api/v1/stream
+  refresh_s: number; // интервал потока или поллинга
+  replay_past_hours: number;
+  replay_future_hours: number;
+}
+
 export interface Snapshot {
-  generated_at: string;
+  generated_at: string; // момент снимка (при replay — запрошенный at)
+  server_time: string;
+  replay: boolean;
   mock: boolean;
+  live: LiveInfo;
   nodes: NodeStatus[];
   vessels: VesselStatus[];
   shipments: Shipment[];
@@ -165,11 +175,26 @@ async function getJson<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-export const fetchSnapshot = () => getJson<Snapshot>("/api/v1/snapshot");
+function withParams(path: string, params: Record<string, string | undefined>): string {
+  const query = Object.entries(params)
+    .filter((entry): entry is [string, string] => entry[1] != null)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join("&");
+  return query ? `${path}?${query}` : path;
+}
+
+/** at — момент replay; null — живой снимок. */
+export const fetchSnapshot = (at: Date | null) =>
+  getJson<Snapshot>(withParams("/api/v1/snapshot", { at: at?.toISOString() }));
+
+export const streamUrl = () => `${API_BASE}/api/v1/stream`;
 
 /** null — поле ветра недоступно (в проде без источника отдаёт 404). */
-export async function fetchWind(): Promise<WindField | null> {
-  const url = `${API_BASE}/api/v1/wind`;
+export async function fetchWind(at: Date | null, stepDeg?: number): Promise<WindField | null> {
+  const url = `${API_BASE}${withParams("/api/v1/wind", {
+    at: at?.toISOString(),
+    step: stepDeg?.toString(),
+  })}`;
   const response = await fetch(url, { cache: "no-store" });
   if (response.status === 404) return null;
   if (!response.ok) throw await httpError(url, response);

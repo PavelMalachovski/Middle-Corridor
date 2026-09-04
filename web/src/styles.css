@@ -819,6 +819,77 @@ body,
   text-decoration: underline;
 }
 
+/* паромы: HTML-маркер с силуэтом, поворот по курсу — на иконке */
+.vessel-marker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
+  cursor: pointer;
+  pointer-events: auto;
+  color: var(--vessel);
+}
+.hide-vessels .vessel-marker {
+  display: none;
+}
+.vessel-marker__icon {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6));
+}
+.vessel-marker.is-moored .vessel-marker__icon {
+  opacity: 0.8;
+  transform-origin: center;
+}
+.vessel-marker__label {
+  font-size: 10px;
+  color: #ffd2b0;
+  text-shadow:
+    0 0 3px #000,
+    0 0 3px #000;
+  white-space: nowrap;
+}
+.map[data-zoom="far"] .vessel-marker__label,
+.map[data-zoom="mid"] .vessel-marker__label {
+  display: none;
+}
+.map[data-basemap="light"] .vessel-marker__label {
+  color: #8a3d12;
+  text-shadow:
+    0 0 3px #fff,
+    0 0 3px #fff;
+}
+
+/* слежение: маркер груза получает вращающееся кольцо */
+.ship-marker.is-followed .ship-marker__dot::before {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  border: 2px dashed var(--accent);
+  animation: spin 6s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.detail__actions {
+  display: flex;
+  gap: 12px;
+}
+.link--active {
+  color: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ship-marker.is-followed .ship-marker__dot::before,
+  .ship-marker--projection .ship-marker__dot::after,
+  .dot-live {
+    animation: none;
+  }
+}
+
 .maplibregl-popup-content {
   background: var(--panel-solid);
   color: var(--text);

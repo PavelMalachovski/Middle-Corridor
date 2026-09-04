@@ -37,19 +37,3 @@ export function windArrow(size = 32): IconImage {
     ctx.fill();
   });
 }
-
-/** Силуэт судна носом на север. */
-export function shipIcon(size = 36): IconImage {
-  return canvasImage(size, (ctx) => {
-    const c = size / 2;
-    ctx.fillStyle = "#fff";
-    ctx.beginPath();
-    ctx.moveTo(c, size * 0.06);
-    ctx.lineTo(c + size * 0.28, size * 0.42);
-    ctx.lineTo(c + size * 0.28, size * 0.9);
-    ctx.lineTo(c - size * 0.28, size * 0.9);
-    ctx.lineTo(c - size * 0.28, size * 0.42);
-    ctx.closePath();
-    ctx.fill();
-  });
-}

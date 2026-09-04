@@ -1,10 +1,15 @@
+import { useEffect, useState } from "react";
 import type { Snapshot } from "../api";
+import type { LiveMode } from "../live";
 import type { LayerToggles } from "../map/MapView";
+
+const MODE_LABEL: Record<LiveMode, string> = { stream: "поток", poll: "поллинг", replay: "replay" };
 
 interface Props {
   snapshot: Snapshot | null;
   error: string | null;
   fetchedAt: Date | null;
+  mode: LiveMode;
   layers: LayerToggles;
   windAvailable: boolean;
   onToggle: (key: keyof LayerToggles) => void;
@@ -17,7 +22,12 @@ const TOGGLES: { key: keyof LayerToggles; label: string }[] = [
   { key: "routes", label: "Коридор" },
 ];
 
-export function TopBar({ snapshot, error, fetchedAt, layers, windAvailable, onToggle }: Props) {
+export function TopBar({ snapshot, error, fetchedAt, mode, layers, windAvailable, onToggle }: Props) {
+  const [, setTick] = useState(0); // перерисовка «N с назад» раз в секунду
+  useEffect(() => {
+    const t = setInterval(() => setTick((v) => v + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
   const ageSec = fetchedAt ? Math.max(0, Math.round((Date.now() - fetchedAt.getTime()) / 1000)) : null;
   const inTransit = snapshot?.shipments.filter((s) => s.state === "in_transit").length ?? 0;
   const delayed = snapshot?.shipments.filter((s) => s.delay_hours >= 1 && s.state !== "delivered").length ?? 0;
@@ -68,7 +78,7 @@ export function TopBar({ snapshot, error, fetchedAt, layers, windAvailable, onTo
           <span>загрузка…</span>
         ) : (
           <span>
-            <i className="dot-live" /> обновлено {ageSec} с назад
+            <i className="dot-live" /> обновлено {ageSec} с назад · {MODE_LABEL[mode]}
           </span>
         )}
       </div>
