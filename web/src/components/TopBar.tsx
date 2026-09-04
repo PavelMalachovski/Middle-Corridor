@@ -23,6 +23,7 @@ export function TopBar({ snapshot, error, fetchedAt, layers, windAvailable, onTo
   const delayed = snapshot?.shipments.filter((s) => s.delay_hours >= 1 && s.state !== "delivered").length ?? 0;
   const alerts =
     snapshot?.nodes.filter((n) => n.alert_level === "warning" || n.alert_level === "critical").length ?? 0;
+  const errorCode = error?.match(/HTTP \d{3}/)?.[0] ?? null; // 404 = нет бэкенда, 5xx = упал
 
   return (
     <header className="topbar">
@@ -62,7 +63,7 @@ export function TopBar({ snapshot, error, fetchedAt, layers, windAvailable, onTo
       </div>
       <div className={`topbar__status ${error ? "topbar__status--error" : ""}`}>
         {error ? (
-          <span title={error}>нет связи с API</span>
+          <span title={error}>нет связи с API{errorCode ? ` · ${errorCode}` : ""}</span>
         ) : ageSec == null ? (
           <span>загрузка…</span>
         ) : (

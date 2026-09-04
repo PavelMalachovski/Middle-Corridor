@@ -272,6 +272,13 @@ body,
   z-index: 6;
   overflow: hidden;
 }
+.sheet-header {
+  touch-action: none; /* перетаскивание шторки пальцем без прокрутки страницы */
+  user-select: none;
+}
+.sheet-handle {
+  display: none;
+}
 .tabs {
   display: flex;
   border-bottom: 1px solid var(--line);
@@ -309,6 +316,15 @@ body,
   color: var(--muted);
   padding: 24px 8px;
   text-align: center;
+}
+.empty--error {
+  color: var(--text-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.empty--error b {
+  color: var(--critical);
 }
 
 .list {
@@ -840,11 +856,31 @@ body,
   }
   .sidebar {
     top: auto;
-    left: 12px;
-    right: 12px;
+    left: 8px;
+    right: 8px;
     bottom: 0;
-    height: 45vh;
+    height: 88vh; /* полная высота; положение задаёт translateY из Sidebar */
     width: auto;
-    border-radius: 12px 12px 0 0;
+    border-radius: 14px 14px 0 0;
+    transition: transform 0.25s ease;
+    will-change: transform;
+  }
+  .sheet-handle {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0 2px;
+    cursor: grab;
+  }
+  .sheet-handle span {
+    width: 40px;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.28);
+  }
+  .sidebar--sheet .tab {
+    padding: 8px 8px 10px;
+  }
+  .sidebar--peek .sidebar__body {
+    visibility: hidden;
   }
 }

@@ -58,6 +58,7 @@ export function App() {
   const [focus, setFocus] = useState<Focus | null>(null);
   const [prefs, setPrefs] = useState<MapPrefs>(loadPrefs);
   const [styleFallback, setStyleFallback] = useState(false);
+  const [sheetHeight, setSheetHeight] = useState(0); // видимая высота шторки на мобильном
   const [, setTick] = useState(0); // перерисовка «N с назад» раз в секунду
 
   const updatePrefs = useCallback((patch: Partial<MapPrefs>) => {
@@ -151,6 +152,7 @@ export function App() {
         basemap={prefs.basemap}
         globe={prefs.globe}
         terrain={prefs.terrain}
+        sheetHeight={sheetHeight}
         selectedRef={selectedRef}
         focus={focus}
         onSelectShipment={selectShipment}
@@ -179,6 +181,7 @@ export function App() {
       </div>
       <Sidebar
         snapshot={snapshot}
+        error={error}
         tab={tab}
         onTab={setTab}
         selectedRef={selectedRef}
@@ -186,6 +189,7 @@ export function App() {
         onSelectShipment={selectShipment}
         onFocusShipment={focusShipment}
         onFocusNode={focusNode}
+        onSheetChange={setSheetHeight}
       />
     </div>
   );
