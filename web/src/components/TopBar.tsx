@@ -40,6 +40,25 @@ export function TopBar({
   const ageSec = fetchedAt
     ? Math.max(0, Math.round((Date.now() - fetchedAt.getTime()) / 1000))
     : null;
+  const [online, setOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine,
+  );
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
+  // снимок старше трёх интервалов обновления — данные не живые (офлайн, кэш сервис-воркера)
+  const stale =
+    snapshot != null &&
+    ageSec != null &&
+    mode !== "replay" &&
+    ageSec > snapshot.live.refresh_s * 3 + 5;
   const inTransit = snapshot?.shipments.filter((s) => s.state === "in_transit").length ?? 0;
   const delayed =
     snapshot?.shipments.filter((s) => s.delay_hours >= 1 && s.state !== "delivered").length ?? 0;
@@ -92,6 +111,18 @@ export function TopBar({
           <span title={error}>нет связи с API{errorCode ? ` · ${errorCode}` : ""}</span>
         ) : ageSec == null ? (
           <span>загрузка…</span>
+        ) : (!online || stale) && snapshot ? (
+          <span
+            className="topbar__stale"
+            title={
+              online
+                ? "Обновления не приходят; показан последний снимок"
+                : "Нет сети; показан последний полученный снимок"
+            }
+          >
+            <i className="dot-live dot-live--stale" /> {online ? "нет обновлений" : "офлайн"} ·
+            данные на {fmtTs(snapshot.generated_at)}
+          </span>
         ) : mode === "replay" && snapshot ? (
           <span title="Снимок на выбранный момент; живые данные — кнопка LIVE на шкале времени">
             <i className="dot-live dot-live--replay" /> replay · {fmtTs(snapshot.generated_at)}

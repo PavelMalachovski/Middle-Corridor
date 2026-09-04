@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151a24"/>
+      <stop offset="1" stop-color="#0f1216"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-50%" width="140%" height="200%">
+      <feGaussianBlur stdDeviation="18" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M60 0 H0 V60" fill="none" stroke="#ffffff" stroke-opacity="0.045"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <!-- поле ветра -->
+  <g stroke="#86b6ef" stroke-width="3" stroke-linecap="round" opacity="0.45">
+    <path d="M120 470 l40 -12 M100 520 l40 -12 M180 540 l40 -12 M260 500 l40 -12 M340 545 l40 -12 M60 420 l40 -12 M220 455 l40 -12"/>
+    <path d="M700 90 l38 14 M780 70 l38 14 M860 110 l38 14 M940 80 l38 14 M1020 120 l38 14 M1100 90 l38 14 M820 150 l38 14"/>
+  </g>
+  <!-- лента коридора -->
+  <path d="M110 330 C 240 300, 330 250, 470 268 S 640 240, 760 195 S 960 130, 1090 112" fill="none" stroke="#8f86e6" stroke-width="34" stroke-linecap="round" opacity="0.3" filter="url(#glow)"/>
+  <path d="M110 330 C 240 300, 330 250, 470 268 S 640 240, 760 195 S 960 130, 1090 112" fill="none" stroke="#8f86e6" stroke-width="9" stroke-linecap="round"/>
+  <path d="M470 268 S 640 240, 760 195" fill="none" stroke="#0f1216" stroke-width="9" stroke-linecap="round" stroke-dasharray="0.1 20"/>
+  <!-- узлы -->
+  <g stroke="#fff" stroke-width="5">
+    <circle cx="110" cy="330" r="13" fill="#6b6b66"/>
+    <circle cx="300" cy="284" r="13" fill="#0ca30c"/>
+    <circle cx="470" cy="268" r="15" fill="#fab219"/>
+    <circle cx="760" cy="195" r="15" fill="#ec835a"/>
+    <circle cx="930" cy="150" r="13" fill="#0ca30c"/>
+    <circle cx="1090" cy="112" r="13" fill="#6b6b66"/>
+  </g>
+  <!-- паром и груз -->
+  <path d="M610 240 l14 -22 l14 22 v22 h-28 z" fill="#eb6834" stroke="#000" stroke-opacity="0.5" stroke-width="2" transform="rotate(-25 624 240)"/>
+  <circle cx="640" cy="228" r="18" fill="#2fd39a" stroke="#fff" stroke-width="5"/>
+  <text x="668" y="234" font-family="Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#2fd39a">MC-26-0412</text>
+  <!-- подписи -->
+  <text x="80" y="470" font-family="Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#f2f1ec" letter-spacing="-1">Middle Corridor</text>
+  <text x="82" y="516" font-family="Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="26" fill="#b7b5ad" letter-spacing="3">КАРТА СТАТУСА КОРИДОРА</text>
+  <text x="82" y="566" font-family="Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="22" fill="#86847d">грузы · паромы · ветер и погода портов Каспия · replay за трое суток</text>
+</svg>

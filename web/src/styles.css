@@ -1328,3 +1328,14 @@ button.card:focus-visible {
 .panel-loading {
   padding: 16px 4px;
 }
+
+/* --- офлайн / устаревший снимок ------------------------------------------------- */
+
+.topbar__stale {
+  color: #fab219;
+}
+.dot-live--stale {
+  background: #fab219;
+  animation: none;
+  box-shadow: none;
+}

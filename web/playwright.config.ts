@@ -29,6 +29,7 @@ export default defineConfig({
   outputDir: "test-results",
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
+    serviceWorkers: "block", // иначе page.route(404/503) не перехватит запросы через воркер
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
     video: "off",
