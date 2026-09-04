@@ -175,6 +175,11 @@ Vercel — это статика + serverless-функции, а не посто
 3. Deploy. Проверка: `https://<проект>.vercel.app/health` →
    `{"status":"ok","db":false,...}`, карта — на корне.
 
+Если сборка падает на `cd: web: No such file or directory` — в Project
+Settings → General → Root Directory стоит `web`: для варианта A поле
+должно быть пустым (корень репо), затем Redeploy. Команды в `vercel.json`
+переживают оба значения, но Python-функция и `/api` есть только из корня.
+
 Зависимости Python ставятся из [requirements.txt](requirements.txt)
 (зеркало `pyproject.toml`, тест следит, чтобы не разъехались). Если указать
 `DATABASE_URL` (Neon/Supabase, лучше pooler-адрес) и убрать `MOCK_DATA`,
@@ -185,7 +190,7 @@ Vercel — это статика + serverless-функции, а не посто
 новости крутятся на Railway (ниже), Vercel раздаёт только `web/`.
 
 1. Vercel → Add New → Project, тот же репозиторий, **Root Directory = `web`**,
-   Framework Preset — Vite.
+   Framework Preset — Vite (в `web/vercel.json` уже задан).
 2. Environment Variables: `VITE_API_BASE=https://<сервис>.up.railway.app`
    (без завершающего слэша) — фронт ходит в API напрямую.
 3. На Railway добавить `CORS_ORIGINS=https://<проект>.vercel.app` (через
