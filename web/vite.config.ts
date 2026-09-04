@@ -16,5 +16,5 @@ export default defineConfig({
   optimizeDeps: { exclude: ["maplibre-gl"] },
   build: { outDir: "dist", sourcemap: false },
   // Юнит-тесты чистой логики (vitest): без DOM и без сети
-  test: { include: ["src/**/*.test.ts"], environment: "node" },
+  test: { include: ["src/**/*.test.{ts,tsx}"], environment: "node" },
 });

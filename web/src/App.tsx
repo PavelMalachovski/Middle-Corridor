@@ -1,4 +1,5 @@
 import { type CSSProperties, useCallback, useEffect, useState } from "react";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Legend } from "./components/Legend";
 import { MapControls } from "./components/MapControls";
 import { hasWebGL2, MapFallback } from "./components/MapFallback";
@@ -119,67 +120,102 @@ export function App() {
   return (
     <div className="app" style={{ "--sheet-h": `${sheetHeight}px` } as CSSProperties}>
       {WEBGL2 ? (
-        <MapView
-          snapshot={snapshot}
-          wind={wind}
-          layers={layers}
-          basemap={prefs.basemap}
-          globe={prefs.globe}
-          terrain={prefs.terrain}
-          terrain3d={prefs.terrain3d}
-          sheetHeight={sheetHeight}
-          selectedRef={selectedRef}
-          followRef={followRef}
-          focus={focus}
-          onSelectShipment={selectShipment}
-          onSelectNode={selectNodeFromMap}
-          onStyleResolved={setStyleFallback}
-          onFollowBroken={() => setFollowRef(null)}
-        />
+        <ErrorBoundary
+          scope="карта"
+          fallback={(err, reset) => (
+            <MapFallback
+              title="Карта не отрисовалась"
+              detail={`Панель справа работает. Ошибка: ${err.message}`}
+              onRetry={reset}
+            />
+          )}
+        >
+          <MapView
+            snapshot={snapshot}
+            wind={wind}
+            layers={layers}
+            basemap={prefs.basemap}
+            globe={prefs.globe}
+            terrain={prefs.terrain}
+            terrain3d={prefs.terrain3d}
+            sheetHeight={sheetHeight}
+            selectedRef={selectedRef}
+            followRef={followRef}
+            focus={focus}
+            onSelectShipment={selectShipment}
+            onSelectNode={selectNodeFromMap}
+            onStyleResolved={setStyleFallback}
+            onFollowBroken={() => setFollowRef(null)}
+          />
+        </ErrorBoundary>
       ) : (
         <MapFallback
           title="Карта недоступна в этом браузере"
           detail="Нужен WebGL 2: обновите браузер или откройте ссылку в Chrome, Safari 15+ или Firefox. Список грузов, порты и новости работают и без карты."
         />
       )}
-      <TopBar
-        snapshot={snapshot}
-        error={error}
-        fetchedAt={fetchedAt}
-        mode={mode}
-        layers={layers}
-        windAvailable={windAvailable}
-        onToggle={(key) => setLayers((l) => ({ ...l, [key]: !l[key] }))}
-      />
-      <div className="left-stack">
-        <Legend />
-        <MapControls
-          basemap={prefs.basemap}
-          globe={prefs.globe}
-          terrain={prefs.terrain}
-          terrain3d={prefs.terrain3d}
-          fallback={styleFallback}
-          onBasemap={(basemap) => updatePrefs({ basemap })}
-          onGlobe={(globe) => updatePrefs({ globe })}
-          onTerrain={(terrain) => updatePrefs({ terrain })}
-          onTerrain3d={(terrain3d) => updatePrefs({ terrain3d })}
+      <ErrorBoundary
+        scope="управление"
+        fallback={(_err, reset) => (
+          <button type="button" className="ctrl-error" onClick={reset}>
+            Панель управления упала · перезагрузить
+          </button>
+        )}
+      >
+        <TopBar
+          snapshot={snapshot}
+          error={error}
+          fetchedAt={fetchedAt}
+          mode={mode}
+          layers={layers}
+          windAvailable={windAvailable}
+          onToggle={(key) => setLayers((l) => ({ ...l, [key]: !l[key] }))}
         />
-      </div>
-      <Timeline replay={replay} disabled={!snapshot} />
-      <Sidebar
-        snapshot={snapshot}
-        error={error}
-        tab={tab}
-        onTab={setTab}
-        selectedRef={selectedRef}
-        followRef={followRef}
-        selectedNode={selectedNode}
-        onSelectShipment={selectShipment}
-        onToggleFollow={toggleFollow}
-        onFocusShipment={focusShipment}
-        onFocusNode={focusNode}
-        onSheetChange={setSheetHeight}
-      />
+        <div className="left-stack">
+          <Legend />
+          <MapControls
+            basemap={prefs.basemap}
+            globe={prefs.globe}
+            terrain={prefs.terrain}
+            terrain3d={prefs.terrain3d}
+            fallback={styleFallback}
+            onBasemap={(basemap) => updatePrefs({ basemap })}
+            onGlobe={(globe) => updatePrefs({ globe })}
+            onTerrain={(terrain) => updatePrefs({ terrain })}
+            onTerrain3d={(terrain3d) => updatePrefs({ terrain3d })}
+          />
+        </div>
+        <Timeline replay={replay} disabled={!snapshot} />
+      </ErrorBoundary>
+      <ErrorBoundary
+        scope="панель"
+        fallback={(err, reset) => (
+          <aside className="sidebar sidebar--error" role="alert">
+            <div className="map-fallback">
+              <div className="map-fallback__title">Панель не открылась</div>
+              <div className="map-fallback__detail">Карта работает. Ошибка: {err.message}</div>
+              <button type="button" className="chip chip--on" onClick={reset}>
+                Перезагрузить панель
+              </button>
+            </div>
+          </aside>
+        )}
+      >
+        <Sidebar
+          snapshot={snapshot}
+          error={error}
+          tab={tab}
+          onTab={setTab}
+          selectedRef={selectedRef}
+          followRef={followRef}
+          selectedNode={selectedNode}
+          onSelectShipment={selectShipment}
+          onToggleFollow={toggleFollow}
+          onFocusShipment={focusShipment}
+          onFocusNode={focusNode}
+          onSheetChange={setSheetHeight}
+        />
+      </ErrorBoundary>
     </div>
   );
 }
