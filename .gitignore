@@ -17,3 +17,7 @@ dist/
 # IDE
 .idea/
 .vscode/
+
+# Web (React + Vite)
+web/node_modules/
+web/dist/

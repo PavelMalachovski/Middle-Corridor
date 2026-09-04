@@ -6,7 +6,8 @@
 - BOT_WEBHOOK_URL задан — бот принимает апдейты вебхуком через FastAPI,
   иначе long polling (локальная разработка);
 - SCHEDULER_ENABLED=true — автопилот погоды/новостей, иначе по командам админа;
-- ANTHROPIC_API_KEY задан — англоязычные новости переводятся перед публикацией.
+- ANTHROPIC_API_KEY задан — англоязычные новости переводятся перед публикацией;
+- MOCK_DATA=true — JSON-API карты (/api/v1) отдаёт синтетику без БД.
 """
 
 import asyncio
@@ -15,6 +16,7 @@ from datetime import timedelta
 
 import structlog
 import uvicorn
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.main import create_app
 from app.api.routes.telegram import TELEGRAM_WEBHOOK_PATH
@@ -25,6 +27,10 @@ from app.db.base import create_engine, create_session_factory
 from app.integrations.ais.aisstream import AISStreamClient
 from app.integrations.ais.base import BoundingBox
 from app.integrations.llm.claude import ClaudeNewsTranslator
+from app.integrations.mock.clock import MockClock
+from app.integrations.mock.corridor import MockNewsSource, MockNodeSource, MockReportSource
+from app.integrations.mock.fleet import MockFleetSource, MockShipmentSource
+from app.integrations.mock.wind import MockWindField
 from app.integrations.news.composite import CompositeNewsProvider
 from app.integrations.news.middlecorridor import MiddleCorridorScraper
 from app.integrations.news.rss import RssNewsProvider
@@ -33,6 +39,7 @@ from app.logging import configure_logging
 from app.scheduler.scheduler import create_scheduler
 from app.services.ais_tracker import AISStreamWorker, AISTrackerService
 from app.services.manual_reports import ManualReportsService
+from app.services.map_snapshot import CorridorStatusAdapter, DbNewsSource, MapSnapshotService
 from app.services.news_feed import NewsFeedService
 from app.services.status_aggregator import StatusAggregatorService
 from app.services.weather_predictor import WeatherPredictor, WindThresholds
@@ -45,6 +52,37 @@ def _webhook_secret(settings: Settings) -> str:
         return settings.bot_webhook_secret
     # детерминированный секрет из токена — не храним лишних значений
     return hashlib.sha256(settings.bot_token.encode()).hexdigest()[:32]
+
+
+def build_map_service(
+    settings: Settings, session_factory: async_sessionmaker[AsyncSession] | None
+) -> MapSnapshotService:
+    """Источники для карты: синтетика (MOCK_DATA, без БД) или агрегатор статуса + БД."""
+    thresholds = WindThresholds.from_settings(settings)
+    if settings.mock_data:
+        clock = MockClock(settings.mock_time_scale)
+        return MapSnapshotService(
+            nodes=MockNodeSource(clock.now, thresholds),
+            vessels=MockFleetSource(clock.now),
+            shipments=MockShipmentSource(clock.now),
+            wind=MockWindField(clock.now),
+            news=MockNewsSource(clock.now),
+            reports=MockReportSource(clock.now),
+            thresholds=thresholds,
+            mock=True,
+            clock=clock.now,
+        )
+    if session_factory is None:
+        raise ValueError("без MOCK_DATA карте нужна БД (session_factory)")
+    adapter = CorridorStatusAdapter(StatusAggregatorService(session_factory))
+    # Отправки и поле ветра в проде пока без источника — фронт покажет «нет данных»
+    return MapSnapshotService(
+        nodes=adapter,
+        vessels=adapter,
+        reports=adapter,
+        news=DbNewsSource(session_factory),
+        thresholds=thresholds,
+    )
 
 
 async def run() -> None:  # noqa: PLR0915 — точка сборки всего приложения
@@ -110,6 +148,9 @@ async def run() -> None:  # noqa: PLR0915 — точка сборки всего
         logger.warning("bot_token_missing", detail="BOT_TOKEN не задан — запускаю только API")
 
     # --- HTTP ---
+    map_service = build_map_service(settings, session_factory)
+    if settings.mock_data:
+        logger.warning("mock_data_enabled", detail="API карты отдаёт синтетику (MOCK_DATA=true)")
     api_app = create_app(
         engine=engine,
         settings=settings,
@@ -118,6 +159,7 @@ async def run() -> None:  # noqa: PLR0915 — точка сборки всего
         bot=bot,
         dispatcher=dp,
         telegram_webhook_secret=_webhook_secret(settings) if webhook_mode else "",
+        map_service=map_service,
     )
     server = uvicorn.Server(
         uvicorn.Config(api_app, host="0.0.0.0", port=settings.port, log_config=None)

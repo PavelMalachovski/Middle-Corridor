@@ -38,3 +38,12 @@ class NewsRepository:
             select(NewsItem).where(NewsItem.is_sent.is_(False)).order_by(NewsItem.id).limit(limit)
         )
         return result.scalars().all()
+
+    async def list_recent(self, limit: int) -> Sequence[NewsItem]:
+        """Свежие новости для ленты карты (без учёта статуса публикации)."""
+        result = await self._session.execute(
+            select(NewsItem)
+            .order_by(NewsItem.published_at.desc().nullslast(), NewsItem.id.desc())
+            .limit(limit)
+        )
+        return result.scalars().all()

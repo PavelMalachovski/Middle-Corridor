@@ -61,6 +61,12 @@ class Settings(BaseSettings):
     news_max_per_run: int = 3  # троттлинг публикаций за прогон
     news_max_age_days: int = 7  # старше — в архив без публикации
 
+    # Web-карта (фаза 2). MOCK_DATA=true — /api/v1 отдаёт синтетику без БД
+    # и внешних API; MOCK_TIME_SCALE=60 — час мок-времени за минуту (демо).
+    mock_data: bool = False
+    mock_time_scale: float = 1.0
+    web_dist_dir: str = "web/dist"  # собранный фронт; нет каталога = не раздаём
+
     # Runtime
     log_level: str = "INFO"
     env: str = "production"
