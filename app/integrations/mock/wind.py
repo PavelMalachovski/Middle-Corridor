@@ -21,7 +21,7 @@ GUST_OFFSET = 1.5
 # lat_min, lon_min, lat_max, lon_max — от Балкан до Синьцзяна
 DEFAULT_BBOX = (34.0, 18.0, 49.0, 110.0)
 DEFAULT_STEP = 2.0
-MAX_POINTS = 2500
+MAX_POINTS = 8000  # 0.5° над всем bbox ≈ 5 700 точек
 
 
 def _hours(t: datetime) -> float:
@@ -106,10 +106,12 @@ class MockWindField:
         self._bbox = bbox
         self._step = step_deg
 
-    async def get_field(self) -> WindField | None:
-        now = self._clock()
+    async def get_field(
+        self, at: datetime | None = None, step_deg: float | None = None
+    ) -> WindField | None:
+        now = at or self._clock()
         lat_min, lon_min, lat_max, lon_max = self._bbox
-        step = self._step
+        step = step_deg or self._step
         points: list[WindPoint] = []
         lat = lat_min
         while lat <= lat_max + 1e-9 and len(points) < MAX_POINTS:

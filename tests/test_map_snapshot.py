@@ -163,7 +163,7 @@ async def test_cors_enabled_only_with_origins(mock_service: MapSnapshotService) 
 class _DeadNodes:
     """Источник узлов, у которого «упала БД» — как на демо без Postgres."""
 
-    async def list_nodes(self):  # noqa: ANN202
+    async def list_nodes(self, at=None):  # noqa: ANN001, ANN202
         raise OSError("connection refused")
 
 
@@ -182,6 +182,73 @@ async def test_unavailable_source_is_503_not_500(mock_service: MapSnapshotServic
         assert "MOCK_DATA" in response.json()["detail"]
         health = await client.get("/health")
         assert health.json()["mock"] is False and health.json()["db"] is False
+
+
+async def test_replay_at_is_deterministic_and_windowed(mock_service: MapSnapshotService) -> None:
+    app = create_app(settings=_settings(), map_service=mock_service)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        live = (await client.get("/api/v1/snapshot")).json()
+        assert live["replay"] is False and live["live"]["replay_past_hours"] == 72
+        at = (datetime.now(UTC) - timedelta(hours=24)).replace(microsecond=0)
+        past = await client.get("/api/v1/snapshot", params={"at": at.isoformat()})
+        assert past.status_code == 200
+        body = past.json()
+        assert body["replay"] is True
+        assert datetime.fromisoformat(body["generated_at"]) == at
+        # тот же момент — тот же снимок; другой момент — другие позиции
+        again = (await client.get("/api/v1/snapshot", params={"at": at.isoformat()})).json()
+        assert again["shipments"] == body["shipments"]
+        assert body["shipments"][2]["position"] != live["shipments"][2]["position"]
+        # ветер на момент at и с мелкой сеткой
+        wind = await client.get("/api/v1/wind", params={"at": at.isoformat(), "step": 1})
+        assert wind.status_code == 200 and len(wind.json()["points"]) > 1000
+        # вне окна — 400 с причиной
+        far = datetime.now(UTC) - timedelta(days=10)
+        assert (
+            await client.get("/api/v1/snapshot", params={"at": far.isoformat()})
+        ).status_code == 400
+
+
+async def test_stream_events_and_availability(mock_service: MapSnapshotService) -> None:
+    from app.api.routes.v1 import snapshot_events
+    from app.services.map_snapshot import LiveInfo
+
+    live_service = MapSnapshotService(
+        nodes=mock_service._nodes,  # noqa: SLF001
+        vessels=mock_service._vessels,  # noqa: SLF001
+        thresholds=WindThresholds.from_settings(_settings()),
+        live=LiveInfo(stream=True, refresh_s=0, replay_past_hours=1, replay_future_hours=1),
+    )
+    calls = 0
+
+    async def disconnected_after_two() -> bool:
+        nonlocal calls
+        calls += 1
+        return calls > 2
+
+    frames = [frame async for frame in snapshot_events(live_service, disconnected_after_two)]
+    assert len(frames) == 2 and all(
+        frame.startswith("event: snapshot\ndata: {") for frame in frames
+    )
+
+    # Поток выключен (как на Vercel) — 404 с подсказкой про поллинг.
+    # На включённом потоке GET не завершается, поэтому тут только выключенный.
+    no_stream = build_map_service(_settings(stream_enabled=False), None)
+    assert no_stream.live.stream is False and no_stream.live.refresh_s == 10
+    app = create_app(settings=_settings(), map_service=no_stream)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.get("/api/v1/stream")
+        assert response.status_code == 404 and "поллинг" in response.json()["detail"]
+
+
+def test_stream_auto_disabled_on_vercel() -> None:
+    assert Settings(_env_file=None).stream_available is True
+    assert Settings(_env_file=None, vercel="1").stream_available is False
+    assert Settings(_env_file=None, vercel="1", stream_enabled=True).stream_available is True
 
 
 def test_real_mode_requires_db() -> None:

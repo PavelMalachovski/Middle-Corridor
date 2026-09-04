@@ -118,7 +118,9 @@ class Shipment(BaseModel):
 
 
 class ShipmentSource(Protocol):
-    async def list_plans(self) -> list[ShipmentPlan]: ...
+    async def list_plans(self, at: datetime | None = None) -> list[ShipmentPlan]:
+        """Планы и события, известные на момент at (None = сейчас)."""
+        ...
 
 
 def _hours(delta: timedelta) -> float:

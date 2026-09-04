@@ -8,7 +8,7 @@
 
 import dataclasses
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
 from pydantic import BaseModel
@@ -80,9 +80,21 @@ class ThresholdsOut(BaseModel):
     critical_gust: float
 
 
+class LiveInfo(BaseModel):
+    """Как фронту получать обновления: поток SSE или поллинг с интервалом."""
+
+    stream: bool
+    refresh_s: int
+    replay_past_hours: int
+    replay_future_hours: int
+
+
 class MapSnapshot(BaseModel):
-    generated_at: datetime
+    generated_at: datetime  # момент, на который построен снимок (при replay — запрошенный at)
+    server_time: datetime  # реальное «сейчас» сервера
+    replay: bool  # снимок на прошлое/будущее, а не живой
     mock: bool
+    live: LiveInfo
     nodes: list[NodeStatus]
     vessels: list[VesselMapStatus]
     shipments: list[Shipment]
@@ -95,20 +107,24 @@ class MapSnapshot(BaseModel):
 # --- Интерфейсы источников -----------------------------------------------------
 
 
+# at — момент, на который нужны данные (None = сейчас). Мок считает любой
+# момент, боевые источники пока отдают текущее состояние и игнорируют at.
+
+
 class NodeSource(Protocol):
-    async def list_nodes(self) -> list[NodeStatus]: ...
+    async def list_nodes(self, at: datetime | None = None) -> list[NodeStatus]: ...
 
 
 class VesselSource(Protocol):
-    async def list_vessels(self) -> list[VesselMapStatus]: ...
+    async def list_vessels(self, at: datetime | None = None) -> list[VesselMapStatus]: ...
 
 
 class ReportSource(Protocol):
-    async def list_reports(self) -> list[ReportStatus]: ...
+    async def list_reports(self, at: datetime | None = None) -> list[ReportStatus]: ...
 
 
 class NewsSource(Protocol):
-    async def list_news(self, limit: int) -> list[NewsSummary]: ...
+    async def list_news(self, limit: int, at: datetime | None = None) -> list[NewsSummary]: ...
 
 
 def static_segments() -> list[RouteSegment]:
@@ -137,6 +153,7 @@ class MapSnapshotService:
         mock: bool = False,
         news_limit: int = 20,
         clock: Callable[[], datetime] | None = None,
+        live: LiveInfo | None = None,
     ) -> None:
         self._nodes = nodes
         self._vessels = vessels
@@ -148,38 +165,63 @@ class MapSnapshotService:
         self._mock = mock
         self._news_limit = news_limit
         self._clock = clock or (lambda: datetime.now(UTC))
+        self._live = live or LiveInfo(
+            stream=False, refresh_s=10, replay_past_hours=72, replay_future_hours=24
+        )
 
-    async def snapshot(self) -> MapSnapshot:
+    @property
+    def live(self) -> LiveInfo:
+        return self._live
+
+    def now(self) -> datetime:
+        return self._clock()
+
+    def check_replay_window(self, at: datetime) -> None:
+        """at должен лежать в окне replay относительно «сейчас», иначе ValueError."""
         now = self._clock()
-        vessels = await self._vessels.list_vessels()
-        shipments = await self._project_shipments(vessels, now)
+        lo = now - timedelta(hours=self._live.replay_past_hours)
+        hi = now + timedelta(hours=self._live.replay_future_hours)
+        if not lo <= at <= hi:
+            raise ValueError(f"at вне окна replay: от {lo:%Y-%m-%dT%H:%M}Z до {hi:%Y-%m-%dT%H:%M}Z")
+
+    async def snapshot(self, at: datetime | None = None) -> MapSnapshot:
+        """Снимок на момент at; None — живой снимок на «сейчас»."""
+        server_time = self._clock()
+        now = at or server_time
+        vessels = await self._vessels.list_vessels(at)
+        shipments = await self._project_shipments(vessels, now, at)
         return MapSnapshot(
             generated_at=now,
+            server_time=server_time,
+            replay=at is not None,
             mock=self._mock,
-            nodes=await self._nodes.list_nodes(),
+            live=self._live,
+            nodes=await self._nodes.list_nodes(at),
             vessels=vessels,
             shipments=shipments,
             segments=static_segments(),
-            news=await self._news.list_news(self._news_limit) if self._news else [],
-            reports=await self._reports.list_reports() if self._reports else [],
+            news=await self._news.list_news(self._news_limit, at) if self._news else [],
+            reports=await self._reports.list_reports(at) if self._reports else [],
             thresholds=ThresholdsOut(**dataclasses.asdict(self._thresholds)),
         )
 
-    async def wind(self) -> WindField | None:
+    async def wind(
+        self, at: datetime | None = None, step_deg: float | None = None
+    ) -> WindField | None:
         if self._wind is None:
             return None
-        return await self._wind.get_field()
+        return await self._wind.get_field(at, step_deg)
 
-    async def shipment(self, ref: str) -> Shipment | None:
-        now = self._clock()
-        vessels = await self._vessels.list_vessels()
-        for shipment in await self._project_shipments(vessels, now):
+    async def shipment(self, ref: str, at: datetime | None = None) -> Shipment | None:
+        now = at or self._clock()
+        vessels = await self._vessels.list_vessels(at)
+        for shipment in await self._project_shipments(vessels, now, at):
             if shipment.ref.lower() == ref.strip().lower():
                 return shipment
         return None
 
     async def _project_shipments(
-        self, vessels: list[VesselMapStatus], now: datetime
+        self, vessels: list[VesselMapStatus], now: datetime, at: datetime | None
     ) -> list[Shipment]:
         if self._shipments is None:
             return []
@@ -188,7 +230,8 @@ class MapSnapshotService:
             for v in vessels
             if v.has_recent_data and v.lat is not None and v.lon is not None
         }
-        return [project_shipment(plan, now, known) for plan in await self._shipments.list_plans()]
+        plans = await self._shipments.list_plans(at)
+        return [project_shipment(plan, now, known) for plan in plans]
 
 
 # --- Боевые источники: агрегатор статуса и БД ---------------------------------
@@ -208,7 +251,7 @@ class CorridorStatusAdapter:
     def __init__(self, status: StatusSourceProto) -> None:
         self._status = status
 
-    async def list_nodes(self) -> list[NodeStatus]:
+    async def list_nodes(self, at: datetime | None = None) -> list[NodeStatus]:
         status = await self._status.get_corridor_status()
         db_codes = {port.code for port in status.ports}
         nodes = [
@@ -245,7 +288,7 @@ class CorridorStatusAdapter:
         )
         return nodes
 
-    async def list_vessels(self) -> list[VesselMapStatus]:
+    async def list_vessels(self, at: datetime | None = None) -> list[VesselMapStatus]:
         status = await self._status.get_corridor_status()
         return [
             VesselMapStatus(
@@ -260,7 +303,7 @@ class CorridorStatusAdapter:
             for v in status.vessels
         ]
 
-    async def list_reports(self) -> list[ReportStatus]:
+    async def list_reports(self, at: datetime | None = None) -> list[ReportStatus]:
         return (await self._status.get_corridor_status()).recent_reports
 
 
@@ -268,7 +311,7 @@ class DbNewsSource:
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
 
-    async def list_news(self, limit: int) -> list[NewsSummary]:
+    async def list_news(self, limit: int, at: datetime | None = None) -> list[NewsSummary]:
         async with self._session_factory() as session:
             items = await NewsRepository(session).list_recent(limit)
             return [

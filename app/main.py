@@ -39,7 +39,12 @@ from app.logging import configure_logging
 from app.scheduler.scheduler import create_scheduler
 from app.services.ais_tracker import AISStreamWorker, AISTrackerService
 from app.services.manual_reports import ManualReportsService
-from app.services.map_snapshot import CorridorStatusAdapter, DbNewsSource, MapSnapshotService
+from app.services.map_snapshot import (
+    CorridorStatusAdapter,
+    DbNewsSource,
+    LiveInfo,
+    MapSnapshotService,
+)
 from app.services.news_feed import NewsFeedService
 from app.services.status_aggregator import StatusAggregatorService
 from app.services.weather_predictor import WeatherPredictor, WindThresholds
@@ -59,6 +64,14 @@ def build_map_service(
 ) -> MapSnapshotService:
     """Источники для карты: синтетика (MOCK_DATA, без БД) или агрегатор статуса + БД."""
     thresholds = WindThresholds.from_settings(settings)
+    live = LiveInfo(
+        stream=settings.stream_available,
+        refresh_s=(
+            settings.stream_interval_s if settings.stream_available else settings.poll_interval_s
+        ),
+        replay_past_hours=settings.replay_past_hours,
+        replay_future_hours=settings.replay_future_hours,
+    )
     if settings.mock_data:
         clock = MockClock(settings.mock_time_scale)
         return MapSnapshotService(
@@ -71,6 +84,7 @@ def build_map_service(
             thresholds=thresholds,
             mock=True,
             clock=clock.now,
+            live=live,
         )
     if session_factory is None:
         raise ValueError("без MOCK_DATA карте нужна БД (session_factory)")
@@ -82,6 +96,7 @@ def build_map_service(
         reports=adapter,
         news=DbNewsSource(session_factory),
         thresholds=thresholds,
+        live=live,
     )
 
 

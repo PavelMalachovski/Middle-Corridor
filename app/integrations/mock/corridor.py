@@ -22,8 +22,8 @@ class MockNodeSource:
         self._clock = clock
         self._thresholds = thresholds
 
-    async def list_nodes(self) -> list[NodeStatus]:
-        now = self._clock()
+    async def list_nodes(self, at: datetime | None = None) -> list[NodeStatus]:
+        now = at or self._clock()
         weather_ts = _floor_minutes(now, 15)
         result: list[NodeStatus] = []
         for node in NODES.values():
@@ -121,8 +121,8 @@ class MockNewsSource:
     def __init__(self, clock: Callable[[], datetime]) -> None:
         self._clock = clock
 
-    async def list_news(self, limit: int) -> list[NewsSummary]:
-        now = self._clock()
+    async def list_news(self, limit: int, at: datetime | None = None) -> list[NewsSummary]:
+        now = at or self._clock()
         return [
             NewsSummary(
                 id=idx + 1,
@@ -140,8 +140,8 @@ class MockReportSource:
     def __init__(self, clock: Callable[[], datetime]) -> None:
         self._clock = clock
 
-    async def list_reports(self) -> list[ReportStatus]:
-        now = self._clock()
+    async def list_reports(self, at: datetime | None = None) -> list[ReportStatus]:
+        now = at or self._clock()
         return [
             ReportStatus(
                 report_type="queue",
