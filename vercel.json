@@ -1,9 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "installCommand": "cd web && npm ci --no-audit --no-fund",
-  "buildCommand": "cd web && npm run build",
-  "outputDirectory": "web/dist",
+  "installCommand": "cd web 2>/dev/null || true; npm ci --no-audit --no-fund",
+  "buildCommand": "cd web 2>/dev/null || true; npm run build && rm -rf ../dist && cp -R dist ../dist",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
     { "source": "/health", "destination": "/api/index" }
