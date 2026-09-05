@@ -122,7 +122,10 @@ export function App() {
   );
 
   return (
-    <div className="app" style={{ "--sheet-h": `${sheetHeight}px` } as CSSProperties}>
+    <div
+      className={`app ${sheetHeight > window.innerHeight * 0.6 ? "app--sheet-full" : ""}`}
+      style={{ "--sheet-h": `${sheetHeight}px` } as CSSProperties}
+    >
       {WEBGL2 ? (
         <ErrorBoundary
           scope="карта"

@@ -959,7 +959,7 @@ button.card:focus-visible {
     left: 8px;
     right: 8px;
     bottom: 0;
-    height: 88vh; /* полная высота; положение задаёт translateY из Sidebar */
+    height: 88vh; /* запас; реальную высоту от innerHeight задаёт Sidebar inline-стилем */
     width: auto;
     border-radius: 14px 14px 0 0;
     transition: transform 0.25s ease;
@@ -1245,6 +1245,9 @@ button.card:focus-visible {
     width: auto;
     transform: none;
     bottom: calc(var(--sheet-h, 0px) + 10px);
+  }
+  .app--sheet-full .timeline {
+    visibility: hidden; /* под развёрнутой шторкой шкале места нет */
     padding: 6px 10px 12px;
     gap: 8px;
     transition: bottom 0.25s ease;

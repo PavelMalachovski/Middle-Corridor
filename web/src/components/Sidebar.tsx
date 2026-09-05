@@ -39,6 +39,26 @@ export type { SheetState } from "./sheet";
 const MOBILE_QUERY = "(max-width: 900px)";
 const TAP_PX = 6;
 
+/**
+ * Высота окна для геометрии шторки. CSS-единица vh на телефоне считается от
+ * максимального окна (адресная строка скрыта), а innerHeight — от текущего;
+ * если высоту задать в vh, а положение считать в JS, шторка в «peek» торчит
+ * выше расчётного и накрывает шкалу времени. Поэтому всё — от innerHeight.
+ */
+function useViewportHeight(): number {
+  const [h, setH] = useState(() => window.innerHeight);
+  useEffect(() => {
+    const update = () => setH(window.innerHeight);
+    window.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("resize", update);
+    };
+  }, []);
+  return h;
+}
+
 function useIsMobile(): boolean {
   const [mobile, setMobile] = useState(() => window.matchMedia(MOBILE_QUERY).matches);
   useEffect(() => {
@@ -94,6 +114,7 @@ export function Sidebar({
   onSheetChange,
 }: Props) {
   const mobile = useIsMobile();
+  const viewportH = useViewportHeight();
   const [sheet, setSheet] = useState<SheetState>("half");
   const [dragOffset, setDragOffset] = useState<number | null>(null);
   const drag = useRef<DragInfo | null>(null);
@@ -101,7 +122,7 @@ export function Sidebar({
 
   useEffect(() => {
     onSheetChange(mobile ? visibleFor(sheet) : 0);
-  }, [mobile, sheet, onSheetChange]);
+  }, [mobile, sheet, onSheetChange, viewportH]);
 
   const selectTab = (t: Tab) => {
     onTab(t);
@@ -172,6 +193,7 @@ export function Sidebar({
 
   const style = mobile
     ? {
+        height: `${fullHeight()}px`, // от innerHeight, как и translateY — не 88vh
         transform: `translateY(${dragOffset ?? offsetFor(sheet)}px)`,
         transition: dragOffset != null ? "none" : undefined,
       }
