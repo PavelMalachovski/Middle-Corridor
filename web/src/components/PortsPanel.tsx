@@ -1,7 +1,9 @@
-import type { NodeStatus, Snapshot } from "../api";
+import type { NodeStatus, Snapshot, Thresholds } from "../api";
+import { fmtIn, portOutlook } from "../forecast";
 import {
   fmtDir,
   fmtRelative,
+  fmtTs,
   fmtWind,
   LEVEL_COLOR,
   LEVEL_ICON,
@@ -10,6 +12,7 @@ import {
   PAYLOAD_LABEL,
   REPORT_TITLE,
 } from "../format";
+import { WindSparkline } from "./charts/Sparkline";
 
 const RANK: Record<string, number> = { critical: 0, warning: 1, watch: 2, ok: 3, none: 4 };
 
@@ -19,15 +22,54 @@ interface Props {
   onFocusNode: (code: string) => void;
 }
 
+/** Одна строка про ближайшие 48 часов: встанет / откроется / без остановок. */
+function OutlookLine({
+  node,
+  thresholds,
+  now,
+}: {
+  node: NodeStatus;
+  thresholds: Thresholds;
+  now: Date;
+}) {
+  if (!node.forecast?.length) return null;
+  const o = portOutlook(node.forecast, thresholds, now);
+  const at = (iso: string) => fmtTs(iso).replace(" UTC", "");
+  if (o.closedNow) {
+    return (
+      <div className="outlook outlook--closed">
+        ● порт закрыт по ветру
+        {o.opensAt ? ` · откроется к ${at(o.opensAt)}` : " · в ближайшие 48 ч не откроется"}
+      </div>
+    );
+  }
+  if (o.stopsAt) {
+    return (
+      <div className="outlook outlook--soon">
+        ▲ встанет {fmtIn(o.stopsAt, now)} ({at(o.stopsAt)})
+        {o.opensAt ? ` · откроется к ${at(o.opensAt)}` : ""}
+      </div>
+    );
+  }
+  return (
+    <div className="outlook outlook--ok">
+      ○ остановок в ближайшие 48 ч не ожидается
+      {o.peak ? ` · пик ${o.peak.speed.toFixed(0)} м/с ${fmtIn(o.peak.ts, now)}` : ""}
+    </div>
+  );
+}
+
 function NodeRow({
   node,
   selected,
   refDate,
+  thresholds,
   onClick,
 }: {
   node: NodeStatus;
   selected: boolean;
   refDate: Date;
+  thresholds: Thresholds;
   onClick: () => void;
 }) {
   const level = levelOf(node);
@@ -58,6 +100,10 @@ function NodeRow({
           <span className="muted">{node.country}</span>
         </div>
         {node.alert_message && <div className="muted small">{node.alert_message}</div>}
+        <OutlookLine node={node} thresholds={thresholds} now={refDate} />
+        {selected && node.forecast && node.forecast.length > 1 && (
+          <WindSparkline forecast={node.forecast} thresholds={thresholds} now={refDate} />
+        )}
         {node.weather_ts && (
           <div className="muted small">обновлено {fmtRelative(node.weather_ts, refDate)}</div>
         )}
@@ -88,6 +134,7 @@ export function PortsPanel({ snapshot, selectedNode, onFocusNode }: Props) {
             node={n}
             selected={n.code === selectedNode}
             refDate={refDate}
+            thresholds={snapshot.thresholds}
             onClick={() => onFocusNode(n.code)}
           />
         ))}

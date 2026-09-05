@@ -1,4 +1,5 @@
 import type { Shipment, Snapshot } from "../api";
+import { checkpointDelays } from "../forecast";
 import {
   findNearestNode,
   fmtDir,
@@ -11,6 +12,7 @@ import {
   LEVEL_LABEL,
   levelOf,
 } from "../format";
+import { DelayChart } from "./charts/DelayChart";
 import { StatePill } from "./ShipmentList";
 
 interface Props {
@@ -156,7 +158,8 @@ export function ShipmentCard({
       )}
 
       <section className="block">
-        <div className="block__title">Маршрут</div>
+        <div className="block__title">Маршрут · отклонение от плана по узлам, ч</div>
+        <DelayChart delays={checkpointDelays(s)} />
         <ol className="timeline">
           {s.checkpoints.map((cp) => (
             <li key={cp.code} className={`timeline__item timeline__item--${cp.state}`}>

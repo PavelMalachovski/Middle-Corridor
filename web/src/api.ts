@@ -7,6 +7,13 @@ export type ShipmentState = "planned" | "in_transit" | "waiting" | "delivered";
 export type CheckpointState = "done" | "current" | "planned";
 export type PositionSource = "event" | "ais" | "projection";
 
+export interface WindHour {
+  ts: string;
+  speed: number;
+  gust: number;
+  level: AlertLevel | null;
+}
+
 export interface NodeStatus {
   code: string;
   name: string;
@@ -22,6 +29,7 @@ export interface NodeStatus {
   wind_gust: number | null;
   wind_dir: number | null;
   weather_ts: string | null;
+  forecast?: WindHour[] | null; // почасовой ветер −6…+48 ч (порты)
 }
 
 export interface VesselStatus {
@@ -111,6 +119,14 @@ export interface Thresholds {
   critical_gust: number;
 }
 
+export interface WeekSummary {
+  period_hours: number;
+  caspian_crossings: number;
+  avg_delay_hours: number | null;
+  port_downtime_hours: number | null;
+  ports_stopped: number;
+}
+
 export interface LiveInfo {
   stream: boolean; // бэкенд умеет SSE /api/v1/stream
   refresh_s: number; // интервал потока или поллинга
@@ -131,6 +147,7 @@ export interface Snapshot {
   news: NewsSummary[];
   reports: ReportStatus[];
   thresholds: Thresholds;
+  summary?: WeekSummary | null;
 }
 
 export interface WindPoint {

@@ -77,6 +77,39 @@ async def test_mock_snapshot_is_internally_consistent(mock_service: MapSnapshotS
     assert snap.thresholds.critical_wind == thresholds.critical_wind
 
 
+async def test_mock_forecast_and_week_summary(mock_service: MapSnapshotService) -> None:
+    snap = await mock_service.snapshot()
+    thresholds = WindThresholds.from_settings(_settings())
+    ports = [n for n in snap.nodes if n.kind == NodeKind.port]
+    for port in ports:
+        assert port.forecast is not None and len(port.forecast) == 6 + 48 + 1
+        hours = [h.ts for h in port.forecast]
+        assert all(
+            (b - a).total_seconds() == 3600 for a, b in zip(hours[:-1], hours[1:], strict=True)
+        )
+        assert hours[0] <= snap.generated_at <= hours[-1]
+        for h in port.forecast:
+            assert h.level == evaluate_level(h.speed, h.gust, thresholds)
+    assert all(n.forecast is None for n in snap.nodes if n.kind != NodeKind.port)
+
+    summary = snap.summary
+    assert summary is not None and summary.period_hours == 168
+    assert summary.caspian_crossings >= 0
+    assert summary.avg_delay_hours is None or summary.avg_delay_hours >= 0
+    assert summary.port_downtime_hours is not None and 0 <= summary.port_downtime_hours <= 168 * 5
+    assert 0 <= summary.ports_stopped <= len(ports)
+    # прогноз и сводка — функция времени: replay даёт то же самое для того же at
+    at = snap.generated_at - timedelta(hours=5)
+    a, b = await mock_service.snapshot(at=at), await mock_service.snapshot(at=at)
+    assert a.summary == b.summary
+    assert [n.forecast for n in a.nodes] == [n.forecast for n in b.nodes]
+    port_code = ports[0].code
+    forecast_at = next(n.forecast for n in a.nodes if n.code == port_code)
+    forecast_now = next(n.forecast for n in snap.nodes if n.code == port_code)
+    assert forecast_at is not None and forecast_now is not None
+    assert forecast_at[0].ts == forecast_now[0].ts - timedelta(hours=5)
+
+
 async def test_mock_shipments_move_with_time() -> None:
     plans = await MockShipmentSource(lambda: NOW).list_plans()
     steppe = next(p for p in plans if p.ref == "MC-26-0431")

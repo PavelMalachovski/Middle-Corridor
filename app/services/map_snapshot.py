@@ -9,20 +9,37 @@
 import dataclasses
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import Protocol
+from statistics import mean
+from typing import Protocol, runtime_checkable
 
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.db.models import AlertLevel, CorridorLeg
 from app.db.repositories.news import NewsRepository
-from app.services.corridor import NODES, SEGMENTS, NodeKind, TransportMode
+from app.services.corridor import NODES, SEGMENTS, NodeKind, TransportMode, segment
 from app.services.status_aggregator import CorridorStatus, ReportStatus
-from app.services.tracking import Shipment, ShipmentSource, project_shipment
+from app.services.tracking import (
+    EventKind,
+    Shipment,
+    ShipmentPlan,
+    ShipmentSource,
+    ShipmentState,
+    project_shipment,
+)
 from app.services.weather_predictor import WindThresholds
 from app.services.wind_field import WindField, WindFieldSource
 
 # --- Модели ответа -------------------------------------------------------------
+
+
+class WindHour(BaseModel):
+    """Час прогноза (или недавнего прошлого) ветра в узле."""
+
+    ts: datetime
+    speed: float
+    gust: float
+    level: AlertLevel | None = None
 
 
 class NodeStatus(BaseModel):
@@ -40,6 +57,8 @@ class NodeStatus(BaseModel):
     wind_gust: float | None = None
     wind_dir: float | None = None
     weather_ts: datetime | None = None
+    # почасовой ветер −6…+48 ч с уровнями предиктора; None — источник не даёт прогноза
+    forecast: list[WindHour] | None = None
 
 
 class VesselMapStatus(BaseModel):
@@ -89,6 +108,16 @@ class LiveInfo(BaseModel):
     replay_future_hours: int
 
 
+class WeekSummary(BaseModel):
+    """Сводка за период (по умолчанию 7 суток) для шапки карты."""
+
+    period_hours: int = 168
+    caspian_crossings: int  # прибытий паромов с грузом (по подтверждённым событиям)
+    avg_delay_hours: float | None  # средняя задержка активных отправок; None — нет активных
+    port_downtime_hours: float | None  # часы critical по портам; None — источник не считает
+    ports_stopped: int  # портов, у которых была хотя бы одна остановка
+
+
 class MapSnapshot(BaseModel):
     generated_at: datetime  # момент, на который построен снимок (при replay — запрошенный at)
     server_time: datetime  # реальное «сейчас» сервера
@@ -102,6 +131,7 @@ class MapSnapshot(BaseModel):
     news: list[NewsSummary]
     reports: list[ReportStatus]
     thresholds: ThresholdsOut
+    summary: WeekSummary | None = None
 
 
 # --- Интерфейсы источников -----------------------------------------------------
@@ -113,6 +143,13 @@ class MapSnapshot(BaseModel):
 
 class NodeSource(Protocol):
     async def list_nodes(self, at: datetime | None = None) -> list[NodeStatus]: ...
+
+
+@runtime_checkable
+class DowntimeSource(Protocol):
+    """Источник узлов, умеющий посчитать простой портов за окно (часы critical)."""
+
+    async def downtime_hours(self, at: datetime, window_hours: int) -> tuple[float, int]: ...
 
 
 class VesselSource(Protocol):
@@ -189,7 +226,8 @@ class MapSnapshotService:
         server_time = self._clock()
         now = at or server_time
         vessels = await self._vessels.list_vessels(at)
-        shipments = await self._project_shipments(vessels, now, at)
+        plans = await self._shipments.list_plans(at) if self._shipments else []
+        shipments = self._project(plans, vessels, now)
         return MapSnapshot(
             generated_at=now,
             server_time=server_time,
@@ -203,6 +241,7 @@ class MapSnapshotService:
             news=await self._news.list_news(self._news_limit, at) if self._news else [],
             reports=await self._reports.list_reports(at) if self._reports else [],
             thresholds=ThresholdsOut(**dataclasses.asdict(self._thresholds)),
+            summary=await self._week_summary(now, plans, shipments),
         )
 
     async def wind(
@@ -225,13 +264,59 @@ class MapSnapshotService:
     ) -> list[Shipment]:
         if self._shipments is None:
             return []
+        return self._project(await self._shipments.list_plans(at), vessels, now)
+
+    @staticmethod
+    def _project(
+        plans: list[ShipmentPlan], vessels: list[VesselMapStatus], now: datetime
+    ) -> list[Shipment]:
         known = {
             v.name: (v.lat, v.lon)
             for v in vessels
             if v.has_recent_data and v.lat is not None and v.lon is not None
         }
-        plans = await self._shipments.list_plans(at)
         return [project_shipment(plan, now, known) for plan in plans]
+
+    async def _week_summary(
+        self, now: datetime, plans: list[ShipmentPlan], shipments: list[Shipment]
+    ) -> WeekSummary | None:
+        """Сводка за 7 суток: переправы через Каспий, средняя задержка, простой портов."""
+        if self._shipments is None:
+            return None
+        window_hours = 168
+        since = now - timedelta(hours=window_hours)
+        # переправа через Каспий = подтверждённое прибытие в каспийский порт по морскому плечу
+        crossings = 0
+        for plan in plans:
+            caspian_arrivals = {
+                leg.to_code
+                for leg in plan.legs
+                if segment(leg.from_code, leg.to_code).mode == TransportMode.sea
+                and NODES[leg.to_code].leg == CorridorLeg.caspian
+            }
+            crossings += sum(
+                1
+                for e in plan.events
+                if e.kind == EventKind.arrived
+                and e.node_code in caspian_arrivals
+                and since <= e.ts <= now
+            )
+        active = [
+            s.delay_hours
+            for s in shipments
+            if s.state in (ShipmentState.in_transit, ShipmentState.waiting)
+        ]
+        downtime: float | None = None
+        stopped = 0
+        if isinstance(self._nodes, DowntimeSource):
+            downtime, stopped = await self._nodes.downtime_hours(now, window_hours)
+        return WeekSummary(
+            period_hours=window_hours,
+            caspian_crossings=crossings,
+            avg_delay_hours=round(mean(active), 1) if active else None,
+            port_downtime_hours=downtime,
+            ports_stopped=stopped,
+        )
 
 
 # --- Боевые источники: агрегатор статуса и БД ---------------------------------

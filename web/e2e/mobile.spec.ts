@@ -42,6 +42,20 @@ const expectSheet = (page: Page, top: number) =>
   expect.poll(() => sheetTop(page), { timeout: 5_000 }).toBe(top);
 
 test("шторка: полэкрана по умолчанию, свайпы, флики, тап по ручке", async ({ page }) => {
+  // тест про жесты, а не про ветер: частицы на SwiftShader грузят главный поток,
+  // и скорость флика (по времени между событиями) перестаёт быть фликом
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      "mc-map-prefs",
+      JSON.stringify({
+        basemap: "dark",
+        globe: true,
+        terrain: false,
+        terrain3d: false,
+        windMode: "arrows",
+      }),
+    ),
+  );
   await openMap(page);
   const h = page.viewportSize()?.height ?? 0;
   const FULL = Math.round(h - h * 0.88);

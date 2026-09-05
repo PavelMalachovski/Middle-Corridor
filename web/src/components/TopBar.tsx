@@ -92,6 +92,30 @@ export function TopBar({
           <b>{alerts}</b> {alerts === 1 ? "порт под риском" : "портов под риском"}
         </span>
       </div>
+      {snapshot?.summary && (
+        <div
+          className="topbar__week"
+          title="Сводка за 7 суток: прибытия паромов с грузом (по подтверждённым событиям), средняя задержка активных отправок, часы закрытия портов по критическому ветру"
+        >
+          <span>
+            7 дней: <b>{snapshot.summary.caspian_crossings}</b> через Каспий
+          </span>
+          <span>
+            задержка в среднем{" "}
+            <b>
+              {snapshot.summary.avg_delay_hours == null
+                ? "—"
+                : `${Math.round(snapshot.summary.avg_delay_hours)} ч`}
+            </b>
+          </span>
+          {snapshot.summary.port_downtime_hours != null && (
+            <span>
+              простой портов <b>{Math.round(snapshot.summary.port_downtime_hours)} ч</b>
+              {snapshot.summary.ports_stopped ? ` (${snapshot.summary.ports_stopped})` : ""}
+            </span>
+          )}
+        </div>
+      )}
       <div className="topbar__layers">
         {TOGGLES.map(({ key, label }) => (
           <button
