@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { openMap } from "./helpers";
 
 /** Переключатель RU/EN в топбаре: подписи интерфейса, узлов и маркеров; выбор запоминается. */

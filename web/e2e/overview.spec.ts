@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { markerPositions, openMap, status } from "./helpers";
 
 test("первый экран: снимок, поток, маркеры, легенда", async ({ page }, testInfo) => {

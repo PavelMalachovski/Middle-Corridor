@@ -149,7 +149,7 @@ export function Sidebar({
       startY: e.clientY,
       startOffset: offsetFor(sheet),
       lastY: e.clientY,
-      lastT: performance.now(),
+      lastT: e.timeStamp, // время события, не обработчика: занятый главный поток не «замедляет» флик
       vy: 0,
       moved: false,
     };
@@ -161,7 +161,7 @@ export function Sidebar({
     const dy = e.clientY - d.startY;
     if (!d.moved && Math.abs(dy) > TAP_PX) d.moved = true;
     if (!d.moved) return;
-    const now = performance.now();
+    const now = e.timeStamp;
     d.vy = (e.clientY - d.lastY) / Math.max(now - d.lastT, 1);
     d.lastY = e.clientY;
     d.lastT = now;

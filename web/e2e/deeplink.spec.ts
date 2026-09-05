@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { mapState, openMap, status } from "./helpers";
 
 const ARROWS = {

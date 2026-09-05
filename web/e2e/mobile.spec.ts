@@ -1,4 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { openMap } from "./helpers";
 
 /** Верх шторки в px от верха окна. */

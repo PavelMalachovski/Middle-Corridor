@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { dragMap, mapState, openMap } from "./helpers";
 
 test("карточка груза, подлёт и слежение камерой", async ({ page }) => {
