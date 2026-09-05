@@ -46,6 +46,8 @@ class NodeStatus(BaseModel):
     code: str
     name: str
     country: str
+    name_en: str | None = None  # английские названия для интерфейса
+    country_en: str | None = None
     leg: CorridorLeg
     kind: NodeKind
     lat: float
@@ -73,6 +75,10 @@ class VesselMapStatus(BaseModel):
     has_recent_data: bool = False  # False = «нет данных», а не «стоит»
     route: str | None = None  # «Курык → Алят»
     phase: str | None = None  # «в море», «в порту Алят»
+    from_code: str | None = None  # коды для интерфейса на любом языке
+    to_code: str | None = None
+    phase_code: str | None = None  # at_sea | in_port
+    phase_node: str | None = None
 
 
 class NewsSummary(BaseModel):
@@ -106,6 +112,9 @@ class LiveInfo(BaseModel):
     refresh_s: int
     replay_past_hours: int
     replay_future_hours: int
+    # во сколько раз серверные часы быстрее настенных (мок с MOCK_TIME_SCALE);
+    # фронт экстраполирует «сейчас» сервера между снимками с этим множителем
+    time_scale: float = 1.0
 
 
 class WeekSummary(BaseModel):
@@ -348,6 +357,8 @@ class CorridorStatusAdapter:
                 kind=NodeKind.port,
                 lat=port.lat,
                 lon=port.lon,
+                name_en=NODES[port.code].name_en if port.code in NODES else None,
+                country_en=NODES[port.code].country_en if port.code in NODES else None,
                 is_weather_tracked=True,
                 alert_level=port.alert_level,
                 alert_message=port.alert_message,
@@ -367,6 +378,8 @@ class CorridorStatusAdapter:
                 kind=node.kind,
                 lat=node.lat,
                 lon=node.lon,
+                name_en=node.name_en,
+                country_en=node.country_en,
             )
             for node in NODES.values()
             if node.code not in db_codes

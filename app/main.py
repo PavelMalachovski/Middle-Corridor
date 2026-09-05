@@ -71,6 +71,7 @@ def build_map_service(
         ),
         replay_past_hours=settings.replay_past_hours,
         replay_future_hours=settings.replay_future_hours,
+        time_scale=settings.mock_time_scale if settings.mock_data else 1.0,
     )
     if settings.mock_data:
         clock = MockClock(settings.mock_time_scale)

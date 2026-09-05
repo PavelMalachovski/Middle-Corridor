@@ -15,11 +15,13 @@ export interface ReplayWindow {
 export interface ServerClock {
   serverMs: number;
   wallMs: number;
+  /** Во сколько раз серверные часы быстрее настенных (мок с MOCK_TIME_SCALE); 1 — обычно. */
+  scale?: number;
 }
 
-/** Серверное «сейчас»: опора плюс прошедшее у клиента время. */
+/** Серверное «сейчас»: опора плюс прошедшее у клиента время (умноженное на скорость часов). */
 export function estimateServerNow(clock: ServerClock, wallNow: number = Date.now()): number {
-  return clock.serverMs + (wallNow - clock.wallMs);
+  return clock.serverMs + (wallNow - clock.wallMs) * (clock.scale ?? 1);
 }
 
 /** Момент внутри окна [now − past, now + future] с отступом от краёв. */

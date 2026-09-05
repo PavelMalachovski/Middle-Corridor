@@ -132,6 +132,7 @@ export interface LiveInfo {
   refresh_s: number; // интервал потока или поллинга
   replay_past_hours: number;
   replay_future_hours: number;
+  time_scale?: number; // серверные часы быстрее настенных (мок с MOCK_TIME_SCALE)
 }
 
 export interface Snapshot {
