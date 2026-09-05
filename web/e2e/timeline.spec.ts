@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { openMap, status } from "./helpers";
 
 async function scrub(page: import("@playwright/test").Page, hours: number) {

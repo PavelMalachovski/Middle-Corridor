@@ -176,6 +176,29 @@ body,
   opacity: 0.4;
   cursor: not-allowed;
 }
+.lang {
+  display: inline-flex;
+  margin: 0 0 0 4px;
+  padding: 0;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.lang__btn {
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.lang__btn.is-on {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.12);
+}
 .chips {
   list-style: none;
   padding: 0;
@@ -647,6 +670,13 @@ button.card:focus-visible {
   accent-color: var(--accent);
   margin: 0;
 }
+.mapctl__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-right: 2px;
+}
 .mapctl__hint {
   margin-top: 6px;
   font-size: 11px;
@@ -954,12 +984,15 @@ button.card:focus-visible {
   .left-stack {
     display: none;
   }
+  .topbar__week {
+    display: none;
+  }
   .sidebar {
     top: auto;
     left: 8px;
     right: 8px;
     bottom: 0;
-    height: 88vh; /* полная высота; положение задаёт translateY из Sidebar */
+    height: 88vh; /* запас; реальную высоту от innerHeight задаёт Sidebar inline-стилем */
     width: auto;
     border-radius: 14px 14px 0 0;
     transition: transform 0.25s ease;
@@ -1245,6 +1278,9 @@ button.card:focus-visible {
     width: auto;
     transform: none;
     bottom: calc(var(--sheet-h, 0px) + 10px);
+  }
+  .app--sheet-full .timeline {
+    visibility: hidden; /* под развёрнутой шторкой шкале места нет */
     padding: 6px 10px 12px;
     gap: 8px;
     transition: bottom 0.25s ease;
@@ -1338,4 +1374,141 @@ button.card:focus-visible {
   background: #fab219;
   animation: none;
   box-shadow: none;
+}
+
+/* --- графики (свой SVG) ---------------------------------------------------------- */
+
+.spark,
+.delay {
+  display: block;
+  margin: 6px 0 2px;
+  overflow: visible;
+}
+.spark__area {
+  fill: #86b6ef;
+  fill-opacity: 0.12;
+}
+.spark__line {
+  fill: none;
+  stroke: #86b6ef;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+.spark__gust {
+  fill: none;
+  stroke: #86b6ef;
+  stroke-width: 1;
+  stroke-opacity: 0.45;
+  stroke-dasharray: 3 2;
+}
+.spark__now {
+  stroke: var(--text);
+  stroke-width: 1;
+  stroke-opacity: 0.7;
+}
+.spark__label {
+  font-size: 9px;
+  fill: var(--muted);
+}
+.delay__zero {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.delay__bar {
+  fill: var(--accent);
+  fill-opacity: 0.55;
+}
+.delay__bar.is-late {
+  fill: #ec835a;
+}
+.delay__bar.is-early {
+  fill: var(--accent);
+}
+.delay__bar.is-projected {
+  fill-opacity: 0.22;
+}
+.outlook {
+  font-size: 12px;
+  margin-top: 2px;
+}
+.outlook--closed {
+  color: #d03b3b;
+}
+.outlook--soon {
+  color: #ec835a;
+}
+.outlook--ok {
+  color: var(--ok);
+}
+.topbar__week {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+.topbar__week b {
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+/* --- поиск, фильтры, тост ---------------------------------------------------------- */
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.filters__row {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.search {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.search:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.chip--sm {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+.select {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+.toast {
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  background: var(--panel-solid);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }

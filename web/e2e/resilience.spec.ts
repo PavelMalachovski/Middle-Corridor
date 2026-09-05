@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { openMap, status } from "./helpers";
 
 test("нет бэкенда: 404 от API — понятный статус, интерфейс не падает", async ({ page }) => {

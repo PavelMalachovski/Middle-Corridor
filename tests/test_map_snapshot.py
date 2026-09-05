@@ -77,6 +77,71 @@ async def test_mock_snapshot_is_internally_consistent(mock_service: MapSnapshotS
     assert snap.thresholds.critical_wind == thresholds.critical_wind
 
 
+def test_live_info_reports_mock_time_scale() -> None:
+    fast = build_map_service(_settings(mock_time_scale=600), None)
+    assert fast.live.time_scale == 600
+    assert build_map_service(_settings(), None).live.time_scale == 1.0
+
+
+async def test_snapshot_carries_codes_and_english_names(mock_service: MapSnapshotService) -> None:
+    """Интерфейс на английском строит тексты по кодам, а не по русским строкам."""
+    snap = await mock_service.snapshot()
+    assert all(n.name_en and n.country_en for n in snap.nodes)
+    assert {n.code: n.name_en for n in snap.nodes}["BAKU_ALAT"] == "Baku (Alat)"
+    for s in snap.shipments:
+        assert s.origin_code in NODES and s.destination_code in NODES
+        assert (s.last_event_kind is None) == (s.last_event_at is None)
+        if s.last_event_note_code:
+            assert s.last_event_note_code in {
+                "loaded_on_ferry",
+                "loaded_on_vessel",
+                "gauge_change_done",
+            }
+        if s.hold_reason:
+            assert s.hold_code, s.ref
+    weather = next(s for s in snap.shipments if s.ref == "MC-26-0398")
+    assert weather.hold_code == "weather_ban" and weather.hold_node == "AKTAU"
+    for v in snap.vessels:
+        if v.has_recent_data:
+            assert v.from_code in NODES and v.to_code in NODES
+            assert v.phase_code in {"at_sea", "in_port"}
+            assert (v.phase_code == "in_port") == (v.phase_node is not None)
+    assert {r.report_type: r.port_code for r in snap.reports}["queue"] == "AKTAU"
+
+
+async def test_mock_forecast_and_week_summary(mock_service: MapSnapshotService) -> None:
+    snap = await mock_service.snapshot()
+    thresholds = WindThresholds.from_settings(_settings())
+    ports = [n for n in snap.nodes if n.kind == NodeKind.port]
+    for port in ports:
+        assert port.forecast is not None and len(port.forecast) == 6 + 48 + 1
+        hours = [h.ts for h in port.forecast]
+        assert all(
+            (b - a).total_seconds() == 3600 for a, b in zip(hours[:-1], hours[1:], strict=True)
+        )
+        assert hours[0] <= snap.generated_at <= hours[-1]
+        for h in port.forecast:
+            assert h.level == evaluate_level(h.speed, h.gust, thresholds)
+    assert all(n.forecast is None for n in snap.nodes if n.kind != NodeKind.port)
+
+    summary = snap.summary
+    assert summary is not None and summary.period_hours == 168
+    assert summary.caspian_crossings >= 0
+    assert summary.avg_delay_hours is None or summary.avg_delay_hours >= 0
+    assert summary.port_downtime_hours is not None and 0 <= summary.port_downtime_hours <= 168 * 5
+    assert 0 <= summary.ports_stopped <= len(ports)
+    # прогноз и сводка — функция времени: replay даёт то же самое для того же at
+    at = snap.generated_at - timedelta(hours=5)
+    a, b = await mock_service.snapshot(at=at), await mock_service.snapshot(at=at)
+    assert a.summary == b.summary
+    assert [n.forecast for n in a.nodes] == [n.forecast for n in b.nodes]
+    port_code = ports[0].code
+    forecast_at = next(n.forecast for n in a.nodes if n.code == port_code)
+    forecast_now = next(n.forecast for n in snap.nodes if n.code == port_code)
+    assert forecast_at is not None and forecast_now is not None
+    assert forecast_at[0].ts == forecast_now[0].ts - timedelta(hours=5)
+
+
 async def test_mock_shipments_move_with_time() -> None:
     plans = await MockShipmentSource(lambda: NOW).list_plans()
     steppe = next(p for p in plans if p.ref == "MC-26-0431")

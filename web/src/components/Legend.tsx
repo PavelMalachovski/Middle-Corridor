@@ -1,43 +1,47 @@
 import { LEVEL_COLOR } from "../format";
+import { useI18n } from "../i18n";
 
 export function Legend() {
+  const { t } = useI18n();
   return (
     <aside className="legend">
-      <div className="legend__title">Легенда</div>
+      <div className="legend__title">{t("legend.title")}</div>
       <div className="legend__row">
         <span className="legend__dot" style={{ background: LEVEL_COLOR.ok }} />
-        порт: норма
+        {t("legend.portOk")}
       </div>
       <div className="legend__row">
-        <span className="legend__dot" style={{ background: LEVEL_COLOR.watch }} />◔ усиление ветра
+        <span className="legend__dot" style={{ background: LEVEL_COLOR.watch }} />
+        {t("legend.watch")}
       </div>
       <div className="legend__row">
-        <span className="legend__dot" style={{ background: LEVEL_COLOR.warning }} />▲ риск остановки
+        <span className="legend__dot" style={{ background: LEVEL_COLOR.warning }} />
+        {t("legend.warning")}
       </div>
       <div className="legend__row">
-        <span className="legend__dot" style={{ background: LEVEL_COLOR.critical }} />● вероятна
-        остановка
+        <span className="legend__dot" style={{ background: LEVEL_COLOR.critical }} />
+        {t("legend.critical")}
       </div>
       <div className="legend__sep" />
       <div className="legend__row">
         <span className="legend__ribbon" />
-        Средний коридор: рельсы сплошные, море пунктир
+        {t("legend.corridor")}
       </div>
       <div className="legend__row">
         <span className="legend__dot legend__dot--cargo" />
-        груз: подтверждённая позиция
+        {t("legend.cargoConfirmed")}
       </div>
       <div className="legend__row">
         <span className="legend__dot legend__dot--cargo legend__dot--proj" />
-        груз: оценка по расписанию
+        {t("legend.cargoProjected")}
       </div>
       <div className="legend__row">
         <span className="legend__ship">▲</span>
-        паром (AIS)
+        {t("legend.ferry")}
       </div>
       <div className="legend__row">
         <span className="legend__wind">➜</span>
-        ветер: куда дует, ярче = сильнее
+        {t("legend.wind")}
       </div>
     </aside>
   );

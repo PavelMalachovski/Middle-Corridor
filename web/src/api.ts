@@ -7,6 +7,13 @@ export type ShipmentState = "planned" | "in_transit" | "waiting" | "delivered";
 export type CheckpointState = "done" | "current" | "planned";
 export type PositionSource = "event" | "ais" | "projection";
 
+export interface WindHour {
+  ts: string;
+  speed: number;
+  gust: number;
+  level: AlertLevel | null;
+}
+
 export interface NodeStatus {
   code: string;
   name: string;
@@ -22,6 +29,9 @@ export interface NodeStatus {
   wind_gust: number | null;
   wind_dir: number | null;
   weather_ts: string | null;
+  forecast?: WindHour[] | null; // почасовой ветер −6…+48 ч (порты)
+  name_en?: string | null;
+  country_en?: string | null;
 }
 
 export interface VesselStatus {
@@ -36,6 +46,10 @@ export interface VesselStatus {
   has_recent_data: boolean;
   route: string | null;
   phase: string | null;
+  from_code?: string | null;
+  to_code?: string | null;
+  phase_code?: "at_sea" | "in_port" | null;
+  phase_node?: string | null;
 }
 
 export interface Checkpoint {
@@ -77,6 +91,15 @@ export interface Shipment {
   progress: number;
   checkpoints: Checkpoint[];
   track: [number, number][]; // [lon, lat]
+  origin_code?: string;
+  destination_code?: string;
+  hold_code?: string | null;
+  hold_node?: string | null;
+  hold_vessel?: string | null;
+  last_event_kind?: "departed" | "arrived" | null;
+  last_event_node?: string | null;
+  last_event_note_code?: string | null;
+  last_event_note_vessel?: string | null;
 }
 
 export interface RouteSegment {
@@ -101,6 +124,7 @@ export interface ReportStatus {
   payload: Record<string, unknown>;
   note: string | null;
   ts: string;
+  port_code?: string | null;
 }
 
 export interface Thresholds {
@@ -111,11 +135,20 @@ export interface Thresholds {
   critical_gust: number;
 }
 
+export interface WeekSummary {
+  period_hours: number;
+  caspian_crossings: number;
+  avg_delay_hours: number | null;
+  port_downtime_hours: number | null;
+  ports_stopped: number;
+}
+
 export interface LiveInfo {
   stream: boolean; // бэкенд умеет SSE /api/v1/stream
   refresh_s: number; // интервал потока или поллинга
   replay_past_hours: number;
   replay_future_hours: number;
+  time_scale?: number; // серверные часы быстрее настенных (мок с MOCK_TIME_SCALE)
 }
 
 export interface Snapshot {
@@ -131,6 +164,7 @@ export interface Snapshot {
   news: NewsSummary[];
   reports: ReportStatus[];
   thresholds: Thresholds;
+  summary?: WeekSummary | null;
 }
 
 export interface WindPoint {

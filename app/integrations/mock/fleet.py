@@ -65,6 +65,7 @@ class FerryState:
     sail_start: datetime  # текущий или ближайший рейс
     sail_end: datetime
     phase: str
+    phase_code: str  # at_sea | in_port
 
 
 def _seed(*parts: str) -> int:
@@ -97,10 +98,12 @@ def ferry_state(spec: FerrySpec, now: datetime) -> FerryState:
         (lat, lon), cog = point_along(seg.points, frac)
         sog = SPEED_KN + ((_seed(spec.name, str(int(hours))) % 100) / 100.0 - 0.5)
         phase = "в море"
+        phase_code = "at_sea"
     else:
         node = NODES[from_code]
         lat, lon, cog, sog = node.lat, node.lon, 0.0, 0.0
         phase = f"в порту {node.name}"
+        phase_code = "in_port"
     return FerryState(
         spec=spec,
         lat=round(lat, 4),
@@ -114,6 +117,7 @@ def ferry_state(spec: FerrySpec, now: datetime) -> FerryState:
         sail_start=cycle_start + timedelta(hours=start),
         sail_end=cycle_start + timedelta(hours=end),
         phase=phase,
+        phase_code=phase_code,
     )
 
 
@@ -148,6 +152,10 @@ class MockFleetSource:
                     has_recent_data=True,
                     route=f"{NODES[state.from_code].name} → {NODES[state.to_code].name}",
                     phase=state.phase,
+                    from_code=state.from_code,
+                    to_code=state.to_code,
+                    phase_code=state.phase_code,
+                    phase_node=None if state.sailing else state.from_code,
                 )
             )
         return result
@@ -190,7 +198,11 @@ def build_plan(  # noqa: PLR0913 — сценарий описывается п�
     delay_hours: float = 0.0,
     vessels: dict[tuple[str, str], str] | None = None,
     hold_reason: str | None = None,
+    hold_code: str | None = None,
+    hold_node: str | None = None,
+    hold_vessel: str | None = None,
     pivot_note: str | None = None,
+    pivot_note_code: str | None = None,
 ) -> ShipmentPlan:
     """План по типичным временам сегментов, «пришпиленный» к опорному событию.
 
@@ -227,21 +239,40 @@ def build_plan(  # noqa: PLR0913 — сценарий описывается п�
         is_pivot = idx == pivot_idx
         if idx > 0:
             if is_pivot and pivot_kind == EventKind.arrived:
-                events.append(TrackingEvent(EventKind.arrived, code, pivot_ts, pivot_note))
+                events.append(
+                    TrackingEvent(
+                        EventKind.arrived, code, pivot_ts, pivot_note, note_code=pivot_note_code
+                    )
+                )
                 break
             ts = base + timedelta(hours=arrive[code] + _jitter_h(ref, code, "arr"))
             events.append(TrackingEvent(EventKind.arrived, code, ts))
         next_code = route[idx + 1]
         vessel = vessels.get((code, next_code))
         note = None
+        note_code = None
         if vessel:
             kind = "паром" if vessel in _FERRY_NAMES else "судно"
             note = f"погружен на {kind} «{vessel}»"
+            note_code = "loaded_on_ferry" if vessel in _FERRY_NAMES else "loaded_on_vessel"
         if is_pivot:
-            events.append(TrackingEvent(EventKind.departed, code, pivot_ts, pivot_note or note))
+            events.append(
+                TrackingEvent(
+                    EventKind.departed,
+                    code,
+                    pivot_ts,
+                    pivot_note or note,
+                    note_code=pivot_note_code if pivot_note else note_code,
+                    note_vessel=vessel,
+                )
+            )
         else:
             ts = base + timedelta(hours=depart[code] + _jitter_h(ref, code, "dep"))
-            events.append(TrackingEvent(EventKind.departed, code, ts, note))
+            events.append(
+                TrackingEvent(
+                    EventKind.departed, code, ts, note, note_code=note_code, note_vessel=vessel
+                )
+            )
 
     return ShipmentPlan(
         ref=ref,
@@ -250,6 +281,9 @@ def build_plan(  # noqa: PLR0913 — сценарий описывается п�
         legs=legs,
         events=tuple(sorted(events, key=lambda e: e.ts)),
         hold_reason=hold_reason,
+        hold_code=hold_code,
+        hold_node=hold_node,
+        hold_vessel=hold_vessel,
     )
 
 
@@ -287,6 +321,8 @@ class MockShipmentSource:
             "AKTAU",
             now - 30 * h,
             hold_reason="Погодный запрет на швартовку: Актау — критический ветер",
+            hold_code="weather_ban",
+            hold_node="AKTAU",
         )
 
         # 3. Рельсы в степи: Кызылорда → Бейнеу, 16 ч из 26 в пути
@@ -310,6 +346,8 @@ class MockShipmentSource:
             "BOYUK_KASIK",
             now - 20 * h,
             hold_reason="Таможенное оформление AZ/GE — ожидание досмотра",
+            hold_code="customs_wait",
+            hold_node="BOYUK_KASIK",
         )
 
         # 5. Поти, ждёт ро-ро на Констанцу по плану (отход через ~2 ч)
@@ -357,6 +395,7 @@ class MockShipmentSource:
             now - 2 * h,
             delay_hours=6.0,
             pivot_note="перегруз на колею 1520 завершён",
+            pivot_note_code="gauge_change_done",
         )
 
         # 9. Ещё в Китае: Сиань → Урумчи
@@ -400,6 +439,8 @@ class MockShipmentSource:
                 min(now - 14 * h, az.sail_start - 14 * h),
                 vessels={("AKTAU", "BAKU_ALAT"): az.spec.name},
                 hold_reason=reason,
+                hold_code="ferry_loading_wait" if az.westbound else "ferry_return_wait",
+                hold_vessel=az.spec.name,
             )
 
         return [

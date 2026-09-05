@@ -59,7 +59,9 @@ class TrackingEvent:
     kind: EventKind
     node_code: str
     ts: datetime
-    note: str | None = None
+    note: str | None = None  # текст для бота/RU
+    note_code: str | None = None  # код для интерфейса: loaded_on_vessel, gauge_change_done…
+    note_vessel: str | None = None  # параметр кода: имя судна
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,7 +71,10 @@ class ShipmentPlan:
     cargo: str
     legs: tuple[PlannedLeg, ...]
     events: tuple[TrackingEvent, ...]  # отсортированы по ts
-    hold_reason: str | None = None  # почему стоим дольше плана
+    hold_reason: str | None = None  # почему стоим дольше плана (текст, RU)
+    hold_code: str | None = None  # код причины: weather_ban, customs_wait, ferry_*_wait
+    hold_node: str | None = None  # узел причины (порт, граница)
+    hold_vessel: str | None = None  # судно причины
 
     @property
     def route(self) -> list[str]:
@@ -105,10 +110,19 @@ class Shipment(BaseModel):
     cargo: str
     origin: str
     destination: str
+    origin_code: str = ""
+    destination_code: str = ""
     state: ShipmentState
     hold_reason: str | None = None
+    hold_code: str | None = None
+    hold_node: str | None = None
+    hold_vessel: str | None = None
     delay_hours: float = 0.0
     last_event: str
+    last_event_kind: EventKind | None = None
+    last_event_node: str | None = None
+    last_event_note_code: str | None = None
+    last_event_note_vessel: str | None = None
     last_event_at: datetime | None = None
     eta: datetime | None = None
     position: ShipmentPosition
@@ -229,10 +243,19 @@ def project_shipment(  # noqa: PLR0912, PLR0915 — линейный разбо�
         cargo=plan.cargo,
         origin=NODES[route[0]].name,
         destination=NODES[route[-1]].name,
+        origin_code=route[0],
+        destination_code=route[-1],
         state=state,
         hold_reason=plan.hold_reason if state == ShipmentState.waiting else None,
+        hold_code=plan.hold_code if state == ShipmentState.waiting else None,
+        hold_node=plan.hold_node if state == ShipmentState.waiting else None,
+        hold_vessel=plan.hold_vessel if state == ShipmentState.waiting else None,
         delay_hours=round(delay_hours, 1),
         last_event=_event_label(last) if last else "Ожидает отправления",
+        last_event_kind=last.kind if last else None,
+        last_event_node=last.node_code if last else None,
+        last_event_note_code=last.note_code if last else None,
+        last_event_note_vessel=last.note_vessel if last else None,
         last_event_at=last.ts if last else None,
         eta=eta,
         position=position,

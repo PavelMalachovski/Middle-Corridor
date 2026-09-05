@@ -12,6 +12,8 @@ import { ShipmentList } from "./ShipmentList";
 
 export type Tab = "shipments" | "ports" | "news";
 
+import { type Key, useI18n } from "../i18n";
+import { EMPTY_FILTER, type ShipmentFilter } from "../shipmentFilter";
 /**
  * На узких экранах сайдбар — шторка снизу с тремя положениями:
  * peek (только ручка и вкладки), half (пол-экрана), full (почти весь экран).
@@ -32,12 +34,35 @@ import {
 // Вкладки, которые открывают не первыми, — отдельные чанки
 const PortsPanel = lazy(() => import("./PortsPanel").then((m) => ({ default: m.PortsPanel })));
 const NewsPanel = lazy(() => import("./NewsPanel").then((m) => ({ default: m.NewsPanel })));
-const PanelLoading = () => <div className="muted small panel-loading">загрузка…</div>;
+const PanelLoading = () => {
+  const { t } = useI18n();
+  return <div className="muted small panel-loading">{t("common.loading")}</div>;
+};
 
 export type { SheetState } from "./sheet";
 
 const MOBILE_QUERY = "(max-width: 900px)";
 const TAP_PX = 6;
+
+/**
+ * Высота окна для геометрии шторки. CSS-единица vh на телефоне считается от
+ * максимального окна (адресная строка скрыта), а innerHeight — от текущего;
+ * если высоту задать в vh, а положение считать в JS, шторка в «peek» торчит
+ * выше расчётного и накрывает шкалу времени. Поэтому всё — от innerHeight.
+ */
+function useViewportHeight(): number {
+  const [h, setH] = useState(() => window.innerHeight);
+  useEffect(() => {
+    const update = () => setH(window.innerHeight);
+    window.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("resize", update);
+    };
+  }, []);
+  return h;
+}
 
 function useIsMobile(): boolean {
   const [mobile, setMobile] = useState(() => window.matchMedia(MOBILE_QUERY).matches);
@@ -51,7 +76,6 @@ function useIsMobile(): boolean {
 }
 
 const fullHeight = () => sheetFullHeight(window.innerHeight);
-const visibleFor = (s: SheetState) => sheetVisibleFor(s, window.innerHeight);
 const offsetFor = (s: SheetState) => sheetOffsetFor(s, window.innerHeight);
 
 interface Props {
@@ -67,6 +91,7 @@ interface Props {
   onFocusShipment: (ref: string) => void;
   onFocusNode: (code: string) => void;
   onSheetChange: (visiblePx: number) => void;
+  onShare: () => void;
 }
 
 interface DragInfo {
@@ -92,16 +117,20 @@ export function Sidebar({
   onFocusShipment,
   onFocusNode,
   onSheetChange,
+  onShare,
 }: Props) {
+  const { t } = useI18n();
   const mobile = useIsMobile();
+  const [filter, setFilter] = useState<ShipmentFilter>(EMPTY_FILTER);
+  const viewportH = useViewportHeight();
   const [sheet, setSheet] = useState<SheetState>("half");
   const [dragOffset, setDragOffset] = useState<number | null>(null);
   const drag = useRef<DragInfo | null>(null);
   const lastDragEnd = useRef(0); // чтобы click после перетаскивания не переключал вкладку
 
   useEffect(() => {
-    onSheetChange(mobile ? visibleFor(sheet) : 0);
-  }, [mobile, sheet, onSheetChange]);
+    onSheetChange(mobile ? sheetVisibleFor(sheet, viewportH) : 0);
+  }, [mobile, sheet, onSheetChange, viewportH]);
 
   const selectTab = (t: Tab) => {
     onTab(t);
@@ -120,7 +149,7 @@ export function Sidebar({
       startY: e.clientY,
       startOffset: offsetFor(sheet),
       lastY: e.clientY,
-      lastT: performance.now(),
+      lastT: e.timeStamp, // время события, не обработчика: занятый главный поток не «замедляет» флик
       vy: 0,
       moved: false,
     };
@@ -132,7 +161,7 @@ export function Sidebar({
     const dy = e.clientY - d.startY;
     if (!d.moved && Math.abs(dy) > TAP_PX) d.moved = true;
     if (!d.moved) return;
-    const now = performance.now();
+    const now = e.timeStamp;
     d.vy = (e.clientY - d.lastY) / Math.max(now - d.lastT, 1);
     d.lastY = e.clientY;
     d.lastT = now;
@@ -165,13 +194,14 @@ export function Sidebar({
   const selected = snapshot?.shipments.find((s) => s.ref === selectedRef) ?? null;
   const alerts = snapshot?.nodes.filter((n) => n.alert_level).length ?? 0;
   const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: "shipments", label: "Грузы", count: snapshot?.shipments.length ?? 0 },
-    { key: "ports", label: "Порты", count: alerts },
-    { key: "news", label: "Новости", count: snapshot?.news.length ?? 0 },
+    { key: "shipments", label: t("tab.shipments"), count: snapshot?.shipments.length ?? 0 },
+    { key: "ports", label: t("tab.ports"), count: alerts },
+    { key: "news", label: t("tab.news"), count: snapshot?.news.length ?? 0 },
   ];
 
   const style = mobile
     ? {
+        height: `${fullHeight()}px`, // от innerHeight, как и translateY — не 88vh
         transform: `translateY(${dragOffset ?? offsetFor(sheet)}px)`,
         transition: dragOffset != null ? "none" : undefined,
       }
@@ -209,7 +239,7 @@ export function Sidebar({
           error ? (
             <ApiError error={error} />
           ) : (
-            <div className="empty">Загружаем снимок коридора…</div>
+            <div className="empty">{t("panel.loadingSnapshot")}</div>
           )
         ) : tab === "shipments" ? (
           selected ? (
@@ -220,9 +250,15 @@ export function Sidebar({
               onBack={() => onSelectShipment(null)}
               onFocus={() => onFocusShipment(selected.ref)}
               onToggleFollow={() => onToggleFollow(selected.ref)}
+              onShare={onShare}
             />
           ) : (
-            <ShipmentList snapshot={snapshot} onSelect={onFocusShipment} />
+            <ShipmentList
+              snapshot={snapshot}
+              filter={filter}
+              onFilter={setFilter}
+              onSelect={onFocusShipment}
+            />
           )
         ) : tab === "ports" ? (
           <Suspense fallback={<PanelLoading />}>
@@ -239,22 +275,23 @@ export function Sidebar({
 }
 
 function ApiError({ error }: { error: string }) {
+  const { t } = useI18n();
   const code = error.match(/HTTP (\d{3})/)?.[1];
-  const hint =
+  const hintKey: Key =
     code === "404"
-      ? "На этом домене нет бэкенда: фронт задеплоен отдельно (Root Directory = web?), а VITE_API_BASE не задан."
+      ? "panel.apiNoBackend"
       : code === "503"
-        ? "Бэкенд жив, но источник данных недоступен. На Vercel-демо: MOCK_DATA=true в Environment Variables и Redeploy."
+        ? "panel.apiSourceDown"
         : code?.startsWith("5")
-          ? "Бэкенд падает при запросе. На Vercel: проверь MOCK_DATA=true и логи функции (Deployments → Functions)."
-          : "Сервер не отвечает или блокирует запрос (сеть, CORS).";
+          ? "panel.apiCrash"
+          : "panel.apiNetwork";
   return (
     <div className="empty empty--error">
       <div>
-        <b>API не отвечает</b>
+        <b>{t("panel.apiDown")}</b>
       </div>
       <div className="mono small">{error}</div>
-      <div className="small">{hint}</div>
+      <div className="small">{t(hintKey)}</div>
     </div>
   );
 }

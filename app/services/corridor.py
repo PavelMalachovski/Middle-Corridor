@@ -7,7 +7,7 @@
 """
 
 import enum
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from app.db.models import CorridorLeg
 from app.services.geo import LatLon, polyline_length_km
@@ -33,6 +33,8 @@ class CorridorNode:
     lat: float
     lon: float
     kind: NodeKind
+    name_en: str = ""  # для интерфейса на английском; заполняется из _EN ниже
+    country_en: str = ""
 
     @property
     def latlon(self) -> LatLon:
@@ -92,6 +94,33 @@ NODES: dict[str, CorridorNode] = {
         _N("BUCHAREST", "Бухарест", "Румыния", _L.europe, 44.43, 26.10, NodeKind.rail),
         _N("BUDAPEST", "Будапешт", "Венгрия", _L.europe, 47.50, 19.05, NodeKind.rail),
     ]
+}
+
+# Английские названия узлов для интерфейса. Транслитерация по общепринятым формам
+# (Kuryk, Alat, Böyük Kəsik); термины коридора стоит вычитать с человеком из отрасли.
+_EN: dict[str, tuple[str, str]] = {
+    "XIAN": ("Xi'an", "China"),
+    "URUMQI": ("Ürümqi", "China"),
+    "KHORGOS": ("Khorgos / Altynkol", "Kazakhstan"),
+    "ALMATY": ("Almaty", "Kazakhstan"),
+    "SHYMKENT": ("Shymkent", "Kazakhstan"),
+    "KYZYLORDA": ("Kyzylorda", "Kazakhstan"),
+    "BEINEU": ("Beyneu", "Kazakhstan"),
+    "AKTAU": ("Aktau", "Kazakhstan"),
+    "KURYK": ("Kuryk", "Kazakhstan"),
+    "BAKU_ALAT": ("Baku (Alat)", "Azerbaijan"),
+    "GANJA": ("Ganja", "Azerbaijan"),
+    "BOYUK_KASIK": ("Böyük Kəsik / Gardabani", "Azerbaijan"),
+    "TBILISI": ("Tbilisi", "Georgia"),
+    "POTI": ("Poti", "Georgia"),
+    "BATUMI": ("Batumi", "Georgia"),
+    "CONSTANTA": ("Constanța", "Romania"),
+    "BUCHAREST": ("Bucharest", "Romania"),
+    "BUDAPEST": ("Budapest", "Hungary"),
+}
+NODES = {
+    code: replace(node, name_en=_EN[code][0], country_en=_EN[code][1])
+    for code, node in NODES.items()
 }
 
 

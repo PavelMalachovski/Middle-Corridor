@@ -94,7 +94,7 @@ const CUSTOM_STYLE = import.meta.env.VITE_MAP_STYLE as string | undefined;
 export const BASEMAPS: Record<BasemapId, BasemapPreset> = {
   dark: {
     id: "dark",
-    label: "Тёмная",
+    label: "basemap.dark",
     hint: "векторная, без ключа",
     candidates: [
       "https://tiles.versatiles.org/assets/styles/eclipse/style.json",
@@ -104,7 +104,7 @@ export const BASEMAPS: Record<BasemapId, BasemapPreset> = {
   },
   light: {
     id: "light",
-    label: "Светлая",
+    label: "basemap.light",
     hint: "Positron",
     candidates: [
       "https://tiles.openfreemap.org/styles/positron",
@@ -114,7 +114,7 @@ export const BASEMAPS: Record<BasemapId, BasemapPreset> = {
   },
   detailed: {
     id: "detailed",
-    label: "Детальная",
+    label: "basemap.detailed",
     hint: "дороги, рельеф, названия",
     candidates: [
       "https://tiles.openfreemap.org/styles/liberty",
@@ -124,13 +124,13 @@ export const BASEMAPS: Record<BasemapId, BasemapPreset> = {
   },
   satellite: {
     id: "satellite",
-    label: "Спутник",
+    label: "basemap.satellite",
     hint: "снимки Esri + подписи",
     candidates: [SATELLITE_STYLE],
   },
   custom: {
     id: "custom",
-    label: "Свой стиль",
+    label: "basemap.custom",
     hint: "VITE_MAP_STYLE",
     candidates: CUSTOM_STYLE ? [CUSTOM_STYLE, RASTER_DARK_STYLE] : [RASTER_DARK_STYLE],
   },

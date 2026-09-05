@@ -1,5 +1,6 @@
 import type { NodeStatus, Shipment, VesselStatus } from "../api";
 import { LEVEL_ICON, levelOf } from "../format";
+import { nodeName, t } from "../i18n";
 
 /** Меняет наши классы, не трогая maplibregl-marker* — иначе маркер выпадает из абсолютного позиционирования. */
 export function setOwnClasses(el: HTMLElement, classes: string[]): void {
@@ -23,12 +24,13 @@ export function nodeMarkerElement(): HTMLDivElement {
 export function renderNodeMarker(el: HTMLDivElement, node: NodeStatus): void {
   const level = levelOf(node);
   setOwnClasses(el, ["node-marker", `node-marker--${node.kind}`, `level-${level}`]);
-  el.title = node.alert_message ?? node.name;
-  el.querySelector("b")!.textContent = node.name;
+  const name = nodeName(node);
+  el.title = name;
+  el.querySelector("b")!.textContent = name;
   const sub = el.querySelector("span")!;
   if (node.is_weather_tracked && node.wind_speed != null) {
     const icon = node.alert_level ? `${LEVEL_ICON[node.alert_level]} ` : "";
-    sub.textContent = `${icon}${node.wind_speed.toFixed(0)} м/с`;
+    sub.textContent = `${icon}${node.wind_speed.toFixed(0)} ${t("common.ms")}`;
   } else {
     sub.textContent = "";
   }
@@ -48,6 +50,7 @@ export function renderShipmentMarker(
   s: Shipment,
   selected: boolean,
   followed: boolean,
+  title: string = s.last_event,
 ): void {
   setOwnClasses(el, [
     "ship-marker",
@@ -57,7 +60,7 @@ export function renderShipmentMarker(
     followed ? "is-followed" : "",
     s.delay_hours > 0 ? "is-delayed" : "",
   ]);
-  el.title = `${s.ref}: ${s.last_event}`;
+  el.title = `${s.ref}: ${title}`;
   el.querySelector(".ship-marker__label")!.textContent = s.ref;
 }
 
@@ -80,9 +83,10 @@ export function renderVesselMarker(
   el: HTMLDivElement,
   v: VesselStatus,
   heading: number | null,
+  route: string | null = v.route ?? null,
 ): void {
   setOwnClasses(el, ["vessel-marker", v.sog != null && v.sog > 0.5 ? "is-moving" : "is-moored"]);
-  el.title = `${v.name}${v.route ? ` · ${v.route}` : ""}`;
+  el.title = `${v.name}${route ? ` · ${route}` : ""}`;
   (el.querySelector(".vessel-marker__icon") as HTMLElement).style.transform =
     `rotate(${heading ?? v.cog ?? 0}deg)`;
   el.querySelector(".vessel-marker__label")!.textContent = v.name;

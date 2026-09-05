@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import type { Snapshot } from "../api";
 import { fmtTs } from "../format";
+import { type Key, type Lang, useI18n } from "../i18n";
 import type { LiveMode } from "../live";
 import type { LayerToggles } from "../map/MapView";
-
-const MODE_LABEL: Record<LiveMode, string> = { stream: "поток", poll: "поллинг", replay: "replay" };
 
 interface Props {
   snapshot: Snapshot | null;
@@ -16,12 +15,8 @@ interface Props {
   onToggle: (key: keyof LayerToggles) => void;
 }
 
-const TOGGLES: { key: keyof LayerToggles; label: string }[] = [
-  { key: "shipments", label: "Грузы" },
-  { key: "vessels", label: "Паромы" },
-  { key: "wind", label: "Ветер" },
-  { key: "routes", label: "Коридор" },
-];
+const TOGGLES: (keyof LayerToggles)[] = ["shipments", "vessels", "wind", "routes"];
+const LANGS: Lang[] = ["ru", "en"];
 
 export function TopBar({
   snapshot,
@@ -32,10 +27,11 @@ export function TopBar({
   windAvailable,
   onToggle,
 }: Props) {
+  const { t, lang, setLang } = useI18n();
   const [, setTick] = useState(0); // перерисовка «N с назад» раз в секунду
   useEffect(() => {
-    const t = setInterval(() => setTick((v) => v + 1), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setTick((v) => v + 1), 1000);
+    return () => clearInterval(timer);
   }, []);
   const ageSec = fetchedAt
     ? Math.max(0, Math.round((Date.now() - fetchedAt.getTime()) / 1000))
@@ -66,70 +62,107 @@ export function TopBar({
     snapshot?.nodes.filter((n) => n.alert_level === "warning" || n.alert_level === "critical")
       .length ?? 0;
   const errorCode = error?.match(/HTTP \d{3}/)?.[0] ?? null; // 404 = нет бэкенда, 5xx = упал
+  const hourUnit = t("common.h");
 
   return (
     <header className="topbar">
       <div className="topbar__brand">
         <div className="topbar__title">Middle Corridor</div>
-        <div className="topbar__subtitle">карта статуса коридора</div>
+        <div className="topbar__subtitle">{t("app.subtitle")}</div>
       </div>
       {snapshot?.mock && (
-        <span
-          className="badge badge--mock"
-          title="Синтетические данные для прототипа (MOCK_DATA=true)"
-        >
+        <span className="badge badge--mock" title={t("top.mockTitle")}>
           MOCK DATA
         </span>
       )}
       <div className="topbar__kpis">
         <span className="kpi">
-          <b>{inTransit}</b> в пути
+          <b>{inTransit}</b> {t("top.inTransit")}
         </span>
         <span className={`kpi ${delayed ? "kpi--warn" : ""}`}>
-          <b>{delayed}</b> с задержкой
+          <b>{delayed}</b> {t("top.delayed")}
         </span>
         <span className={`kpi ${alerts ? "kpi--alert" : ""}`}>
-          <b>{alerts}</b> {alerts === 1 ? "порт под риском" : "портов под риском"}
+          <b>{alerts}</b> {alerts === 1 ? t("top.portAtRisk") : t("top.portsAtRisk")}
         </span>
       </div>
+      {snapshot?.summary && (
+        <div className="topbar__week" title={t("top.weekTitle")}>
+          <span>
+            {t("top.week")} <b>{snapshot.summary.caspian_crossings}</b> {t("top.weekCrossings")}
+          </span>
+          <span>
+            {t("top.weekDelay")}{" "}
+            <b>
+              {snapshot.summary.avg_delay_hours == null
+                ? "—"
+                : `${Math.round(snapshot.summary.avg_delay_hours)} ${hourUnit}`}
+            </b>
+          </span>
+          {snapshot.summary.port_downtime_hours != null && (
+            <span>
+              {t("top.weekDowntime")}{" "}
+              <b>
+                {Math.round(snapshot.summary.port_downtime_hours)} {hourUnit}
+              </b>
+              {snapshot.summary.ports_stopped ? ` (${snapshot.summary.ports_stopped})` : ""}
+            </span>
+          )}
+        </div>
+      )}
       <div className="topbar__layers">
-        {TOGGLES.map(({ key, label }) => (
+        {TOGGLES.map((key) => (
           <button
             key={key}
             type="button"
             className={`chip ${layers[key] ? "chip--on" : ""}`}
             onClick={() => onToggle(key)}
             disabled={key === "wind" && !windAvailable}
-            title={key === "wind" && !windAvailable ? "Поле ветра недоступно" : undefined}
+            title={key === "wind" && !windAvailable ? t("layer.windUnavailable") : undefined}
           >
-            {label}
+            {t(`layer.${key}` as Key)}
           </button>
         ))}
+        <fieldset className="lang">
+          <legend className="sr-only">{t("lang.switch")}</legend>
+          {LANGS.map((code) => (
+            <button
+              key={code}
+              type="button"
+              className={`lang__btn ${lang === code ? "is-on" : ""}`}
+              onClick={() => setLang(code)}
+              aria-pressed={lang === code}
+            >
+              {code.toUpperCase()}
+            </button>
+          ))}
+        </fieldset>
       </div>
       <div className={`topbar__status ${error ? "topbar__status--error" : ""}`}>
         {error ? (
-          <span title={error}>нет связи с API{errorCode ? ` · ${errorCode}` : ""}</span>
+          <span title={error}>
+            {t("top.noApi")}
+            {errorCode ? ` · ${errorCode}` : ""}
+          </span>
         ) : ageSec == null ? (
-          <span>загрузка…</span>
+          <span>{t("common.loading")}</span>
         ) : (!online || stale) && snapshot ? (
           <span
             className="topbar__stale"
-            title={
-              online
-                ? "Обновления не приходят; показан последний снимок"
-                : "Нет сети; показан последний полученный снимок"
-            }
+            title={online ? t("top.staleTitle") : t("top.offlineTitle")}
           >
-            <i className="dot-live dot-live--stale" /> {online ? "нет обновлений" : "офлайн"} ·
-            данные на {fmtTs(snapshot.generated_at)}
+            <i className="dot-live dot-live--stale" /> {online ? t("top.stale") : t("top.offline")}{" "}
+            · {t("top.dataAt", { ts: fmtTs(snapshot.generated_at) })}
           </span>
         ) : mode === "replay" && snapshot ? (
-          <span title="Снимок на выбранный момент; живые данные — кнопка LIVE на шкале времени">
-            <i className="dot-live dot-live--replay" /> replay · {fmtTs(snapshot.generated_at)}
+          <span title={t("top.replayTitle")}>
+            <i className="dot-live dot-live--replay" />{" "}
+            {t("top.replayAt", { ts: fmtTs(snapshot.generated_at) })}
           </span>
         ) : (
           <span>
-            <i className="dot-live" /> обновлено {ageSec} с назад · {MODE_LABEL[mode]}
+            <i className="dot-live" />{" "}
+            {t("top.updated", { sec: ageSec, mode: t(`top.mode.${mode}` as Key) })}
           </span>
         )}
       </div>

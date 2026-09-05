@@ -58,7 +58,13 @@ export function useReplay(): ReplayControl {
   const sync = useCallback((snapshot: Snapshot | null, fetchedAt: Date | null) => {
     if (!snapshot || !fetchedAt) return;
     const serverMs = Date.parse(snapshot.server_time);
-    if (!Number.isNaN(serverMs)) clock.current = { serverMs, wallMs: fetchedAt.getTime() };
+    if (!Number.isNaN(serverMs)) {
+      clock.current = {
+        serverMs,
+        wallMs: fetchedAt.getTime(),
+        scale: snapshot.live.time_scale ?? 1,
+      };
+    }
     windowRef.current = {
       pastHours: snapshot.live.replay_past_hours,
       futureHours: snapshot.live.replay_future_hours,

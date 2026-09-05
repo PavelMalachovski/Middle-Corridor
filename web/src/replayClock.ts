@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 /**
  * Чистая арифметика шкалы времени: серверные часы, окно replay, подписи.
  * Вынесена из хука useReplay, чтобы проверяться юнит-тестами без React.
@@ -15,11 +16,13 @@ export interface ReplayWindow {
 export interface ServerClock {
   serverMs: number;
   wallMs: number;
+  /** Во сколько раз серверные часы быстрее настенных (мок с MOCK_TIME_SCALE); 1 — обычно. */
+  scale?: number;
 }
 
-/** Серверное «сейчас»: опора плюс прошедшее у клиента время. */
+/** Серверное «сейчас»: опора плюс прошедшее у клиента время (умноженное на скорость часов). */
 export function estimateServerNow(clock: ServerClock, wallNow: number = Date.now()): number {
-  return clock.serverMs + (wallNow - clock.wallMs);
+  return clock.serverMs + (wallNow - clock.wallMs) * (clock.scale ?? 1);
 }
 
 /** Момент внутри окна [now − past, now + future] с отступом от краёв. */
@@ -42,7 +45,9 @@ export function offsetHours(replayMs: number, nowMs: number): number {
 export function fmtOffset(hours: number): string {
   const abs = Math.abs(hours);
   const sign = hours < 0 ? "−" : "+";
-  if (abs < 1) return `${sign}${Math.round(abs * 60)} мин`;
-  if (abs < 48) return `${sign}${abs < 10 ? abs.toFixed(1).replace(".0", "") : Math.round(abs)} ч`;
-  return `${sign}${(abs / 24).toFixed(1).replace(".0", "")} дн`;
+  if (abs < 1) return `${sign}${Math.round(abs * 60)} ${t("common.min")}`;
+  if (abs < 48) {
+    return `${sign}${abs < 10 ? abs.toFixed(1).replace(".0", "") : Math.round(abs)} ${t("common.h")}`;
+  }
+  return `${sign}${(abs / 24).toFixed(1).replace(".0", "")} ${t("common.d")}`;
 }

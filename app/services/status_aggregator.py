@@ -51,6 +51,7 @@ class VesselStatus(BaseModel):
 class ReportStatus(BaseModel):
     report_type: str
     port_name: str | None = None
+    port_code: str | None = None  # для интерфейса на любом языке
     payload: dict[str, Any]
     note: str | None = None
     ts: datetime
@@ -89,6 +90,7 @@ class StatusAggregatorService:
                 ReportStatus(
                     report_type=report.report_type.value,
                     port_name=report.port.name if report.port is not None else None,
+                    port_code=report.port.code if report.port is not None else None,
                     payload=report.payload,
                     note=report.note,
                     ts=_ensure_utc(report.ts),  # type: ignore[arg-type]

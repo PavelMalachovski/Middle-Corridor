@@ -6,7 +6,7 @@ from typing import Any
 
 from app.integrations.mock.wind import wind_at
 from app.services.corridor import NODES, NodeKind
-from app.services.map_snapshot import NewsSummary, NodeStatus
+from app.services.map_snapshot import NewsSummary, NodeStatus, WindHour
 from app.services.status_aggregator import ReportStatus
 from app.services.weather_predictor import WindThresholds, evaluate_level
 
@@ -15,12 +15,62 @@ def _floor_minutes(ts: datetime, minutes: int) -> datetime:
     return ts.replace(minute=ts.minute - ts.minute % minutes, second=0, microsecond=0)
 
 
+def _floor_hour(ts: datetime) -> datetime:
+    return ts.replace(minute=0, second=0, microsecond=0)
+
+
+FORECAST_PAST_H = 6
+FORECAST_FUTURE_H = 48
+
+
 class MockNodeSource:
     """Узлы справочника; портам — ветер из поля и уровень по боевым порогам."""
 
     def __init__(self, clock: Callable[[], datetime], thresholds: WindThresholds) -> None:
         self._clock = clock
         self._thresholds = thresholds
+        self._hour_cache: dict[tuple[str, datetime], WindHour] = {}
+
+    def _hour(self, code: str, lat: float, lon: float, ts: datetime) -> WindHour:
+        """Ветер и уровень в узле на начало часа; поле детерминировано — кэшируем."""
+        key = (code, ts)
+        cached = self._hour_cache.get(key)
+        if cached is not None:
+            return cached
+        if len(self._hour_cache) > 20_000:
+            self._hour_cache.clear()
+        speed, gust, _direction = wind_at(lat, lon, ts)
+        hour = WindHour(
+            ts=ts, speed=speed, gust=gust, level=evaluate_level(speed, gust, self._thresholds)
+        )
+        self._hour_cache[key] = hour
+        return hour
+
+    def _forecast(self, code: str, lat: float, lon: float, now: datetime) -> list[WindHour]:
+        start = _floor_hour(now) - timedelta(hours=FORECAST_PAST_H)
+        return [
+            self._hour(code, lat, lon, start + timedelta(hours=i))
+            for i in range(FORECAST_PAST_H + FORECAST_FUTURE_H + 1)
+        ]
+
+    async def downtime_hours(self, at: datetime, window_hours: int) -> tuple[float, int]:
+        """Часы critical по всем портам за окно и число портов с остановками."""
+        end = _floor_hour(at)
+        total = 0
+        stopped = 0
+        for node in NODES.values():
+            if node.kind != NodeKind.port:
+                continue
+            hours = sum(
+                1
+                for i in range(window_hours)
+                if self._hour(node.code, node.lat, node.lon, end - timedelta(hours=i)).level
+                == "critical"
+            )
+            total += hours
+            if hours:
+                stopped += 1
+        return float(total), stopped
 
     async def list_nodes(self, at: datetime | None = None) -> list[NodeStatus]:
         now = at or self._clock()
@@ -35,6 +85,8 @@ class MockNodeSource:
                 kind=node.kind,
                 lat=node.lat,
                 lon=node.lon,
+                name_en=node.name_en,
+                country_en=node.country_en,
             )
             if node.kind == NodeKind.port:
                 speed, gust, direction = wind_at(node.lat, node.lon, weather_ts)
@@ -50,6 +102,7 @@ class MockNodeSource:
                         "alert_message": (
                             f"Ветер {speed:.0f} м/с, порывы до {gust:.0f} м/с" if level else None
                         ),
+                        "forecast": self._forecast(node.code, node.lat, node.lon, now),
                     }
                 )
             result.append(status)
@@ -146,6 +199,7 @@ class MockReportSource:
             ReportStatus(
                 report_type="queue",
                 port_name="Актау",
+                port_code="AKTAU",
                 payload={
                     "vessels_waiting": 5,
                     "ferry_expected": (now + timedelta(hours=20)).date().isoformat(),
@@ -156,13 +210,18 @@ class MockReportSource:
             ReportStatus(
                 report_type="border_delay",
                 port_name=None,
-                payload={"border": "Бёюк-Кясик / Гардабани", "delay_hours": 14},
+                payload={
+                    "border": "Бёюк-Кясик / Гардабани",
+                    "border_code": "BOYUK_KASIK",
+                    "delay_hours": 14,
+                },
                 note="Досмотр на азербайджанской стороне, очередь около 40 вагонов",
                 ts=now - timedelta(hours=7),
             ),
             ReportStatus(
                 report_type="rate",
                 port_name="Баку (Алят)",
+                port_code="BAKU_ALAT",
                 payload={"rate_usd": 3450},
                 note="40' HC Сиань — Констанца, all-in, сентябрь",
                 ts=now - timedelta(hours=26),

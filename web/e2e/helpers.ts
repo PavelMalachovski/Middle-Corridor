@@ -3,7 +3,8 @@ import { expect, type Page } from "@playwright/test";
 /** Ждём первый снимок и маркеры грузов — карта и панель живы. */
 export async function openMap(page: Page, path = "/"): Promise<void> {
   await page.goto(path, { waitUntil: "domcontentloaded" });
-  await expect(page.locator(".list .card").first()).toBeVisible();
+  // список грузов или, по ссылке с ?s=, сразу карточка
+  await expect(page.locator(".list .card, .detail").first()).toBeVisible();
   await expect(page.locator(".ship-marker").first()).toBeAttached();
 }
 
@@ -56,4 +57,19 @@ export async function dragMap(page: Page, dx: number, dy: number): Promise<void>
   await page.mouse.down();
   await page.mouse.move(x + dx, y + dy, { steps: 8 });
   await page.mouse.up();
+}
+
+/** Настройки карты по умолчанию для тестов, где ветер ни при чём: стрелки вместо
+ * частиц — на SwiftShader (CI) частицы держат перерисовку каждый кадр, а с
+ * объёмным рельефом кадр там длится секунды и страница замирает. */
+export const ARROWS_PREFS = {
+  basemap: "dark",
+  globe: true,
+  terrain: false,
+  terrain3d: false,
+  windMode: "arrows",
+};
+
+export async function pinPrefs(page: Page, prefs: object = ARROWS_PREFS): Promise<void> {
+  await page.addInitScript((p) => localStorage.setItem("mc-map-prefs", JSON.stringify(p)), prefs);
 }

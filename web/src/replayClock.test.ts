@@ -17,6 +17,10 @@ describe("estimateServerNow", () => {
     expect(estimateServerNow(clock, 5_000)).toBe(1_000_000);
     expect(estimateServerNow(clock, 8_000)).toBe(1_003_000);
   });
+  it("ускоренные часы мока: прошедшее время умножается на scale", () => {
+    const clock = { serverMs: 1_000_000, wallMs: 5_000, scale: 600 };
+    expect(estimateServerNow(clock, 6_000)).toBe(1_600_000);
+  });
 });
 
 describe("clampToWindow", () => {

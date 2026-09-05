@@ -1,15 +1,20 @@
-import type { NodeStatus, Snapshot } from "../api";
+import type { NodeStatus, Snapshot, Thresholds } from "../api";
+import { fmtIn, portOutlook } from "../forecast";
 import {
   fmtDir,
   fmtRelative,
+  fmtTs,
   fmtWind,
   LEVEL_COLOR,
   LEVEL_ICON,
-  LEVEL_LABEL,
+  levelLabel,
   levelOf,
-  PAYLOAD_LABEL,
-  REPORT_TITLE,
+  payloadLabel,
+  reportTitle,
 } from "../format";
+import { type Lang, nodeName, nodeNameByCode, useI18n } from "../i18n";
+import { alertText, reportPort, vesselPhase, vesselRoute } from "../i18n/labels";
+import { WindSparkline } from "./charts/Sparkline";
 
 const RANK: Record<string, number> = { critical: 0, warning: 1, watch: 2, ok: 3, none: 4 };
 
@@ -19,18 +24,64 @@ interface Props {
   onFocusNode: (code: string) => void;
 }
 
+/** Одна строка про ближайшие 48 часов: встанет / откроется / без остановок. */
+function OutlookLine({
+  node,
+  thresholds,
+  now,
+}: {
+  node: NodeStatus;
+  thresholds: Thresholds;
+  now: Date;
+}) {
+  const { t } = useI18n();
+  if (!node.forecast?.length) return null;
+  const o = portOutlook(node.forecast, thresholds, now);
+  const at = (iso: string) => fmtTs(iso).replace(" UTC", "");
+  if (o.closedNow) {
+    return (
+      <div className="outlook outlook--closed">
+        {t("outlook.closed")} ·{" "}
+        {o.opensAt ? t("outlook.opensAt", { ts: at(o.opensAt) }) : t("outlook.noOpen")}
+      </div>
+    );
+  }
+  if (o.stopsAt) {
+    return (
+      <div className="outlook outlook--soon">
+        {t("outlook.stops", { rel: fmtIn(o.stopsAt, now), ts: at(o.stopsAt) })}
+        {o.opensAt ? ` · ${t("outlook.opensAt", { ts: at(o.opensAt) })}` : ""}
+      </div>
+    );
+  }
+  return (
+    <div className="outlook outlook--ok">
+      {t("outlook.calm")}
+      {o.peak
+        ? ` · ${t("outlook.peak", { speed: o.peak.speed.toFixed(0), rel: fmtIn(o.peak.ts, now) })}`
+        : ""}
+    </div>
+  );
+}
+
 function NodeRow({
   node,
   selected,
   refDate,
+  thresholds,
+  lang,
   onClick,
 }: {
   node: NodeStatus;
   selected: boolean;
   refDate: Date;
+  thresholds: Thresholds;
+  lang: Lang;
   onClick: () => void;
 }) {
+  const { t } = useI18n();
   const level = levelOf(node);
+  const alert = alertText(node, lang);
   return (
     <li>
       <button
@@ -39,27 +90,35 @@ function NodeRow({
         onClick={onClick}
       >
         <div className="card__head">
-          <b>{node.name}</b>
+          <b>{nodeName(node, lang)}</b>
           <span
             className="pill"
             style={{ color: LEVEL_COLOR[level], borderColor: LEVEL_COLOR[level] }}
           >
             {node.alert_level
-              ? `${LEVEL_ICON[node.alert_level]} ${LEVEL_LABEL[node.alert_level]}`
+              ? `${LEVEL_ICON[node.alert_level]} ${levelLabel(node.alert_level)}`
               : level === "ok"
-                ? "норма"
-                : "нет данных"}
+                ? t("common.ok")
+                : t("common.noData")}
           </span>
         </div>
         <div className="card__meta">
           <span>
             {fmtWind(node.wind_speed, node.wind_gust)} {fmtDir(node.wind_dir)}
           </span>
-          <span className="muted">{node.country}</span>
+          <span className="muted">
+            {lang === "en" && node.country_en ? node.country_en : node.country}
+          </span>
         </div>
-        {node.alert_message && <div className="muted small">{node.alert_message}</div>}
+        {alert && <div className="muted small">{alert}</div>}
+        <OutlookLine node={node} thresholds={thresholds} now={refDate} />
+        {selected && node.forecast && node.forecast.length > 1 && (
+          <WindSparkline forecast={node.forecast} thresholds={thresholds} now={refDate} />
+        )}
         {node.weather_ts && (
-          <div className="muted small">обновлено {fmtRelative(node.weather_ts, refDate)}</div>
+          <div className="muted small">
+            {t("ports.updated", { value: fmtRelative(node.weather_ts, refDate) })}
+          </div>
         )}
       </button>
     </li>
@@ -67,6 +126,7 @@ function NodeRow({
 }
 
 export function PortsPanel({ snapshot, selectedNode, onFocusNode }: Props) {
+  const { t, lang } = useI18n();
   const refDate = new Date(snapshot.generated_at);
   const ports = snapshot.nodes
     .filter((n) => n.is_weather_tracked)
@@ -80,7 +140,7 @@ export function PortsPanel({ snapshot, selectedNode, onFocusNode }: Props) {
 
   return (
     <div>
-      <div className="block__title">Порты · погодный предиктор</div>
+      <div className="block__title">{t("ports.title")}</div>
       <ul className="list">
         {ports.map((n) => (
           <NodeRow
@@ -88,12 +148,14 @@ export function PortsPanel({ snapshot, selectedNode, onFocusNode }: Props) {
             node={n}
             selected={n.code === selectedNode}
             refDate={refDate}
+            thresholds={snapshot.thresholds}
+            lang={lang}
             onClick={() => onFocusNode(n.code)}
           />
         ))}
       </ul>
 
-      <div className="block__title">Паромы Каспия</div>
+      <div className="block__title">{t("ports.ferries")}</div>
       <ul className="list">
         {vessels.map((v) => (
           <li key={v.name} className="card">
@@ -102,14 +164,18 @@ export function PortsPanel({ snapshot, selectedNode, onFocusNode }: Props) {
               {v.has_recent_data ? (
                 <span className="pill pill--ais">AIS {fmtRelative(v.ts, refDate)}</span>
               ) : (
-                <span className="pill pill--nodata">нет данных</span>
+                <span className="pill pill--nodata">{t("common.noData")}</span>
               )}
             </div>
             <div className="card__meta">
               <span>
-                {v.has_recent_data ? `${v.route} · ${v.phase}` : "позиция вне AIS-покрытия"}
+                {v.has_recent_data
+                  ? `${vesselRoute(v, snapshot.nodes, lang)} · ${vesselPhase(v, snapshot.nodes, lang)}`
+                  : t("ports.outsideAis")}
               </span>
-              <span className="muted">{v.sog != null ? `${v.sog.toFixed(1)} уз` : v.operator}</span>
+              <span className="muted">
+                {v.sog != null ? `${v.sog.toFixed(1)} ${t("common.kn")}` : v.operator}
+              </span>
             </div>
           </li>
         ))}
@@ -117,38 +183,47 @@ export function PortsPanel({ snapshot, selectedNode, onFocusNode }: Props) {
 
       {snapshot.reports.length > 0 && (
         <>
-          <div className="block__title">Сводки от доверенных источников</div>
+          <div className="block__title">{t("ports.reports")}</div>
           <ul className="list">
-            {snapshot.reports.map((r) => (
-              <li key={`${r.report_type}-${r.port_name}-${r.ts}`} className="card">
-                <div className="card__head">
-                  <b>
-                    {REPORT_TITLE[r.report_type] ?? r.report_type}
-                    {r.port_name ? ` — ${r.port_name}` : ""}
-                  </b>
-                  <span className="muted small">{fmtRelative(r.ts, refDate)}</span>
-                </div>
-                <dl className="kv kv--compact">
-                  {Object.entries(r.payload).map(([k, v]) => (
-                    <div key={k}>
-                      <dt>{PAYLOAD_LABEL[k] ?? k}</dt>
-                      <dd>{String(v)}</dd>
-                    </div>
-                  ))}
-                </dl>
-                {r.note && <div className="muted small">{r.note}</div>}
-              </li>
-            ))}
+            {snapshot.reports.map((r) => {
+              const port = reportPort(r, snapshot.nodes, lang);
+              return (
+                <li key={`${r.report_type}-${r.port_name}-${r.ts}`} className="card">
+                  <div className="card__head">
+                    <b>
+                      {reportTitle(r.report_type)}
+                      {port ? ` — ${port}` : ""}
+                    </b>
+                    <span className="muted small">{fmtRelative(r.ts, refDate)}</span>
+                  </div>
+                  <dl className="kv kv--compact">
+                    {Object.entries(r.payload)
+                      .filter(([k]) => k !== "border_code")
+                      .map(([k, v]) => (
+                        <div key={k}>
+                          <dt>{payloadLabel(k)}</dt>
+                          <dd>
+                            {k === "border" && typeof r.payload.border_code === "string"
+                              ? nodeNameByCode(snapshot.nodes, r.payload.border_code, lang)
+                              : String(v)}
+                          </dd>
+                        </div>
+                      ))}
+                  </dl>
+                  {r.note && <div className="muted small">{r.note}</div>}
+                </li>
+              );
+            })}
           </ul>
         </>
       )}
 
-      <div className="block__title">Узлы без погоды</div>
+      <div className="block__title">{t("ports.otherNodes")}</div>
       <ul className="chips">
         {others.map((n) => (
           <li key={n.code}>
             <button type="button" className="chip" onClick={() => onFocusNode(n.code)}>
-              {n.name}
+              {nodeName(n, lang)}
             </button>
           </li>
         ))}
