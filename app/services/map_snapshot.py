@@ -253,6 +253,11 @@ class MapSnapshotService:
             summary=await self._week_summary(now, plans, shipments),
         )
 
+    @property
+    def wind_source(self) -> WindFieldSource | None:
+        """Источник поля ветра — планировщику нужна его джоба обновления."""
+        return self._wind
+
     async def wind(
         self, at: datetime | None = None, step_deg: float | None = None
     ) -> WindField | None:

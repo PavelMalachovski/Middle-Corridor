@@ -186,6 +186,21 @@ def _jitter_h(ref: str, code: str, kind: str) -> float:
     return ((_seed(ref, code, kind) % 7) - 3) * 0.5  # −1.5…+1.5 ч, детерминировано
 
 
+# Описания грузов мока по-английски: карта в EN показывает их вместо русских
+CARGO_EN: dict[str, str] = {
+    "2 × 40' HC, электроника": "2 × 40' HC, electronics",
+    "3 × 20', полипропилен": "3 × 20', polypropylene",
+    "1 × 40' HC, автозапчасти": "1 × 40' HC, auto parts",
+    "2 × 40', солнечные панели": "2 × 40', solar panels",
+    "1 × 40' reefer, продукты питания": "1 × 40' reefer, foodstuffs",
+    "4 × 40' HC, бытовая техника": "4 × 40' HC, home appliances",
+    "1 × 40' HC, текстиль": "1 × 40' HC, textiles",
+    "2 × 40' HC, станки": "2 × 40' HC, machine tools",
+    "3 × 40' HC, аккумуляторы": "3 × 40' HC, batteries",
+    "2 × 20', ферросплавы": "2 × 20', ferroalloys",
+}
+
+
 def build_plan(  # noqa: PLR0913 — сценарий описывается параметрами
     ref: str,
     client: str,
@@ -278,6 +293,7 @@ def build_plan(  # noqa: PLR0913 — сценарий описывается п�
         ref=ref,
         client=client,
         cargo=cargo,
+        cargo_en=CARGO_EN.get(cargo),
         legs=legs,
         events=tuple(sorted(events, key=lambda e: e.ts)),
         hold_reason=hold_reason,

@@ -79,6 +79,16 @@ class Settings(BaseSettings):
     poll_interval_s: int = 10
     replay_past_hours: int = 72  # окно шкалы времени назад
     replay_future_hours: int = 24  # и вперёд (прогноз)
+    # Поле ветра над морями для карты в боевом режиме: Open-Meteo по сетке
+    # sea_grid(WIND_GRID_STEP_DEG), прогноз на WIND_GRID_FORECAST_HOURS вперёд,
+    # снимок раз в WIND_GRID_REFRESH_MINUTES. Каждая точка — отдельный вызов в
+    # лимитах Open-Meteo: 0.5° ≈ 400 точек, 8 снимков в сутки ≈ 3 200 вызовов.
+    wind_grid_enabled: bool = True
+    wind_grid_step_deg: float = 0.5
+    wind_grid_forecast_hours: int = 48
+    wind_grid_refresh_minutes: int = 180
+    wind_grid_history_hours: int = 96  # снимки старше удаляются (replay назад)
+    wind_grid_lazy_refresh: bool = True  # без планировщика (serverless) — брать по запросу
     vercel: str = ""  # Vercel выставляет VERCEL=1 в окружении функции
 
     # Runtime

@@ -13,6 +13,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.config import Settings
 from app.services.news_feed import NewsFeedService
 from app.services.weather_predictor import WeatherPredictor
+from app.services.wind_grid import WindGridService
 
 logger = structlog.get_logger(__name__)
 
@@ -34,8 +35,18 @@ def create_scheduler(
     settings: Settings,
     weather_predictor: WeatherPredictor,
     news_service: NewsFeedService,
+    wind_grid: WindGridService | None = None,
 ) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="UTC")
+    if wind_grid is not None:
+        scheduler.add_job(
+            _safe("refresh_wind_grid", wind_grid.refresh_once),
+            "interval",
+            minutes=settings.wind_grid_refresh_minutes,
+            id="refresh_wind_grid",
+            coalesce=True,
+            max_instances=1,
+        )
     scheduler.add_job(
         _safe("poll_weather", weather_predictor.poll_once),
         "interval",

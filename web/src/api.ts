@@ -79,6 +79,7 @@ export interface Shipment {
   ref: string;
   client: string;
   cargo: string;
+  cargo_en?: string | null; // описание груза по-английски, если есть
   origin: string;
   destination: string;
   state: ShipmentState;

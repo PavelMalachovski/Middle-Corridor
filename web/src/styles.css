@@ -1512,3 +1512,14 @@ button.card:focus-visible {
   font-size: 13px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
+.toast__action {
+  margin-left: 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}

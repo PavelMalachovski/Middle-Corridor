@@ -28,9 +28,26 @@ class WindReport:
     forecast: list[WindObservation]
 
 
+@dataclass(frozen=True, slots=True)
+class GridPointForecast:
+    """Почасовой прогноз ветра в узле сетки (для поля ветра над морем)."""
+
+    lat: float
+    lon: float
+    hours: list[WindObservation]  # отсортированы по времени, без null-хвоста
+
+
 class WeatherProviderError(RuntimeError):
     """Провайдер погоды недоступен или вернул некорректный ответ."""
 
 
 class WeatherProvider(Protocol):
     async def get_wind(self, lat: float, lon: float) -> WindReport: ...
+
+
+class WindGridProvider(Protocol):
+    async def get_wind_grid(
+        self, points: list[tuple[float, float]], forecast_hours: int
+    ) -> list[GridPointForecast]:
+        """Прогноз в узлах (lat, lon) на forecast_hours вперёд; порядок узлов сохраняется."""
+        ...

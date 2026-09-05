@@ -23,7 +23,7 @@ export interface LiveData {
 }
 
 const WIND_POLL_MS = 60_000;
-const WIND_STEP_DEG = 1; // мельче стрелок: пригодится частицам
+const WIND_STEP_DEG = 0.5; // поле только над морями — можно мельче: частицам виднее
 const SCRUB_DEBOUNCE_MS = 120;
 const WIND_SCRUB_MIN_MS = 1500; // поле ветра тяжёлое: в replay не чаще раза в полторы секунды
 const STREAM_FAILURES_BEFORE_POLL = 3;

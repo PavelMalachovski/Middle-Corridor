@@ -8,6 +8,7 @@ interface Props {
   terrain: boolean;
   terrain3d: boolean;
   fallback: boolean; // векторный стиль недоступен — показываем растровую подложку
+  software: boolean; // программный WebGL (SwiftShader/llvmpipe): 3D-рельеф не тянет
   onBasemap: (id: BasemapId) => void;
   onGlobe: (on: boolean) => void;
   onTerrain: (on: boolean) => void;
@@ -23,6 +24,7 @@ export function MapControls({
   terrain,
   terrain3d,
   fallback,
+  software,
   onBasemap,
   onGlobe,
   onTerrain,
@@ -62,15 +64,18 @@ export function MapControls({
           />
           <span>{t("ctl.terrain")}</span>
         </label>
-        <label className="switch" title={t("ctl.3dTitle")}>
-          <input
-            type="checkbox"
-            checked={terrain3d}
-            onChange={(e) => onTerrain3d(e.target.checked)}
-          />
-          <span>{t("ctl.3d")}</span>
-        </label>
+        {!software && (
+          <label className="switch" title={t("ctl.3dTitle")}>
+            <input
+              type="checkbox"
+              checked={terrain3d}
+              onChange={(e) => onTerrain3d(e.target.checked)}
+            />
+            <span>{t("ctl.3d")}</span>
+          </label>
+        )}
       </div>
+      {software && <div className="mapctl__hint">{t("ctl.3dSoftware")}</div>}
       <div className="mapctl__row">
         <span className="mapctl__label">{t("ctl.wind")}</span>
         <button

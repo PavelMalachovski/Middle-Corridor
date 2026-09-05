@@ -115,7 +115,13 @@ void main() {
   float drop_rate = u_drop_rate + speed_t * u_drop_rate_bump;
   float drop = step(1.0 - drop_rate, rand(seed));
   if (pos.x < 0.0 || pos.x > 1.0 || pos.y < 0.0 || pos.y > 1.0 || w.a < 0.5) drop = 1.0;
+  // перерождение — над морем: до 4 попыток найти клетку с данными (alpha > 0),
+  // иначе большинство частиц рождалось бы над сушей и гасло невидимыми
   vec2 random_pos = vec2(rand(seed + 1.3), rand(seed + 2.1));
+  for (int i = 1; i < 4; i++) {
+    if (texture(u_wind, random_pos).a > 0.5) break;
+    random_pos = vec2(rand(seed + 1.3 + float(i) * 0.37), rand(seed + 2.1 + float(i) * 0.53));
+  }
   pos = mix(pos, random_pos, drop);
   fragColor = vec4(fract(pos * 255.0), floor(pos * 255.0) / 255.0);
 }`;

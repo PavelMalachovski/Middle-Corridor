@@ -62,3 +62,23 @@ def point_along(points: Sequence[LatLon], fraction: float) -> tuple[LatLon, floa
             return (lat, lon), bearing_deg(points[i], points[i + 1])
         walked += seg
     return points[-1], bearing_deg(points[-2], points[-1])
+
+
+def point_in_polygon(point: LatLon, polygon: Sequence[LatLon]) -> bool:
+    """Лежит ли точка внутри многоугольника (лучевой метод, плоское приближение).
+
+    Для морских полигонов масштаба сотен километров искажение проекции
+    (lat, lon) как плоскости не важно: границы и так грубые.
+    """
+    lat, lon = point
+    inside = False
+    n = len(polygon)
+    for i in range(n):
+        lat_a, lon_a = polygon[i]
+        lat_b, lon_b = polygon[(i + 1) % n]
+        if (lat_a > lat) == (lat_b > lat):
+            continue  # ребро не пересекает горизонталь через точку
+        cross_lon = lon_a + (lat - lat_a) * (lon_b - lon_a) / (lat_b - lat_a)
+        if lon < cross_lon:
+            inside = not inside
+    return inside

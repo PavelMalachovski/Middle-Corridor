@@ -1,5 +1,6 @@
 """Тесты снимка карты: мок-источники, JSON-API, адаптер боевых источников."""
 
+import re
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -13,7 +14,7 @@ from app.integrations.mock.clock import MockClock
 from app.integrations.mock.fleet import FERRIES, MockShipmentSource, list_ferry_states
 from app.integrations.mock.wind import MockWindField, wind_at
 from app.main import build_map_service
-from app.services.corridor import NODES, NodeKind
+from app.services.corridor import COAST_TOLERANCE_DEG, NODES, NodeKind, sea_at, sea_grid
 from app.services.map_snapshot import CorridorStatusAdapter, DbNewsSource, MapSnapshotService
 from app.services.status_aggregator import StatusAggregatorService
 from app.services.tracking import CheckpointState, PositionSource, ShipmentState, project_shipment
@@ -158,15 +159,45 @@ def test_ferry_cycle_always_has_westbound_ais_ferry() -> None:
         assert any(s.sailing and s.westbound and s.spec.has_ais for s in states), hour
 
 
-async def test_mock_wind_field_grid() -> None:
-    field = await MockWindField(
-        lambda: NOW, bbox=(40.0, 48.0, 46.0, 54.0), step_deg=2.0
-    ).get_field()
+async def test_mock_wind_field_grid_is_sea_only() -> None:
+    field = await MockWindField(lambda: NOW, step_deg=1.0).get_field()
     assert field is not None
-    assert len(field.points) == 4 * 4
+    cells = {(p.lat, p.lon) for p in field.points}
+    assert (44.0, 50.0) in cells  # Каспий у Актау
+    assert (43.0, 36.0) in cells  # Чёрное море
+    assert (44.0, 53.0) not in cells  # Мангышлак, суша
+    assert (43.0, 77.0) not in cells  # Алматы, далеко за bbox
+    assert (42.0, 44.0) not in cells  # Кавказ между морями
     for point in field.points:
-        assert 40.0 <= point.lat <= 46.0 and 48.0 <= point.lon <= 54.0
+        assert sea_at(point.lat, point.lon, COAST_TOLERANCE_DEG) is not None
         assert point.speed >= 0 and point.gust > point.speed and 0 <= point.dir < 360
+    # сетка выровнена по кратным шага, bbox — по крайним узлам
+    assert all(p.lat == round(p.lat) and p.lon == round(p.lon) for p in field.points)
+    assert field.lat_min == min(p.lat for p in field.points)
+    # мельче шаг — больше точек, но всё ещё только море
+    fine = await MockWindField(lambda: NOW, step_deg=0.5).get_field()
+    assert fine is not None and len(fine.points) > 3 * len(field.points)
+
+
+async def test_mock_shipments_carry_english_cargo(mock_service: MapSnapshotService) -> None:
+    snap = await mock_service.snapshot()
+    assert snap.shipments and all(s.cargo_en for s in snap.shipments)
+    assert all(not re.search("[А-Яа-я]", s.cargo_en or "") for s in snap.shipments)
+
+
+def test_sea_polygons_cover_ports_and_exclude_land() -> None:
+    assert sea_at(43.63, 51.1) == "caspian"  # рейд Актау
+    assert sea_at(40.1, 50.0) == "caspian"  # южнее Апшерона, подходы к Баку
+    assert sea_at(42.2, 41.5) == "black_sea"  # рейд Поти
+    assert sea_at(44.2, 29.0) == "black_sea"  # Констанца
+    assert sea_at(41.3, 53.5) is None  # Кара-Богаз-Гол исключён
+    assert sea_at(46.5, 34.0) is None  # Азов не считаем
+    assert sea_at(51.1, 71.4) is None  # Астана
+    assert sea_at(43.65, 51.2) is None  # сам берег Актау — суша без допуска…
+    assert sea_at(43.65, 51.2, COAST_TOLERANCE_DEG) == "caspian"  # …и море с ним
+    grid = sea_grid(1.0)
+    assert 80 < len(grid) < 160
+    assert all(sea_at(lat, lon, COAST_TOLERANCE_DEG) for lat, lon in grid)
     # детерминированность по времени
     assert wind_at(43.63, 51.25, NOW) == wind_at(43.63, 51.25, NOW)
     assert wind_at(43.63, 51.25, NOW) != wind_at(43.63, 51.25, NOW + timedelta(hours=6))
@@ -191,7 +222,7 @@ async def test_api_endpoints(mock_service: MapSnapshotService) -> None:
         assert body["shipments"][0]["track"][0] == [NODES["XIAN"].lon, NODES["XIAN"].lat]
 
         wind = await client.get("/api/v1/wind")
-        assert wind.status_code == 200 and len(wind.json()["points"]) > 100
+        assert wind.status_code == 200 and len(wind.json()["points"]) > 60
 
         one = await client.get("/api/v1/shipments/mc-26-0412")
         assert one.status_code == 200 and one.json()["ref"] == "MC-26-0412"
@@ -267,8 +298,8 @@ async def test_replay_at_is_deterministic_and_windowed(mock_service: MapSnapshot
         assert again["shipments"] == body["shipments"]
         assert body["shipments"][2]["position"] != live["shipments"][2]["position"]
         # ветер на момент at и с мелкой сеткой
-        wind = await client.get("/api/v1/wind", params={"at": at.isoformat(), "step": 1})
-        assert wind.status_code == 200 and len(wind.json()["points"]) > 1000
+        wind = await client.get("/api/v1/wind", params={"at": at.isoformat(), "step": 0.5})
+        assert wind.status_code == 200 and len(wind.json()["points"]) > 300
         # вне окна — 400 с причиной
         far = datetime.now(UTC) - timedelta(days=10)
         assert (
