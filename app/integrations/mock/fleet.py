@@ -125,8 +125,8 @@ class MockFleetSource:
     def __init__(self, clock: Callable[[], datetime]) -> None:
         self._clock = clock
 
-    async def list_vessels(self) -> list[VesselMapStatus]:
-        now = self._clock()
+    async def list_vessels(self, at: datetime | None = None) -> list[VesselMapStatus]:
+        now = at or self._clock()
         result: list[VesselMapStatus] = []
         for state in list_ferry_states(now):
             spec = state.spec
@@ -257,8 +257,8 @@ class MockShipmentSource:
     def __init__(self, clock: Callable[[], datetime]) -> None:
         self._clock = clock
 
-    async def list_plans(self) -> list[ShipmentPlan]:
-        now = self._clock()
+    async def list_plans(self, at: datetime | None = None) -> list[ShipmentPlan]:
+        now = at or self._clock()
         h = timedelta(hours=1)
         ferries = {state.spec.name: state for state in list_ferry_states(now)}
 

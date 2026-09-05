@@ -1,14 +1,14 @@
 import type { NodeStatus, Snapshot } from "../api";
 import {
-  LEVEL_COLOR,
-  LEVEL_ICON,
-  LEVEL_LABEL,
-  PAYLOAD_LABEL,
-  REPORT_TITLE,
   fmtDir,
   fmtRelative,
   fmtWind,
+  LEVEL_COLOR,
+  LEVEL_ICON,
+  LEVEL_LABEL,
   levelOf,
+  PAYLOAD_LABEL,
+  REPORT_TITLE,
 } from "../format";
 
 const RANK: Record<string, number> = { critical: 0, warning: 1, watch: 2, ok: 3, none: 4 };
@@ -32,23 +32,36 @@ function NodeRow({
 }) {
   const level = levelOf(node);
   return (
-    <li className={`card card--clickable ${selected ? "card--selected" : ""}`} onClick={onClick}>
-      <div className="card__head">
-        <b>{node.name}</b>
-        <span className="pill" style={{ color: LEVEL_COLOR[level], borderColor: LEVEL_COLOR[level] }}>
-          {node.alert_level ? `${LEVEL_ICON[node.alert_level]} ${LEVEL_LABEL[node.alert_level]}` : level === "ok" ? "норма" : "нет данных"}
-        </span>
-      </div>
-      <div className="card__meta">
-        <span>
-          {fmtWind(node.wind_speed, node.wind_gust)} {fmtDir(node.wind_dir)}
-        </span>
-        <span className="muted">{node.country}</span>
-      </div>
-      {node.alert_message && <div className="muted small">{node.alert_message}</div>}
-      {node.weather_ts && (
-        <div className="muted small">обновлено {fmtRelative(node.weather_ts, refDate)}</div>
-      )}
+    <li>
+      <button
+        type="button"
+        className={`card card--clickable ${selected ? "card--selected" : ""}`}
+        onClick={onClick}
+      >
+        <div className="card__head">
+          <b>{node.name}</b>
+          <span
+            className="pill"
+            style={{ color: LEVEL_COLOR[level], borderColor: LEVEL_COLOR[level] }}
+          >
+            {node.alert_level
+              ? `${LEVEL_ICON[node.alert_level]} ${LEVEL_LABEL[node.alert_level]}`
+              : level === "ok"
+                ? "норма"
+                : "нет данных"}
+          </span>
+        </div>
+        <div className="card__meta">
+          <span>
+            {fmtWind(node.wind_speed, node.wind_gust)} {fmtDir(node.wind_dir)}
+          </span>
+          <span className="muted">{node.country}</span>
+        </div>
+        {node.alert_message && <div className="muted small">{node.alert_message}</div>}
+        {node.weather_ts && (
+          <div className="muted small">обновлено {fmtRelative(node.weather_ts, refDate)}</div>
+        )}
+      </button>
     </li>
   );
 }
@@ -57,9 +70,13 @@ export function PortsPanel({ snapshot, selectedNode, onFocusNode }: Props) {
   const refDate = new Date(snapshot.generated_at);
   const ports = snapshot.nodes
     .filter((n) => n.is_weather_tracked)
-    .sort((a, b) => RANK[levelOf(a)] - RANK[levelOf(b)] || (b.wind_speed ?? 0) - (a.wind_speed ?? 0));
+    .sort(
+      (a, b) => RANK[levelOf(a)] - RANK[levelOf(b)] || (b.wind_speed ?? 0) - (a.wind_speed ?? 0),
+    );
   const others = snapshot.nodes.filter((n) => !n.is_weather_tracked);
-  const vessels = [...snapshot.vessels].sort((a, b) => Number(b.has_recent_data) - Number(a.has_recent_data));
+  const vessels = [...snapshot.vessels].sort(
+    (a, b) => Number(b.has_recent_data) - Number(a.has_recent_data),
+  );
 
   return (
     <div>
@@ -89,7 +106,9 @@ export function PortsPanel({ snapshot, selectedNode, onFocusNode }: Props) {
               )}
             </div>
             <div className="card__meta">
-              <span>{v.has_recent_data ? `${v.route} · ${v.phase}` : "позиция вне AIS-покрытия"}</span>
+              <span>
+                {v.has_recent_data ? `${v.route} · ${v.phase}` : "позиция вне AIS-покрытия"}
+              </span>
               <span className="muted">{v.sog != null ? `${v.sog.toFixed(1)} уз` : v.operator}</span>
             </div>
           </li>
@@ -100,8 +119,8 @@ export function PortsPanel({ snapshot, selectedNode, onFocusNode }: Props) {
         <>
           <div className="block__title">Сводки от доверенных источников</div>
           <ul className="list">
-            {snapshot.reports.map((r, i) => (
-              <li key={i} className="card">
+            {snapshot.reports.map((r) => (
+              <li key={`${r.report_type}-${r.port_name}-${r.ts}`} className="card">
                 <div className="card__head">
                   <b>
                     {REPORT_TITLE[r.report_type] ?? r.report_type}

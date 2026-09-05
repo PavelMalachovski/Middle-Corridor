@@ -15,7 +15,8 @@ export function Legend() {
         <span className="legend__dot" style={{ background: LEVEL_COLOR.warning }} />▲ риск остановки
       </div>
       <div className="legend__row">
-        <span className="legend__dot" style={{ background: LEVEL_COLOR.critical }} />● вероятна остановка
+        <span className="legend__dot" style={{ background: LEVEL_COLOR.critical }} />● вероятна
+        остановка
       </div>
       <div className="legend__sep" />
       <div className="legend__row">

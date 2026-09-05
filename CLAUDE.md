@@ -19,6 +19,8 @@ docker compose up -d db                # Postgres на ПОРТУ 5433 (5432 з�
 $env:MOCK_DATA='true'; .venv\Scripts\python -m app.main   # API карты на синтетике, без Postgres
 cd web; npm install; npm run dev                            # фронт с hot reload на :5173 (прокси /api → :8000)
 cd web; npm run build                                       # web/dist → раздаёт FastAPI по /
+cd web; npm run lint; npm test; npm run typecheck           # Biome + Vitest + tsc (обязательно перед коммитом)
+cd web; npm run e2e                                         # Playwright: нужен build; API с MOCK_DATA поднимет сам (или возьмёт :8000)
 ```
 
 Конфиг — только через ENV/`.env` (pydantic-settings, `app/config.py`).
@@ -34,7 +36,10 @@ api/           только FastAPI-роуты; вызывают services
 db/            модели SQLAlchemy 2 async + repositories (запросы только тут)
 scheduler/     джобы; APScheduler опционален (SCHEDULER_ENABLED, по умолчанию false)
 integrations/mock/  синтетические источники для карты (MOCK_DATA=true); реализуют те же Protocol'ы
-web/           фронт карты: React + Vite + TS + MapLibre; ходит только в /api/v1, типы в src/api.ts
+web/           фронт карты: React 19 + Vite 8 + TS 7 + MapLibre 6; ходит только в /api/v1, типы в src/api.ts
+               src/live.ts — SSE/поллинг/replay; src/replay.ts + replayClock.ts — шкала времени;
+               src/map/animate.ts — интерполятор движения; components/sheet.ts — геометрия шторки;
+               *.test.ts рядом с кодом (Vitest), e2e/ — Playwright, biome.json — линт и формат
 api/index.py   точка входа Vercel (serverless FastAPI: только /api/v1 и /health); vercel.json — маршрутизация
 ```
 
@@ -74,6 +79,34 @@ api/index.py   точка входа Vercel (serverless FastAPI: только /a
   другом домене ходит в API через `VITE_API_BASE` + `CORS_ORIGINS`.
 - Положение груза без живой позиции — ПРОЕКЦИЯ, не факт: не рисовать её как
   подтверждённую (`position.confirmed=false`, пунктир на карте).
+- MapLibre 6: только WebGL 2 (без него — `MapFallback`), импорт `import * as
+  maplibregl`. Dev-пребандл Rolldown дублирует maplibre-gl-shared и валидатор
+  стиля не знает `line-layer-opacity` — поэтому `optimizeDeps.exclude:
+  ["maplibre-gl"]`; в production-сборке дубля нет.
+- CSS MapLibre приезжает с ленивым чанком карты, то есть ПОСЛЕ styles.css:
+  переопределения `.maplibregl-*` и контейнер карты держим на специфичности
+  `.app .map` / `.map .maplibregl-…`, иначе `.maplibregl-map { position:
+  relative }` схлопывает карту в 0 px.
+- Слежение камерой: покадровый `jumpTo` вызывает `map.stop()`, который
+  сбрасывает обработчики жестов. Слежение снимаем СИНХРОННО в обработчике
+  `dragstart`/`wheel`/`zoomstart` (`followState.current`), не через React-
+  состояние — иначе drag превращается в click и снимает выбор груза.
+- Replay: «сейчас» — по серверным часам (`server_time` снимка + прошедшее у
+  клиента), не по `Date.now()`: с `MOCK_TIME_SCALE` они расходятся в сотни
+  раз. Окно ±N ч задаёт бэкенд (`snapshot.live`), у краёв держим отступ 15
+  мин — иначе сервер отвечает 400.
+- Ветер в replay — троттлинг (раз в 1,5 с), не дебаунс: при воспроизведении
+  `replayAt` меняется каждые 400 мс, и дебаунс не сработал бы никогда.
+- Vitest: логику держать в чистых модулях (`replayClock.ts`, `sheet.ts`,
+  `geo.ts`, `animate.ts`), React-компоненты тестировать через jsdom
+  (`// @vitest-environment jsdom`, см. ErrorBoundary.test.tsx).
+- Playwright в песочнике: браузер Chromium из `/opt/pw-browsers/chromium`
+  через `PLAYWRIGHT_CHROMIUM_PATH`, тайлы недоступны — карта чёрная,
+  проверяем оверлеи; `page.goto` с `networkidle` зависает из-за SSE — только
+  `domcontentloaded`.
+- В командах для песочницы использовать абсолютные пути: рабочий каталог
+  прыгает между корнем и `web/`, `npm install` не в том каталоге создаёт
+  мусорный package.json в корне.
 - Фронт: подписи узлов/грузов — HTML-маркеры (без glyph-сервера), иконки
   symbol-слоёв рисуются на canvas. Подложки — пресеты в `web/src/map/style.ts`
   с цепочкой кандидатов (вектор без ключа → растр CARTO/Esri); стиль

@@ -30,4 +30,12 @@ class WindField(BaseModel):
 
 
 class WindFieldSource(Protocol):
-    async def get_field(self) -> WindField | None: ...
+    async def get_field(
+        self, at: datetime | None = None, step_deg: float | None = None
+    ) -> WindField | None:
+        """Поле на момент at (None = сейчас) с шагом сетки step_deg (None = по умолчанию).
+
+        Источники без истории могут игнорировать at; частицам ветра нужен
+        шаг мельче, чем стрелкам, поэтому шаг задаёт запрос.
+        """
+        ...

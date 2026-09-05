@@ -72,6 +72,14 @@ class Settings(BaseSettings):
     # Origin'ы фронта, живущего на другом домене (например, Vercel при бэкенде
     # на Railway), через запятую. Пусто = CORS выключен (фронт раздаёт сам API).
     cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=list)
+    # Живые обновления карты: SSE-поток /api/v1/stream (None = авто: выключен на
+    # Vercel, где функция не может держать соединение) и интервал поллинга/потока.
+    stream_enabled: bool | None = None
+    stream_interval_s: int = 5
+    poll_interval_s: int = 10
+    replay_past_hours: int = 72  # окно шкалы времени назад
+    replay_future_hours: int = 24  # и вперёд (прогноз)
+    vercel: str = ""  # Vercel выставляет VERCEL=1 в окружении функции
 
     # Runtime
     log_level: str = "INFO"
@@ -95,6 +103,12 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.env.lower() == "production"
+
+    @property
+    def stream_available(self) -> bool:
+        if self.stream_enabled is not None:
+            return self.stream_enabled
+        return not self.vercel
 
 
 @lru_cache

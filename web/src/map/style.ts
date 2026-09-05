@@ -41,7 +41,12 @@ function rasterStyle(
     },
     layers: [
       { id: "background", type: "background", paint: { "background-color": background } },
-      { id: "base", type: "raster", source: "base", paint: { "raster-opacity": base.opacity ?? 1 } },
+      {
+        id: "base",
+        type: "raster",
+        source: "base",
+        paint: { "raster-opacity": base.opacity ?? 1 },
+      },
     ],
   };
   if (labels) {
