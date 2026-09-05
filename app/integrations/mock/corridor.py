@@ -85,6 +85,8 @@ class MockNodeSource:
                 kind=node.kind,
                 lat=node.lat,
                 lon=node.lon,
+                name_en=node.name_en,
+                country_en=node.country_en,
             )
             if node.kind == NodeKind.port:
                 speed, gust, direction = wind_at(node.lat, node.lon, weather_ts)
@@ -197,6 +199,7 @@ class MockReportSource:
             ReportStatus(
                 report_type="queue",
                 port_name="Актау",
+                port_code="AKTAU",
                 payload={
                     "vessels_waiting": 5,
                     "ferry_expected": (now + timedelta(hours=20)).date().isoformat(),
@@ -207,13 +210,18 @@ class MockReportSource:
             ReportStatus(
                 report_type="border_delay",
                 port_name=None,
-                payload={"border": "Бёюк-Кясик / Гардабани", "delay_hours": 14},
+                payload={
+                    "border": "Бёюк-Кясик / Гардабани",
+                    "border_code": "BOYUK_KASIK",
+                    "delay_hours": 14,
+                },
                 note="Досмотр на азербайджанской стороне, очередь около 40 вагонов",
                 ts=now - timedelta(hours=7),
             ),
             ReportStatus(
                 report_type="rate",
                 port_name="Баку (Алят)",
+                port_code="BAKU_ALAT",
                 payload={"rate_usd": 3450},
                 note="40' HC Сиань — Констанца, all-in, сентябрь",
                 ts=now - timedelta(hours=26),

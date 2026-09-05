@@ -1,3 +1,5 @@
+import { useI18n } from "../i18n";
+
 /**
  * Заглушка на месте карты: браузер без WebGL 2 или карта упала.
  * Панель справа продолжает работать — данные не зависят от карты.
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export function MapFallback({ title, detail, onRetry }: Props) {
+  const { t } = useI18n();
   return (
     <div className="map map--fallback" role="alert">
       <div className="map-fallback">
@@ -20,7 +23,7 @@ export function MapFallback({ title, detail, onRetry }: Props) {
         <div className="map-fallback__detail">{detail}</div>
         {onRetry && (
           <button type="button" className="chip chip--on" onClick={onRetry}>
-            Попробовать снова
+            {t("err.retry")}
           </button>
         )}
       </div>

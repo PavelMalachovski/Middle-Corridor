@@ -381,7 +381,7 @@ export class WindParticleLayer implements CustomLayerInterface {
   private drawScreenTexture(gl: GL, texture: WebGLTexture, opacity: number): void {
     const p = this.screenProgram;
     if (!p || !this.quadBuffer) return;
-    gl.useProgram(p.program);
+    activateProgram(gl, p.program);
     bindAttribute(gl, this.quadBuffer, p.attribs.get("a_pos")!, 2);
     bindTexture(gl, texture, 2);
     gl.uniform1i(p.uniforms.get("u_screen")!, 2);
@@ -402,7 +402,7 @@ export class WindParticleLayer implements CustomLayerInterface {
       );
       this.drawPrograms.set(variant, p);
     }
-    gl.useProgram(p.program);
+    activateProgram(gl, p.program);
     bindAttribute(gl, this.indexBuffer, p.attribs.get("a_index")!, 1);
     bindTexture(gl, this.state[0], 0);
     bindTexture(gl, this.windTexture, 1);
@@ -433,7 +433,7 @@ export class WindParticleLayer implements CustomLayerInterface {
   private updateParticles(gl: GL, grid: WindGrid): void {
     const p = this.updateProgram;
     if (!p || !this.state || !this.windTexture || !this.quadBuffer || !this.map) return;
-    gl.useProgram(p.program);
+    activateProgram(gl, p.program);
     bindAttribute(gl, this.quadBuffer, p.attribs.get("a_pos")!, 2);
     bindTexture(gl, this.state[0], 0);
     bindTexture(gl, this.windTexture, 1);
@@ -507,6 +507,12 @@ function createBuffer(gl: GL, data: Float32Array): WebGLBuffer {
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
   return buffer;
+}
+
+/** gl.useProgram через обёртку: имя `use*` Biome принимает за React-хук. */
+function activateProgram(gl: GL, program: WebGLProgram): void {
+  // biome-ignore lint/correctness/useHookAtTopLevel: WebGL API, не React-хук
+  gl.useProgram(program);
 }
 
 function bindAttribute(gl: GL, buffer: WebGLBuffer, location: number, size: number): void {

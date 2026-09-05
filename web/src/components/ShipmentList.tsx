@@ -1,5 +1,7 @@
 import type { Shipment, Snapshot } from "../api";
-import { fmtHours, fmtRelative, STATE_LABEL } from "../format";
+import { fmtHours, fmtRelative, stateLabel } from "../format";
+import { type Key, nodeNameByCode, useI18n } from "../i18n";
+import { eventLabel, holdLabel } from "../i18n/labels";
 import {
   EMPTY_FILTER,
   filterShipments,
@@ -20,7 +22,7 @@ export function StatePill({ shipment }: { shipment: Shipment }) {
   const delayed = shipment.delay_hours >= 1 && shipment.state !== "delivered";
   return (
     <span className={`pill pill--${shipment.state} ${delayed ? "pill--delayed" : ""}`}>
-      {STATE_LABEL[shipment.state]}
+      {stateLabel(shipment.state)}
       {delayed && ` · +${fmtHours(shipment.delay_hours)}`}
     </span>
   );
@@ -37,68 +39,67 @@ export function ShipmentList({
   onFilter: (f: ShipmentFilter) => void;
   onSelect: (ref: string) => void;
 }) {
+  const { t, lang } = useI18n();
   const ref = new Date(snapshot.generated_at);
   const all = [...snapshot.shipments].sort(
     (a, b) => ORDER[a.state] - ORDER[b.state] || b.delay_hours - a.delay_hours,
   );
   if (!all.length) {
-    return (
-      <div className="empty">
-        Отправок нет: источник трекинга ещё не подключён. Порты, суда и новости — на соседних
-        вкладках.
-      </div>
-    );
+    return <div className="empty">{t("list.empty")}</div>;
   }
   const items = filterShipments(all, filter, snapshot.nodes);
   const active = isFilterActive(filter);
+  const place = (code: string | undefined, fallback: string) =>
+    (code && nodeNameByCode(snapshot.nodes, code, lang)) || fallback;
   return (
     <>
       <div className="filters">
         <input
           type="search"
           className="search"
-          placeholder="Номер, клиент, груз, город…"
-          aria-label="Поиск груза"
+          placeholder={t("list.searchPlaceholder")}
+          aria-label={t("list.searchLabel")}
           value={filter.query}
           onChange={(e) => onFilter({ ...filter, query: e.target.value })}
         />
-        <div className="filters__row" role="group" aria-label="Статус">
-          {STATUS_OPTIONS.map((o) => (
+        <fieldset className="filters__row">
+          <legend className="sr-only">{t("list.statusLabel")}</legend>
+          {STATUS_OPTIONS.map((key) => (
             <button
-              key={o.key}
+              key={key}
               type="button"
-              className={`chip chip--sm ${filter.status === o.key ? "chip--on" : ""}`}
-              onClick={() => onFilter({ ...filter, status: o.key })}
+              className={`chip chip--sm ${filter.status === key ? "chip--on" : ""}`}
+              onClick={() => onFilter({ ...filter, status: key })}
             >
-              {o.label}
+              {t(`filter.status.${key}` as Key)}
             </button>
           ))}
-        </div>
+        </fieldset>
         <div className="filters__row">
           <select
             className="select"
-            aria-label="Плечо коридора"
+            aria-label={t("list.legLabel")}
             value={filter.leg}
             onChange={(e) => onFilter({ ...filter, leg: e.target.value as ShipmentFilter["leg"] })}
           >
-            {LEG_OPTIONS.map((o) => (
-              <option key={o.key} value={o.key}>
-                {o.label}
+            {LEG_OPTIONS.map((key) => (
+              <option key={key} value={key}>
+                {t(`filter.leg.${key}` as Key)}
               </option>
             ))}
           </select>
           {active && (
             <button type="button" className="link" onClick={() => onFilter(EMPTY_FILTER)}>
-              сбросить · {items.length} из {all.length}
+              {t("list.resetCount", { shown: items.length, total: all.length })}
             </button>
           )}
         </div>
       </div>
       {!items.length && (
         <div className="empty">
-          Ничего не найдено.{" "}
+          {t("list.nothingFound")}{" "}
           <button type="button" className="link" onClick={() => onFilter(EMPTY_FILTER)}>
-            Сбросить фильтры
+            {t("list.resetFilters")}
           </button>
         </div>
       )}
@@ -111,7 +112,7 @@ export function ShipmentList({
                 <StatePill shipment={s} />
               </div>
               <div className="card__route">
-                {s.origin} → {s.destination}
+                {place(s.origin_code, s.origin)} → {place(s.destination_code, s.destination)}
               </div>
               <div className="progress">
                 <div
@@ -120,10 +121,12 @@ export function ShipmentList({
                 />
               </div>
               <div className="card__meta">
-                <span>{s.last_event}</span>
+                <span>{eventLabel(s, snapshot.nodes, lang)}</span>
                 <span className="muted">{fmtRelative(s.last_event_at, ref)}</span>
               </div>
-              {s.hold_reason && <div className="hold">⚠ {s.hold_reason}</div>}
+              {holdLabel(s, snapshot.nodes, lang) && (
+                <div className="hold">⚠ {holdLabel(s, snapshot.nodes, lang)}</div>
+              )}
             </button>
           </li>
         ))}

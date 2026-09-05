@@ -13,8 +13,10 @@ import {
 // воркера не грузятся ни тайлы, ни GeoJSON-слои (коридор, стрелки) — карта чёрная.
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Snapshot, VesselStatus, WindField } from "../api";
+import type { NodeStatus, Snapshot, VesselStatus, WindField } from "../api";
 import { fmtRelative } from "../format";
+import { type Lang, t } from "../i18n";
+import { eventLabel, vesselPhase, vesselRoute } from "../i18n/labels";
 import { Interpolator, type Pose } from "./animate";
 import { type LonLat, splitTrack } from "./geo";
 import { windArrow } from "./icons";
@@ -60,6 +62,7 @@ interface Props {
   wind: WindField | null;
   layers: LayerToggles;
   windMode: WindMode;
+  lang: Lang; // язык подписей маркеров и попапов — при смене перерисовываем
   basemap: BasemapId;
   globe: boolean;
   terrain: boolean; // светотень рельефа (hillshade)
@@ -292,10 +295,12 @@ function applyHillshade(map: MLMap, on: boolean, dark: boolean): void {
   }
 }
 
-function vesselPopupHtml(v: VesselStatus, ref: Date): string {
-  const age = v.ts ? fmtRelative(v.ts, ref) : "нет данных";
-  const sog = v.sog != null ? `${v.sog.toFixed(1)} уз` : "—";
-  return `<div class="popup"><b>${v.name}</b><div>${v.route ?? ""} · ${v.phase ?? ""}</div><div>${sog} · AIS ${age}</div></div>`;
+function vesselPopupHtml(v: VesselStatus, ref: Date, nodes: NodeStatus[]): string {
+  const age = v.ts ? fmtRelative(v.ts, ref) : t("common.noData");
+  const sog = v.sog != null ? `${v.sog.toFixed(1)} ${t("common.kn")}` : "—";
+  const route = vesselRoute(v, nodes) ?? "";
+  const phase = vesselPhase(v, nodes) ?? "";
+  return `<div class="popup"><b>${v.name}</b><div>${route} · ${phase}</div><div>${sog} · AIS ${age}</div></div>`;
 }
 
 export function MapView({
@@ -303,6 +308,7 @@ export function MapView({
   wind,
   layers,
   windMode,
+  lang,
   basemap,
   globe,
   terrain,
@@ -358,6 +364,8 @@ export function MapView({
   };
   const particles = useRef<WindParticleLayer | null>(null);
   const snapshotRef = useRef(snapshot);
+  // вид из адреса и груз из ссылки нужны только при создании карты
+  const mount = useRef({ initialView, selectedRef });
   snapshotRef.current = snapshot;
   const sheetRef = useRef(sheetHeight);
   sheetRef.current = sheetHeight;
@@ -404,8 +412,14 @@ export function MapView({
       style: BOOT_STYLE,
       // вид из адреса, иначе весь коридор; на старте шторка ещё не отчиталась о
       // высоте — берём её положение по умолчанию
-      ...(initialView
-        ? { center: [initialView.lon, initialView.lat] as [number, number], zoom: initialView.zoom }
+      ...(mount.current.initialView
+        ? {
+            center: [mount.current.initialView.lon, mount.current.initialView.lat] as [
+              number,
+              number,
+            ],
+            zoom: mount.current.initialView.zoom,
+          }
         : {
             bounds: CORRIDOR_BOUNDS,
             fitBoundsOptions: { padding: viewportPadding(window.innerHeight * 0.45) },
@@ -420,7 +434,9 @@ export function MapView({
     mapRef.current = map;
     (window as unknown as { __mcMap?: MLMap }).__mcMap = map; // отладка из консоли
     // ссылка с грузом и видом: вид важнее подлёта к грузу — считаем, что уже подлетели
-    if (initialView && selectedRef) flownRef.current = selectedRef;
+    if (mount.current.initialView && mount.current.selectedRef) {
+      flownRef.current = mount.current.selectedRef;
+    }
     const particleLayer = new WindParticleLayer({
       count: window.innerWidth <= MOBILE_MAX_WIDTH ? MOBILE_PARTICLES : DEFAULT_WIND_OPTIONS.count,
     });
@@ -591,7 +607,7 @@ export function MapView({
           popupRef.current?.remove();
           popupRef.current = new Popup({ closeButton: false, offset: 14 })
             .setLngLat(m.getLngLat())
-            .setHTML(vesselPopupHtml(vessel, new Date(snap.generated_at)))
+            .setHTML(vesselPopupHtml(vessel, new Date(snap.generated_at), snap.nodes))
             .addTo(map);
         });
         marker = new Marker({ element: el, anchor: "center" }).setLngLat([v.lon, v.lat]).addTo(map);
@@ -604,6 +620,7 @@ export function MapView({
         marker.getElement() as HTMLDivElement,
         v,
         interp.current.pose(`v:${v.name}`, now)?.heading ?? v.cog,
+        vesselRoute(v, snapshot.nodes, lang),
       );
     }
     for (const [name, marker] of vesselMarkers.current) {
@@ -646,6 +663,7 @@ export function MapView({
         s,
         s.ref === selectedRef,
         s.ref === followRef,
+        eventLabel(s, snapshot.nodes, lang),
       );
     }
     for (const [ref, marker] of shipMarkers.current) {
@@ -656,7 +674,7 @@ export function MapView({
       }
     }
     ensureLoop();
-  }, [snapshot, styleVersion, selectedRef, followRef, ensureLoop]);
+  }, [snapshot, styleVersion, selectedRef, followRef, ensureLoop, lang]);
 
   // --- слежение за грузом ----------------------------------------------------------
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { type Key, useI18n } from "../i18n";
 import type { WindMode } from "../map/MapView";
 import { AVAILABLE_BASEMAPS, type BasemapId } from "../map/style";
 
@@ -30,76 +31,69 @@ export function MapControls({
   windHint,
   onWindMode,
 }: Props) {
+  const { t } = useI18n();
   return (
     <aside className="mapctl">
-      <div className="mapctl__title">Подложка</div>
+      <div className="mapctl__title">{t("ctl.basemap")}</div>
       <div className="mapctl__row">
         {AVAILABLE_BASEMAPS.map((preset) => (
           <button
             key={preset.id}
             type="button"
             className={`chip ${basemap === preset.id ? "chip--on" : ""}`}
-            title={preset.hint}
+            title={t(`${preset.label}.hint` as Key)}
             onClick={() => onBasemap(preset.id)}
           >
-            {preset.label}
+            {t(preset.label as Key)}
           </button>
         ))}
       </div>
       <div className="mapctl__row">
         <label className="switch">
           <input type="checkbox" checked={globe} onChange={(e) => onGlobe(e.target.checked)} />
-          <span>Глобус</span>
+          <span>{t("ctl.globe")}</span>
         </label>
-        <label className="switch" title="Светотень рельефа поверх подложки">
+        <label className="switch" title={t("ctl.terrainTitle")}>
           <input
             type="checkbox"
             checked={terrain || terrain3d}
             disabled={terrain3d}
             onChange={(e) => onTerrain(e.target.checked)}
           />
-          <span>Рельеф</span>
+          <span>{t("ctl.terrain")}</span>
         </label>
-        <label
-          className="switch"
-          title="Объёмный рельеф и наклон камеры; вращение — правой кнопкой или компасом"
-        >
+        <label className="switch" title={t("ctl.3dTitle")}>
           <input
             type="checkbox"
             checked={terrain3d}
             onChange={(e) => onTerrain3d(e.target.checked)}
           />
-          <span>3D</span>
+          <span>{t("ctl.3d")}</span>
         </label>
       </div>
       <div className="mapctl__row">
-        <span className="mapctl__label">Ветер</span>
+        <span className="mapctl__label">{t("ctl.wind")}</span>
         <button
           type="button"
           className={`chip ${windMode === "particles" ? "chip--on" : ""}`}
-          title="Живые частицы по полю ветра (WebGL); цвет — сила ветра"
+          title={t("ctl.particlesTitle")}
           onClick={() => onWindMode("particles")}
         >
-          Частицы
+          {t("ctl.particles")}
         </button>
         <button
           type="button"
           className={`chip ${windMode === "arrows" ? "chip--on" : ""}`}
-          title="Стрелки по сетке — легче для слабых устройств"
+          title={t("ctl.arrowsTitle")}
           onClick={() => onWindMode("arrows")}
         >
-          Стрелки
+          {t("ctl.arrows")}
         </button>
       </div>
-      {windHint && (
-        <div className="mapctl__hint">частицы выключены: устройству тяжело, показаны стрелки</div>
-      )}
+      {windHint && <div className="mapctl__hint">{t("ctl.windHint")}</div>}
       {fallback && (
-        <div
-          className="mapctl__hint"
-          title="Векторные тайлы не ответили — включена растровая подложка"
-        >
-          векторный стиль недоступен · растр
+        <div className="mapctl__hint" title={t("ctl.fallbackTitle")}>
+          {t("ctl.fallback")}
         </div>
       )}
     </aside>

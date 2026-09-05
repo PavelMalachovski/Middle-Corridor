@@ -1,5 +1,6 @@
 import type { Thresholds, WindHour } from "../../api";
 import { LEVEL_COLOR } from "../../format";
+import { useI18n } from "../../i18n";
 
 /**
  * Спарклайн ветра: линия устойчивого ветра, тонкая линия порывов, зоны
@@ -17,6 +18,7 @@ interface Props {
 const PAD = { top: 6, right: 8, bottom: 16, left: 26 };
 
 export function WindSparkline({ forecast, thresholds, now, width = 320, height = 96 }: Props) {
+  const { t } = useI18n();
   if (forecast.length < 2) return null;
   const t0 = Date.parse(forecast[0].ts);
   const t1 = Date.parse(forecast[forecast.length - 1].ts);
@@ -51,9 +53,9 @@ export function WindSparkline({ forecast, thresholds, now, width = 320, height =
       width="100%"
       height={height}
       role="img"
-      aria-label="Прогноз ветра на 48 часов с порогами предиктора"
+      aria-label={t("chart.windAria")}
     >
-      <title>Прогноз ветра, м/с</title>
+      <title>{t("chart.windTitle")}</title>
       {bands.map((b) => (
         <rect
           key={b.from}
@@ -89,7 +91,7 @@ export function WindSparkline({ forecast, thresholds, now, width = 320, height =
         const tx = x(now.getTime() + hh * 3_600_000);
         return (
           <text key={hh} x={tx} y={height - 4} className="spark__label" textAnchor="middle">
-            {hh === 0 ? "сейчас" : hh > 0 ? `+${hh} ч` : `${hh} ч`}
+            {hh === 0 ? t("common.now") : `${hh > 0 ? "+" : ""}${hh} ${t("common.h")}`}
           </text>
         );
       })}

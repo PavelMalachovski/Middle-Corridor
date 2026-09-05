@@ -1,5 +1,6 @@
 import type { AlertLevel, Checkpoint, Shipment, Thresholds, WindHour } from "./api";
 import { levelForWind } from "./format";
+import { t } from "./i18n";
 
 /**
  * Чистая логика прогноза и задержек для графиков — без React, под юнит-тесты.
@@ -90,8 +91,7 @@ export function checkpointDelays(s: Shipment): CheckpointDelay[] {
 /** «через 5 ч», «через 40 мин», «сейчас» */
 export function fmtIn(iso: string, now: Date): string {
   const min = Math.round((Date.parse(iso) - now.getTime()) / 60_000);
-  if (min <= 0) return "сейчас";
-  if (min < 60) return `через ${min} мин`;
-  const h = Math.round(min / 60);
-  return `через ${h} ч`;
+  if (min <= 0) return t("common.now");
+  if (min < 60) return t("common.in", { value: `${min} ${t("common.min")}` });
+  return t("common.in", { value: `${Math.round(min / 60)} ${t("common.h")}` });
 }

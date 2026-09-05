@@ -12,6 +12,7 @@ import { ShipmentList } from "./ShipmentList";
 
 export type Tab = "shipments" | "ports" | "news";
 
+import { type Key, useI18n } from "../i18n";
 import { EMPTY_FILTER, type ShipmentFilter } from "../shipmentFilter";
 /**
  * На узких экранах сайдбар — шторка снизу с тремя положениями:
@@ -33,7 +34,10 @@ import {
 // Вкладки, которые открывают не первыми, — отдельные чанки
 const PortsPanel = lazy(() => import("./PortsPanel").then((m) => ({ default: m.PortsPanel })));
 const NewsPanel = lazy(() => import("./NewsPanel").then((m) => ({ default: m.NewsPanel })));
-const PanelLoading = () => <div className="muted small panel-loading">загрузка…</div>;
+const PanelLoading = () => {
+  const { t } = useI18n();
+  return <div className="muted small panel-loading">{t("common.loading")}</div>;
+};
 
 export type { SheetState } from "./sheet";
 
@@ -72,7 +76,6 @@ function useIsMobile(): boolean {
 }
 
 const fullHeight = () => sheetFullHeight(window.innerHeight);
-const visibleFor = (s: SheetState) => sheetVisibleFor(s, window.innerHeight);
 const offsetFor = (s: SheetState) => sheetOffsetFor(s, window.innerHeight);
 
 interface Props {
@@ -116,6 +119,7 @@ export function Sidebar({
   onSheetChange,
   onShare,
 }: Props) {
+  const { t } = useI18n();
   const mobile = useIsMobile();
   const [filter, setFilter] = useState<ShipmentFilter>(EMPTY_FILTER);
   const viewportH = useViewportHeight();
@@ -125,7 +129,7 @@ export function Sidebar({
   const lastDragEnd = useRef(0); // чтобы click после перетаскивания не переключал вкладку
 
   useEffect(() => {
-    onSheetChange(mobile ? visibleFor(sheet) : 0);
+    onSheetChange(mobile ? sheetVisibleFor(sheet, viewportH) : 0);
   }, [mobile, sheet, onSheetChange, viewportH]);
 
   const selectTab = (t: Tab) => {
@@ -190,9 +194,9 @@ export function Sidebar({
   const selected = snapshot?.shipments.find((s) => s.ref === selectedRef) ?? null;
   const alerts = snapshot?.nodes.filter((n) => n.alert_level).length ?? 0;
   const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: "shipments", label: "Грузы", count: snapshot?.shipments.length ?? 0 },
-    { key: "ports", label: "Порты", count: alerts },
-    { key: "news", label: "Новости", count: snapshot?.news.length ?? 0 },
+    { key: "shipments", label: t("tab.shipments"), count: snapshot?.shipments.length ?? 0 },
+    { key: "ports", label: t("tab.ports"), count: alerts },
+    { key: "news", label: t("tab.news"), count: snapshot?.news.length ?? 0 },
   ];
 
   const style = mobile
@@ -235,7 +239,7 @@ export function Sidebar({
           error ? (
             <ApiError error={error} />
           ) : (
-            <div className="empty">Загружаем снимок коридора…</div>
+            <div className="empty">{t("panel.loadingSnapshot")}</div>
           )
         ) : tab === "shipments" ? (
           selected ? (
@@ -271,22 +275,23 @@ export function Sidebar({
 }
 
 function ApiError({ error }: { error: string }) {
+  const { t } = useI18n();
   const code = error.match(/HTTP (\d{3})/)?.[1];
-  const hint =
+  const hintKey: Key =
     code === "404"
-      ? "На этом домене нет бэкенда: фронт задеплоен отдельно (Root Directory = web?), а VITE_API_BASE не задан."
+      ? "panel.apiNoBackend"
       : code === "503"
-        ? "Бэкенд жив, но источник данных недоступен. На Vercel-демо: MOCK_DATA=true в Environment Variables и Redeploy."
+        ? "panel.apiSourceDown"
         : code?.startsWith("5")
-          ? "Бэкенд падает при запросе. На Vercel: проверь MOCK_DATA=true и логи функции (Deployments → Functions)."
-          : "Сервер не отвечает или блокирует запрос (сеть, CORS).";
+          ? "panel.apiCrash"
+          : "panel.apiNetwork";
   return (
     <div className="empty empty--error">
       <div>
-        <b>API не отвечает</b>
+        <b>{t("panel.apiDown")}</b>
       </div>
       <div className="mono small">{error}</div>
-      <div className="small">{hint}</div>
+      <div className="small">{t(hintKey)}</div>
     </div>
   );
 }

@@ -13,22 +13,22 @@ export interface ShipmentFilter {
 
 export const EMPTY_FILTER: ShipmentFilter = { query: "", status: "all", leg: "all" };
 
-export const STATUS_OPTIONS: { key: StatusFilter; label: string }[] = [
-  { key: "all", label: "все" },
-  { key: "active", label: "активные" },
-  { key: "in_transit", label: "в пути" },
-  { key: "waiting", label: "стоянка" },
-  { key: "delayed", label: "с задержкой" },
-  { key: "delivered", label: "доставлены" },
+export const STATUS_OPTIONS: StatusFilter[] = [
+  "all",
+  "active",
+  "in_transit",
+  "waiting",
+  "delayed",
+  "delivered",
 ];
 
-export const LEG_OPTIONS: { key: LegFilter; label: string }[] = [
-  { key: "all", label: "все плечи" },
-  { key: "rail_cis", label: "Китай — Казахстан" },
-  { key: "caspian", label: "Каспий" },
-  { key: "rail_caucasus", label: "Кавказ" },
-  { key: "black_sea", label: "Чёрное море" },
-  { key: "europe", label: "Европа" },
+export const LEG_OPTIONS: LegFilter[] = [
+  "all",
+  "rail_cis",
+  "caspian",
+  "rail_caucasus",
+  "black_sea",
+  "europe",
 ];
 
 /** Плечо, на котором груз сейчас: по узлу, откуда он движется (или где стоит). */

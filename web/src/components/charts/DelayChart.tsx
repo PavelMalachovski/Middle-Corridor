@@ -1,4 +1,5 @@
 import type { CheckpointDelay } from "../../forecast";
+import { useI18n } from "../../i18n";
 
 /**
  * Задержка по чекпоинтам: столбики «факт − план» в часах; будущие узлы —
@@ -13,6 +14,7 @@ interface Props {
 const PAD = { top: 12, right: 6, bottom: 6, left: 6 };
 
 export function DelayChart({ delays, height = 64 }: Props) {
+  const { t } = useI18n();
   if (delays.length < 2) return null;
   const width = 320;
   const w = width - PAD.left - PAD.right;
@@ -29,9 +31,9 @@ export function DelayChart({ delays, height = 64 }: Props) {
       width="100%"
       height={height}
       role="img"
-      aria-label="Задержка по чекпоинтам, часы"
+      aria-label={t("chart.delayAria")}
     >
-      <title>Отклонение от плана по чекпоинтам, ч</title>
+      <title>{t("chart.delayTitle")}</title>
       <line x1={PAD.left} x2={PAD.left + w} y1={zero} y2={zero} className="delay__zero" />
       {delays.map((d, i) => {
         const cx = PAD.left + slot * (i + 0.5);

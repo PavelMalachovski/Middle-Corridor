@@ -9,9 +9,11 @@ import {
   fmtWind,
   LEVEL_COLOR,
   LEVEL_ICON,
-  LEVEL_LABEL,
+  levelLabel,
   levelOf,
 } from "../format";
+import { type Lang, nodeName, nodeNameByCode, useI18n } from "../i18n";
+import { alertText, eventLabel, holdLabel } from "../i18n/labels";
 import { DelayChart } from "./charts/DelayChart";
 import { StatePill } from "./ShipmentList";
 
@@ -25,40 +27,55 @@ interface Props {
   onShare: () => void;
 }
 
-function positionText(s: Shipment, snapshot: Snapshot): { title: string; detail: string } {
+type T = (
+  key: Parameters<ReturnType<typeof useI18n>["t"]>[0],
+  params?: Record<string, string | number>,
+) => string;
+
+function positionText(
+  s: Shipment,
+  snapshot: Snapshot,
+  t: T,
+  lang: Lang,
+): { title: string; detail: string } {
   const p = s.position;
-  const nodeName = (code: string | null) =>
-    snapshot.nodes.find((n) => n.code === code)?.name ?? code ?? "";
+  const name = (code: string | null | undefined) =>
+    nodeNameByCode(snapshot.nodes, code, lang) || code || "";
   if (s.state === "delivered") {
-    return { title: `Доставлен: ${s.destination}`, detail: "Маршрут завершён" };
+    return {
+      title: t("card.delivered", { node: name(s.destination_code) || s.destination }),
+      detail: t("card.routeDone"),
+    };
   }
   if (p.source === "event") {
     return {
-      title: `В узле ${nodeName(p.from_code)}`,
-      detail: p.to_code
-        ? `Подтверждено событием · далее ${nodeName(p.to_code)}`
-        : "Подтверждено событием",
+      title: t("card.atNode", { node: name(p.from_code) }),
+      detail: p.to_code ? t("card.confirmedNext", { node: name(p.to_code) }) : t("card.confirmed"),
     };
   }
   if (p.source === "ais") {
     const vessel = snapshot.vessels.find((v) => v.name === p.on_vessel);
-    const sog = vessel?.sog != null ? `${vessel.sog.toFixed(1)} уз` : "";
-    const age = vessel?.ts ? `AIS ${fmtRelative(vessel.ts, new Date(snapshot.generated_at))}` : "";
+    const sog = vessel?.sog != null ? `${vessel.sog.toFixed(1)} ${t("common.kn")}` : "";
+    const age = vessel?.ts
+      ? t("card.aisAge", { value: fmtRelative(vessel.ts, new Date(snapshot.generated_at)) })
+      : "";
     return {
-      title: `На пароме «${p.on_vessel}»`,
-      detail: [`${nodeName(p.from_code)} → ${nodeName(p.to_code)}`, sog, age]
-        .filter(Boolean)
-        .join(" · "),
+      title: t("card.onFerry", { vessel: p.on_vessel ?? "" }),
+      detail: [`${name(p.from_code)} → ${name(p.to_code)}`, sog, age].filter(Boolean).join(" · "),
     };
   }
   const vehicle = p.on_vessel
-    ? `на судне «${p.on_vessel}»`
+    ? t("card.onVessel", { vessel: p.on_vessel })
     : p.mode === "sea"
-      ? "в море"
-      : "по железной дороге";
+      ? t("card.atSea")
+      : t("card.byRail");
   return {
-    title: `${nodeName(p.from_code)} → ${nodeName(p.to_code)}, ${Math.round(p.leg_progress * 100)}% плеча`,
-    detail: `Оценка по расписанию (${vehicle}) — живой позиции нет`,
+    title: t("card.legProgress", {
+      from: name(p.from_code),
+      to: name(p.to_code),
+      pct: Math.round(p.leg_progress * 100),
+    }),
+    detail: t("card.estimate", { vehicle }),
   };
 }
 
@@ -71,38 +88,37 @@ export function ShipmentCard({
   onToggleFollow,
   onShare,
 }: Props) {
+  const { t, lang } = useI18n();
   const ref = new Date(snapshot.generated_at);
-  const pos = positionText(s, snapshot);
+  const pos = positionText(s, snapshot, t, lang);
   const near = findNearestNode(snapshot.nodes, s.position.lat, s.position.lon);
   const nearLevel = near ? levelOf(near) : "none";
+  const hold = holdLabel(s, snapshot.nodes, lang);
+  const place = (code: string | undefined, fallback: string) =>
+    (code && nodeNameByCode(snapshot.nodes, code, lang)) || fallback;
 
   return (
     <div className="detail">
       <div className="detail__nav">
         <button type="button" className="link" onClick={onBack}>
-          ← все грузы
+          {t("card.all")}
         </button>
         <span className="detail__actions">
           <button type="button" className="link" onClick={onFocus}>
-            показать на карте
+            {t("card.showOnMap")}
           </button>
           {s.state !== "delivered" && (
             <button
               type="button"
               className={`link ${following ? "link--active" : ""}`}
               onClick={onToggleFollow}
-              title="Камера едет за грузом; любое движение карты снимает слежение"
+              title={t("card.followTitle")}
             >
-              {following ? "◉ следим" : "◎ следить"}
+              {following ? t("card.following") : t("card.follow")}
             </button>
           )}
-          <button
-            type="button"
-            className="link"
-            onClick={onShare}
-            title="Ссылка откроет этот груз в этом же месте карты"
-          >
-            ⇪ поделиться
+          <button type="button" className="link" onClick={onShare} title={t("card.shareTitle")}>
+            {t("card.share")}
           </button>
         </span>
       </div>
@@ -114,35 +130,38 @@ export function ShipmentCard({
         {s.client} · {s.cargo}
       </div>
       <div className="card__route detail__route">
-        {s.origin} → {s.destination}
+        {place(s.origin_code, s.origin)} → {place(s.destination_code, s.destination)}
       </div>
       <div className="progress progress--lg">
         <div className="progress__bar" style={{ width: `${Math.round(s.progress * 100)}%` }} />
       </div>
-      <div className="muted small">{Math.round(s.progress * 100)}% маршрута</div>
+      <div className="muted small">{t("card.progress", { pct: Math.round(s.progress * 100) })}</div>
 
       <section className="block">
-        <div className="block__title">Сейчас</div>
+        <div className="block__title">{t("card.now")}</div>
         <div className={`pos pos--${s.position.source}`}>
           <div className="pos__title">{pos.title}</div>
           <div className="muted small">{pos.detail}</div>
         </div>
-        {s.hold_reason && <div className="hold hold--lg">⚠ {s.hold_reason}</div>}
+        {hold && <div className="hold hold--lg">⚠ {hold}</div>}
         <dl className="kv">
-          <dt>Последнее событие</dt>
+          <dt>{t("card.lastEvent")}</dt>
           <dd>
-            {s.last_event}
+            {eventLabel(s, snapshot.nodes, lang)}
             <div className="muted small">
               {fmtTs(s.last_event_at)} · {fmtRelative(s.last_event_at, ref)}
             </div>
           </dd>
-          <dt>{s.state === "delivered" ? "Доставлен" : "ETA"}</dt>
+          <dt>{s.state === "delivered" ? t("card.deliveredAt") : t("card.eta")}</dt>
           <dd>
             {fmtTs(s.eta)}
             <div className="muted small">
               {fmtRelative(s.eta, ref)}
               {s.delay_hours >= 1 && s.state !== "delivered" && (
-                <span className="warn"> · задержка {fmtHours(s.delay_hours)}</span>
+                <span className="warn">
+                  {" "}
+                  · {t("card.delay", { value: fmtHours(s.delay_hours) })}
+                </span>
               )}
             </div>
           </dd>
@@ -151,35 +170,42 @@ export function ShipmentCard({
 
       {near && (
         <section className="block">
-          <div className="block__title">Погода рядом · {near.name}</div>
+          <div className="block__title">
+            {t("card.weatherNear", { node: nodeName(near, lang) })}
+          </div>
           <div className="weather">
             <span className="weather__level" style={{ color: LEVEL_COLOR[nearLevel] }}>
               {near.alert_level
-                ? `${LEVEL_ICON[near.alert_level]} ${LEVEL_LABEL[near.alert_level]}`
-                : "норма"}
+                ? `${LEVEL_ICON[near.alert_level]} ${levelLabel(near.alert_level)}`
+                : t("common.ok")}
             </span>
             <span>
               {fmtWind(near.wind_speed, near.wind_gust)} {fmtDir(near.wind_dir)}
             </span>
           </div>
-          {near.alert_message && <div className="muted small">{near.alert_message}</div>}
-          <div className="muted small">обновлено {fmtRelative(near.weather_ts, ref)}</div>
+          {alertText(near, lang) && <div className="muted small">{alertText(near, lang)}</div>}
+          <div className="muted small">
+            {t("card.updated", { value: fmtRelative(near.weather_ts, ref) })}
+          </div>
         </section>
       )}
 
       <section className="block">
-        <div className="block__title">Маршрут · отклонение от плана по узлам, ч</div>
+        <div className="block__title">{t("card.route")}</div>
         <DelayChart delays={checkpointDelays(s)} />
         <ol className="timeline">
           {s.checkpoints.map((cp) => (
             <li key={cp.code} className={`timeline__item timeline__item--${cp.state}`}>
               <span className="timeline__marker" />
               <div>
-                <div className="timeline__name">{cp.name}</div>
+                <div className="timeline__name">{place(cp.code, cp.name)}</div>
                 <div className="muted small">
                   {cp.actual_at
-                    ? `факт ${fmtTs(cp.actual_at)}`
-                    : `план ${fmtTs(cp.planned_at)} · ${fmtRelative(cp.planned_at, ref)}`}
+                    ? t("card.fact", { ts: fmtTs(cp.actual_at) })
+                    : t("card.plan", {
+                        ts: fmtTs(cp.planned_at),
+                        rel: fmtRelative(cp.planned_at, ref),
+                      })}
                 </div>
               </div>
             </li>

@@ -176,6 +176,29 @@ body,
   opacity: 0.4;
   cursor: not-allowed;
 }
+.lang {
+  display: inline-flex;
+  margin: 0 0 0 4px;
+  padding: 0;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.lang__btn {
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.lang__btn.is-on {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.12);
+}
 .chips {
   list-style: none;
   padding: 0;
@@ -1438,6 +1461,10 @@ button.card:focus-visible {
   margin-bottom: 10px;
 }
 .filters__row {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 5px;

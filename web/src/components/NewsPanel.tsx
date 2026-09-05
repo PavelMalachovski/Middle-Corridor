@@ -1,10 +1,12 @@
 import type { Snapshot } from "../api";
 import { fmtRelative } from "../format";
+import { useI18n } from "../i18n";
 
 export function NewsPanel({ snapshot }: { snapshot: Snapshot }) {
+  const { t } = useI18n();
   const ref = new Date(snapshot.generated_at);
   if (!snapshot.news.length) {
-    return <div className="empty">Новостей пока нет — джоба /poll_news ещё не собирала ленты.</div>;
+    return <div className="empty">{t("news.empty")}</div>;
   }
   return (
     <ul className="list">

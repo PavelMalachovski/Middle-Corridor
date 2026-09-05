@@ -30,6 +30,8 @@ export interface NodeStatus {
   wind_dir: number | null;
   weather_ts: string | null;
   forecast?: WindHour[] | null; // почасовой ветер −6…+48 ч (порты)
+  name_en?: string | null;
+  country_en?: string | null;
 }
 
 export interface VesselStatus {
@@ -44,6 +46,10 @@ export interface VesselStatus {
   has_recent_data: boolean;
   route: string | null;
   phase: string | null;
+  from_code?: string | null;
+  to_code?: string | null;
+  phase_code?: "at_sea" | "in_port" | null;
+  phase_node?: string | null;
 }
 
 export interface Checkpoint {
@@ -85,6 +91,15 @@ export interface Shipment {
   progress: number;
   checkpoints: Checkpoint[];
   track: [number, number][]; // [lon, lat]
+  origin_code?: string;
+  destination_code?: string;
+  hold_code?: string | null;
+  hold_node?: string | null;
+  hold_vessel?: string | null;
+  last_event_kind?: "departed" | "arrived" | null;
+  last_event_node?: string | null;
+  last_event_note_code?: string | null;
+  last_event_note_vessel?: string | null;
 }
 
 export interface RouteSegment {
@@ -109,6 +124,7 @@ export interface ReportStatus {
   payload: Record<string, unknown>;
   note: string | null;
   ts: string;
+  port_code?: string | null;
 }
 
 export interface Thresholds {

@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 /**
  * Чистая арифметика шкалы времени: серверные часы, окно replay, подписи.
  * Вынесена из хука useReplay, чтобы проверяться юнит-тестами без React.
@@ -44,7 +45,9 @@ export function offsetHours(replayMs: number, nowMs: number): number {
 export function fmtOffset(hours: number): string {
   const abs = Math.abs(hours);
   const sign = hours < 0 ? "−" : "+";
-  if (abs < 1) return `${sign}${Math.round(abs * 60)} мин`;
-  if (abs < 48) return `${sign}${abs < 10 ? abs.toFixed(1).replace(".0", "") : Math.round(abs)} ч`;
-  return `${sign}${(abs / 24).toFixed(1).replace(".0", "")} дн`;
+  if (abs < 1) return `${sign}${Math.round(abs * 60)} ${t("common.min")}`;
+  if (abs < 48) {
+    return `${sign}${abs < 10 ? abs.toFixed(1).replace(".0", "") : Math.round(abs)} ${t("common.h")}`;
+  }
+  return `${sign}${(abs / 24).toFixed(1).replace(".0", "")} ${t("common.d")}`;
 }

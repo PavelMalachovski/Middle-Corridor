@@ -20,6 +20,7 @@ import type { Focus, LayerToggles, WindMode } from "./map/MapView";
 // Карта с MapLibre — отдельный чанк: первый экран (панель, топбар) не ждёт её.
 const MapView = lazy(() => import("./map/MapView").then((m) => ({ default: m.MapView })));
 
+import { useI18n } from "./i18n";
 import { BASEMAPS, type BasemapId, DEFAULT_BASEMAP } from "./map/style";
 import { useReplay } from "./replay";
 import { shareLink } from "./share";
@@ -73,6 +74,7 @@ const INITIAL_URL = parseUrlState(window.location.search); // ?s=…&view=…&ba
 const URL_SYNC_MS = 400; // при воспроизведении replayAt меняется каждые 400 мс — не спамим history
 
 export function App() {
+  const { t, lang } = useI18n();
   const replay = useReplay();
   const { snapshot, wind, windAvailable, error, fetchedAt, mode } = useLiveData(replay.replayAt);
   useEffect(() => replay.sync(snapshot, fetchedAt), [replay, snapshot, fetchedAt]);
@@ -141,10 +143,8 @@ export function App() {
   }, [selectedRef, view, prefs.basemap, replay.replayAt]);
 
   useEffect(() => {
-    document.title = selectedRef
-      ? `${selectedRef} · Middle Corridor`
-      : "Middle Corridor · карта статуса";
-  }, [selectedRef]);
+    document.title = selectedRef ? `${selectedRef} · Middle Corridor` : t("app.title");
+  }, [selectedRef, t]);
 
   useEffect(() => {
     if (!toast) return;
@@ -154,10 +154,9 @@ export function App() {
 
   const share = useCallback(async () => {
     const result = await shareLink(window.location.href, document.title);
-    if (result === "copied") setToast("Ссылка скопирована");
-    else if (result === "failed")
-      setToast("Не удалось поделиться — скопируйте адрес из строки браузера");
-  }, []);
+    if (result === "copied") setToast(t("toast.copied"));
+    else if (result === "failed") setToast(t("toast.shareFailed"));
+  }, [t]);
 
   const selectShipment = useCallback((ref: string | null) => {
     setSelectedRef(ref);
@@ -210,8 +209,8 @@ export function App() {
           scope="карта"
           fallback={(err, reset) => (
             <MapFallback
-              title="Карта не отрисовалась"
-              detail={`Панель справа работает. Ошибка: ${err.message}`}
+              title={t("err.mapTitle")}
+              detail={t("err.mapDetail", { message: err.message })}
               onRetry={reset}
             />
           )}
@@ -231,6 +230,7 @@ export function App() {
               focus={focus}
               initialView={INITIAL_URL.view}
               onViewChange={setView}
+              lang={lang}
               onSelectShipment={selectShipment}
               onSelectNode={selectNodeFromMap}
               onStyleResolved={setStyleFallback}
@@ -244,16 +244,13 @@ export function App() {
           </Suspense>
         </ErrorBoundary>
       ) : (
-        <MapFallback
-          title="Карта недоступна в этом браузере"
-          detail="Нужен WebGL 2: обновите браузер или откройте ссылку в Chrome, Safari 15+ или Firefox. Список грузов, порты и новости работают и без карты."
-        />
+        <MapFallback title={t("err.noWebgl")} detail={t("err.noWebglDetail")} />
       )}
       <ErrorBoundary
         scope="управление"
         fallback={(_err, reset) => (
           <button type="button" className="ctrl-error" onClick={reset}>
-            Панель управления упала · перезагрузить
+            {t("err.controls")}
           </button>
         )}
       >
@@ -293,10 +290,12 @@ export function App() {
         fallback={(err, reset) => (
           <aside className="sidebar sidebar--error" role="alert">
             <div className="map-fallback">
-              <div className="map-fallback__title">Панель не открылась</div>
-              <div className="map-fallback__detail">Карта работает. Ошибка: {err.message}</div>
+              <div className="map-fallback__title">{t("err.panelTitle")}</div>
+              <div className="map-fallback__detail">
+                {t("err.panelDetail", { message: err.message })}
+              </div>
               <button type="button" className="chip chip--on" onClick={reset}>
-                Перезагрузить панель
+                {t("err.panelRetry")}
               </button>
             </div>
           </aside>
