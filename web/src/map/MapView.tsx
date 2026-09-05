@@ -1,7 +1,13 @@
 import type { FeatureCollection } from "geojson";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { type GeoJSONSource, Marker, type Map as MLMap, Popup } from "maplibre-gl";
+import {
+  type GeoJSONSource,
+  type LayerSpecification,
+  Marker,
+  type Map as MLMap,
+  Popup,
+} from "maplibre-gl";
 // Воркер MapLibre 6 ищется как ./maplibre-gl-worker.mjs рядом с чанком — в сборке
 // Vite такого файла нет. Собираем воркер сами и говорим MapLibre его адрес; без
 // воркера не грузятся ни тайлы, ни GeoJSON-слои (коридор, стрелки) — карта чёрная.
@@ -29,6 +35,8 @@ import {
   isDarkBasemap,
   resolveStyle,
 } from "./style";
+import { windLod } from "./windGrid";
+import { DEFAULT_WIND_OPTIONS, WindParticleLayer } from "./windParticles";
 
 export interface LayerToggles {
   wind: boolean;
@@ -36,6 +44,9 @@ export interface LayerToggles {
   shipments: boolean;
   routes: boolean;
 }
+
+/** Как рисовать ветер: живые частицы (WebGL) или стрелки по сетке. */
+export type WindMode = "particles" | "arrows";
 
 export interface Focus {
   lon: number;
@@ -48,6 +59,7 @@ interface Props {
   snapshot: Snapshot | null;
   wind: WindField | null;
   layers: LayerToggles;
+  windMode: WindMode;
   basemap: BasemapId;
   globe: boolean;
   terrain: boolean; // светотень рельефа (hillshade)
@@ -60,6 +72,7 @@ interface Props {
   onSelectNode: (code: string) => void;
   onStyleResolved: (fallback: boolean) => void;
   onFollowBroken: () => void; // пользователь сам подвинул карту — слежение снимаем
+  onWindTooSlow: () => void; // частицы не тянут — переключаемся на стрелки
 }
 
 // Сила ветра → одна синяя шкала (тёмная подложка: слабый = темнее, сильный = светлее)
@@ -69,6 +82,13 @@ const TRACK_COLOR = "#2fd39a";
 const CORRIDOR_COLOR = "#8f86e6"; // лента коридора: не спорит ни с ветром, ни с грузами, ни со статусами
 const FIRST_OVERLAY_LAYER = "corridor-glow"; // рельеф вставляется под него
 const CORRIDOR_LAYERS = ["corridor-glow", "corridor-band", "routes-rail", "routes-sea"];
+// Стрелки ветра: на мелком зуме — каждая четвёртая точка сетки, дальше гуще
+const WIND_ARROW_LAYERS = [
+  { id: "wind-far", maxzoom: 4.5, lod: 4 },
+  { id: "wind-mid", minzoom: 4.5, maxzoom: 6, lod: 2 },
+  { id: "wind-near", minzoom: 6, lod: 1 },
+];
+const MOBILE_PARTICLES = 2500;
 
 maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
@@ -117,7 +137,7 @@ function tintIcon(
 }
 
 /** Наши источники и слои поверх любой подложки. Вызывается на каждый style.load. */
-function setupLayers(map: MLMap): void {
+function setupLayers(map: MLMap, particles: WindParticleLayer | null): void {
   const arrow = windArrow(32);
   WIND_COLORS.forEach((color, i) => {
     if (!map.hasImage(`wind-${i}`)) map.addImage(`wind-${i}`, tintIcon(arrow, color));
@@ -174,10 +194,41 @@ function setupLayers(map: MLMap): void {
       "line-dasharray": [2, 2],
     },
   });
+  for (const a of WIND_ARROW_LAYERS) map.addLayer(windArrowLayer(a));
+  // частицы — под стрелками (видны либо те, либо другие) и под треками
+  if (particles) map.addLayer(particles, WIND_ARROW_LAYERS[0].id);
   map.addLayer({
-    id: "wind",
+    id: "track-rest",
+    type: "line",
+    source: "track-rest",
+    paint: {
+      "line-color": TRACK_COLOR,
+      "line-width": 2.5,
+      "line-opacity": 0.7,
+      "line-dasharray": [1.5, 1.5],
+    },
+  });
+  map.addLayer({
+    id: "track-done",
+    type: "line",
+    source: "track-done",
+    paint: { "line-color": TRACK_COLOR, "line-width": 3 },
+  });
+}
+
+function windArrowLayer(a: {
+  id: string;
+  lod: number;
+  minzoom?: number;
+  maxzoom?: number;
+}): LayerSpecification {
+  return {
+    id: a.id,
     type: "symbol",
     source: "wind",
+    ...(a.minzoom != null ? { minzoom: a.minzoom } : {}),
+    ...(a.maxzoom != null ? { maxzoom: a.maxzoom } : {}),
+    filter: [">=", ["get", "lod"], a.lod],
     layout: {
       "icon-image": [
         "step",
@@ -210,24 +261,7 @@ function setupLayers(map: MLMap): void {
       ],
     },
     paint: { "icon-opacity": 0.8 },
-  });
-  map.addLayer({
-    id: "track-rest",
-    type: "line",
-    source: "track-rest",
-    paint: {
-      "line-color": TRACK_COLOR,
-      "line-width": 2.5,
-      "line-opacity": 0.7,
-      "line-dasharray": [1.5, 1.5],
-    },
-  });
-  map.addLayer({
-    id: "track-done",
-    type: "line",
-    source: "track-done",
-    paint: { "line-color": TRACK_COLOR, "line-width": 3 },
-  });
+  };
 }
 
 function applyHillshade(map: MLMap, on: boolean, dark: boolean): void {
@@ -266,6 +300,7 @@ export function MapView({
   snapshot,
   wind,
   layers,
+  windMode,
   basemap,
   globe,
   terrain,
@@ -278,6 +313,7 @@ export function MapView({
   onSelectNode,
   onStyleResolved,
   onFollowBroken,
+  onWindTooSlow,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MLMap | null>(null);
@@ -300,8 +336,21 @@ export function MapView({
   });
 
   // колбэки в ref, чтобы обработчики карты не пересоздавались
-  const callbacks = useRef({ onSelectShipment, onSelectNode, onStyleResolved, onFollowBroken });
-  callbacks.current = { onSelectShipment, onSelectNode, onStyleResolved, onFollowBroken };
+  const callbacks = useRef({
+    onSelectShipment,
+    onSelectNode,
+    onStyleResolved,
+    onFollowBroken,
+    onWindTooSlow,
+  });
+  callbacks.current = {
+    onSelectShipment,
+    onSelectNode,
+    onStyleResolved,
+    onFollowBroken,
+    onWindTooSlow,
+  };
+  const particles = useRef<WindParticleLayer | null>(null);
   const snapshotRef = useRef(snapshot);
   snapshotRef.current = snapshot;
   const sheetRef = useRef(sheetHeight);
@@ -359,6 +408,12 @@ export function MapView({
     map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
     mapRef.current = map;
     (window as unknown as { __mcMap?: MLMap }).__mcMap = map; // отладка из консоли
+    const particleLayer = new WindParticleLayer({
+      count: window.innerWidth <= MOBILE_MAX_WIDTH ? MOBILE_PARTICLES : DEFAULT_WIND_OPTIONS.count,
+    });
+    particleLayer.onTooSlow = () => callbacks.current.onWindTooSlow();
+    particles.current = particleLayer;
+    (window as unknown as { __mcWind?: WindParticleLayer }).__mcWind = particleLayer;
 
     const updateZoomBand = () => {
       const z = map.getZoom();
@@ -388,7 +443,7 @@ export function MapView({
     // (офлайн, прокси) — оверлеи должны появляться независимо от подложки.
     // Срабатывает на каждую смену подложки: слои пересоздаются заново.
     map.on("style.load", () => {
-      setupLayers(map);
+      setupLayers(map, particles.current);
       setStyleVersion((v) => v + 1);
     });
 
@@ -651,29 +706,46 @@ export function MapView({
 
   // --- ветер -----------------------------------------------------------------------
   useEffect(() => {
+    particles.current?.setField(wind);
     const map = mapRef.current;
     if (!map || !styleVersion || !map.getSource("wind")) return;
     (map.getSource("wind") as GeoJSONSource).setData({
       type: "FeatureCollection",
-      features: (wind?.points ?? []).map((p) => ({
-        type: "Feature",
-        properties: { speed: p.speed, gust: p.gust, dir: p.dir },
-        geometry: { type: "Point", coordinates: [p.lon, p.lat] },
-      })),
+      features: wind
+        ? wind.points.map((p) => ({
+            type: "Feature",
+            properties: {
+              speed: p.speed,
+              gust: p.gust,
+              dir: p.dir,
+              lod: windLod(wind, p.lon, p.lat),
+            },
+            geometry: { type: "Point", coordinates: [p.lon, p.lat] },
+          }))
+        : [],
     });
   }, [wind, styleVersion]);
 
   // --- видимость слоёв ------------------------------------------------------------
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !styleVersion || !map.getLayer("wind")) return;
+    if (!map || !styleVersion || !map.getLayer(WIND_ARROW_LAYERS[0].id)) return;
     const vis = (on: boolean) => (on ? "visible" : "none");
-    map.setLayoutProperty("wind", "visibility", vis(layers.wind));
+    for (const a of WIND_ARROW_LAYERS) {
+      map.setLayoutProperty(a.id, "visibility", vis(layers.wind && windMode === "arrows"));
+    }
+    if (map.getLayer("wind-particles")) {
+      map.setLayoutProperty(
+        "wind-particles",
+        "visibility",
+        vis(layers.wind && windMode === "particles"),
+      );
+    }
     for (const id of CORRIDOR_LAYERS) map.setLayoutProperty(id, "visibility", vis(layers.routes));
     containerRef.current?.classList.toggle("hide-shipments", !layers.shipments);
     containerRef.current?.classList.toggle("hide-vessels", !layers.vessels);
     if (!layers.vessels) popupRef.current?.remove();
-  }, [layers, styleVersion]);
+  }, [layers, windMode, styleVersion]);
 
   // --- подлёт по запросу сайдбара -------------------------------------------------
   useEffect(() => {

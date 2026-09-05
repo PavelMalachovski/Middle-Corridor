@@ -37,7 +37,7 @@ export function Legend() {
       </div>
       <div className="legend__row">
         <span className="legend__wind">➜</span>
-        ветер: куда дует, ярче = сильнее
+        ветер: частицы или стрелки по потоку, ярче = сильнее
       </div>
     </aside>
   );

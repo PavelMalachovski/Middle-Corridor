@@ -1,3 +1,4 @@
+import type { WindMode } from "../map/MapView";
 import { AVAILABLE_BASEMAPS, type BasemapId } from "../map/style";
 
 interface Props {
@@ -10,6 +11,9 @@ interface Props {
   onGlobe: (on: boolean) => void;
   onTerrain: (on: boolean) => void;
   onTerrain3d: (on: boolean) => void;
+  windMode: WindMode;
+  windHint: boolean; // частицы выключены автоматически — устройство не тянет
+  onWindMode: (mode: WindMode) => void;
 }
 
 export function MapControls({
@@ -22,6 +26,9 @@ export function MapControls({
   onGlobe,
   onTerrain,
   onTerrain3d,
+  windMode,
+  windHint,
+  onWindMode,
 }: Props) {
   return (
     <aside className="mapctl">
@@ -65,6 +72,28 @@ export function MapControls({
           <span>3D</span>
         </label>
       </div>
+      <div className="mapctl__row">
+        <span className="mapctl__label">Ветер</span>
+        <button
+          type="button"
+          className={`chip ${windMode === "particles" ? "chip--on" : ""}`}
+          title="Живые частицы по полю ветра (WebGL); цвет — сила ветра"
+          onClick={() => onWindMode("particles")}
+        >
+          Частицы
+        </button>
+        <button
+          type="button"
+          className={`chip ${windMode === "arrows" ? "chip--on" : ""}`}
+          title="Стрелки по сетке — легче для слабых устройств"
+          onClick={() => onWindMode("arrows")}
+        >
+          Стрелки
+        </button>
+      </div>
+      {windHint && (
+        <div className="mapctl__hint">частицы выключены: устройству тяжело, показаны стрелки</div>
+      )}
       {fallback && (
         <div
           className="mapctl__hint"

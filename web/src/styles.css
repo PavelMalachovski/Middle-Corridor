@@ -647,6 +647,13 @@ button.card:focus-visible {
   accent-color: var(--accent);
   margin: 0;
 }
+.mapctl__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-right: 2px;
+}
 .mapctl__hint {
   margin-top: 6px;
   font-size: 11px;

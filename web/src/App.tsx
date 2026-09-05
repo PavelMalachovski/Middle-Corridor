@@ -7,7 +7,7 @@ import { Sidebar, type Tab } from "./components/Sidebar";
 import { Timeline } from "./components/Timeline";
 import { TopBar } from "./components/TopBar";
 import { useLiveData } from "./live";
-import type { Focus, LayerToggles } from "./map/MapView";
+import type { Focus, LayerToggles, WindMode } from "./map/MapView";
 
 // Карта с MapLibre — отдельный чанк: первый экран (панель, топбар) не ждёт её.
 const MapView = lazy(() => import("./map/MapView").then((m) => ({ default: m.MapView })));
@@ -22,13 +22,17 @@ interface MapPrefs {
   globe: boolean;
   terrain: boolean;
   terrain3d: boolean;
+  windMode: WindMode;
 }
+const reducedMotion = () =>
+  typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 function loadPrefs(): MapPrefs {
   const prefs: MapPrefs = {
     basemap: DEFAULT_BASEMAP,
     globe: true,
     terrain: false,
     terrain3d: false,
+    windMode: reducedMotion() ? "arrows" : "particles",
   };
   try {
     const raw = localStorage.getItem(PREFS_KEY);
@@ -38,6 +42,8 @@ function loadPrefs(): MapPrefs {
       if (typeof saved.globe === "boolean") prefs.globe = saved.globe;
       if (typeof saved.terrain === "boolean") prefs.terrain = saved.terrain;
       if (typeof saved.terrain3d === "boolean") prefs.terrain3d = saved.terrain3d;
+      if (saved.windMode === "particles" || saved.windMode === "arrows")
+        prefs.windMode = saved.windMode;
     }
   } catch {
     /* приватный режим и т.п. */
@@ -71,6 +77,7 @@ export function App() {
   const [focus, setFocus] = useState<Focus | null>(null);
   const [prefs, setPrefs] = useState<MapPrefs>(loadPrefs);
   const [styleFallback, setStyleFallback] = useState(false);
+  const [windHint, setWindHint] = useState(false); // частицы выключены автоматически
   const [sheetHeight, setSheetHeight] = useState(0); // видимая высота шторки на мобильном
   const updatePrefs = useCallback((patch: Partial<MapPrefs>) => {
     setPrefs((p) => {
@@ -154,6 +161,11 @@ export function App() {
               onSelectNode={selectNodeFromMap}
               onStyleResolved={setStyleFallback}
               onFollowBroken={() => setFollowRef(null)}
+              windMode={prefs.windMode}
+              onWindTooSlow={() => {
+                updatePrefs({ windMode: "arrows" });
+                setWindHint(true);
+              }}
             />
           </Suspense>
         </ErrorBoundary>
@@ -192,6 +204,12 @@ export function App() {
             onGlobe={(globe) => updatePrefs({ globe })}
             onTerrain={(terrain) => updatePrefs({ terrain })}
             onTerrain3d={(terrain3d) => updatePrefs({ terrain3d })}
+            windMode={prefs.windMode}
+            windHint={windHint}
+            onWindMode={(windMode) => {
+              setWindHint(false);
+              updatePrefs({ windMode });
+            }}
           />
         </div>
         <Timeline replay={replay} disabled={!snapshot} />
