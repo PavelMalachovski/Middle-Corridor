@@ -22,6 +22,7 @@ const MapView = lazy(() => import("./map/MapView").then((m) => ({ default: m.Map
 
 import { useI18n } from "./i18n";
 import { BASEMAPS, type BasemapId, DEFAULT_BASEMAP } from "./map/style";
+import { softwareGl } from "./map/webgl";
 import { useReplay } from "./replay";
 import { shareLink } from "./share";
 import { buildSearch, parseUrlState, sameSearch, type MapView as UrlView } from "./urlState";
@@ -35,6 +36,10 @@ interface MapPrefs {
   terrain3d: boolean;
   windMode: WindMode;
 }
+interface Toast {
+  text: string;
+  action?: { label: string; onClick: () => void }; // кнопка в тосте (например, «вернуть частицы»)
+}
 const reducedMotion = () =>
   typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 function loadPrefs(): MapPrefs {
@@ -43,7 +48,7 @@ function loadPrefs(): MapPrefs {
     globe: true,
     terrain: false,
     terrain3d: false,
-    windMode: reducedMotion() ? "arrows" : "particles",
+    windMode: reducedMotion() || softwareGl() ? "arrows" : "particles",
   };
   try {
     const raw = localStorage.getItem(PREFS_KEY);
@@ -95,9 +100,13 @@ export function App() {
     return p;
   });
   const [view, setView] = useState<UrlView | null>(INITIAL_URL.view);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
   const [styleFallback, setStyleFallback] = useState(false);
-  const [windHint, setWindHint] = useState(false); // частицы выключены автоматически
+  // Частицы выключены автоматически (устройство не тянет) — только на эту сессию:
+  // в настройки не пишем, чтобы случайный провал не отключил их навсегда
+  const [autoArrows, setAutoArrows] = useState(false);
+  const [softGl] = useState(() => softwareGl());
+  const windMode: WindMode = autoArrows ? "arrows" : prefs.windMode;
   const [sheetHeight, setSheetHeight] = useState(0); // видимая высота шторки на мобильном
   const updatePrefs = useCallback((patch: Partial<MapPrefs>) => {
     setPrefs((p) => {
@@ -148,14 +157,14 @@ export function App() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 2500);
+    const t = setTimeout(() => setToast(null), toast.action ? 7000 : 2500);
     return () => clearTimeout(t);
   }, [toast]);
 
   const share = useCallback(async () => {
     const result = await shareLink(window.location.href, document.title);
-    if (result === "copied") setToast(t("toast.copied"));
-    else if (result === "failed") setToast(t("toast.shareFailed"));
+    if (result === "copied") setToast({ text: t("toast.copied") });
+    else if (result === "failed") setToast({ text: t("toast.shareFailed") });
   }, [t]);
 
   const selectShipment = useCallback((ref: string | null) => {
@@ -235,10 +244,13 @@ export function App() {
               onSelectNode={selectNodeFromMap}
               onStyleResolved={setStyleFallback}
               onFollowBroken={() => setFollowRef(null)}
-              windMode={prefs.windMode}
+              windMode={windMode}
               onWindTooSlow={() => {
-                updatePrefs({ windMode: "arrows" });
-                setWindHint(true);
+                setAutoArrows(true);
+                setToast({
+                  text: t("toast.particlesOff"),
+                  action: { label: t("toast.particlesBack"), onClick: () => setAutoArrows(false) },
+                });
               }}
             />
           </Suspense>
@@ -275,11 +287,12 @@ export function App() {
             onGlobe={(globe) => updatePrefs({ globe })}
             onTerrain={(terrain) => updatePrefs({ terrain })}
             onTerrain3d={(terrain3d) => updatePrefs({ terrain3d })}
-            windMode={prefs.windMode}
-            windHint={windHint}
-            onWindMode={(windMode) => {
-              setWindHint(false);
-              updatePrefs({ windMode });
+            software={softGl}
+            windMode={windMode}
+            windHint={autoArrows}
+            onWindMode={(mode) => {
+              setAutoArrows(false);
+              updatePrefs({ windMode: mode });
             }}
           />
         </div>
@@ -319,7 +332,19 @@ export function App() {
       </ErrorBoundary>
       {toast && (
         <div className="toast" role="status">
-          {toast}
+          {toast.text}
+          {toast.action && (
+            <button
+              type="button"
+              className="toast__action"
+              onClick={() => {
+                toast.action?.onClick();
+                setToast(null);
+              }}
+            >
+              {toast.action.label}
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -13,7 +13,7 @@ import {
   levelOf,
 } from "../format";
 import { type Lang, nodeName, nodeNameByCode, useI18n } from "../i18n";
-import { alertText, eventLabel, holdLabel } from "../i18n/labels";
+import { alertText, cargoLabel, eventLabel, holdLabel } from "../i18n/labels";
 import { DelayChart } from "./charts/DelayChart";
 import { StatePill } from "./ShipmentList";
 
@@ -127,7 +127,7 @@ export function ShipmentCard({
         <StatePill shipment={s} />
       </div>
       <div className="detail__client">
-        {s.client} · {s.cargo}
+        {s.client} · {cargoLabel(s)}
       </div>
       <div className="card__route detail__route">
         {place(s.origin_code, s.origin)} → {place(s.destination_code, s.destination)}

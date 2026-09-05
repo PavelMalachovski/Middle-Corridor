@@ -80,3 +80,8 @@ export function reportPort(
   if (r.port_code) return nodeNameByCode(nodes, r.port_code, lang);
   return r.port_name ?? null;
 }
+
+/** Описание груза на текущем языке: английское — если бэкенд его дал. */
+export function cargoLabel(s: Shipment, lang: Lang = getLang()): string {
+  return lang === "en" && s.cargo_en ? s.cargo_en : s.cargo;
+}

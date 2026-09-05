@@ -24,6 +24,8 @@ test.describe("3D", () => {
   test("3D: наклон камеры и terrain, обратно — плоская карта", async ({ page }) => {
     test.slow(); // даже мгновенная камера ждёт кадр с рельефом: секунды на SwiftShader
     await pinPrefs(page); // без частиц — см. ARROWS_PREFS
+    // на программном рендере приложение прячет «3D»; тесту нужен сам переключатель
+    await page.addInitScript(() => localStorage.setItem("mc-force-gpu", "1"));
     await openMap(page);
     await page.getByText("3D", { exact: true }).click();
     await expect.poll(async () => Math.round((await mapState(page)).pitch)).toBe(55);

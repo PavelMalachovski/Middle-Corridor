@@ -53,8 +53,8 @@ export function matchesStatus(s: Shipment, status: StatusFilter): boolean {
 export function matchesQuery(s: Shipment, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  return [s.ref, s.client, s.cargo, s.origin, s.destination]
-    .filter(Boolean)
+  return [s.ref, s.client, s.cargo, s.cargo_en, s.origin, s.destination]
+    .filter((v): v is string => !!v)
     .some((v) => v.toLowerCase().includes(q));
 }
 
