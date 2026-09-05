@@ -1,4 +1,12 @@
-import { type CSSProperties, lazy, Suspense, useCallback, useEffect, useState } from "react";
+import {
+  type CSSProperties,
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Legend } from "./components/Legend";
 import { MapControls } from "./components/MapControls";
@@ -14,6 +22,8 @@ const MapView = lazy(() => import("./map/MapView").then((m) => ({ default: m.Map
 
 import { BASEMAPS, type BasemapId, DEFAULT_BASEMAP } from "./map/style";
 import { useReplay } from "./replay";
+import { shareLink } from "./share";
+import { buildSearch, parseUrlState, sameSearch, type MapView as UrlView } from "./urlState";
 
 // Настройки карты живут в localStorage — только удобство, без них всё работает
 const PREFS_KEY = "mc-map-prefs";
@@ -59,12 +69,14 @@ function savePrefs(prefs: MapPrefs): void {
 }
 
 const WEBGL2 = hasWebGL2(); // один раз на загрузку: контекст не появится позже
+const INITIAL_URL = parseUrlState(window.location.search); // ?s=…&view=…&basemap=…&at=…
+const URL_SYNC_MS = 400; // при воспроизведении replayAt меняется каждые 400 мс — не спамим history
 
 export function App() {
   const replay = useReplay();
   const { snapshot, wind, windAvailable, error, fetchedAt, mode } = useLiveData(replay.replayAt);
   useEffect(() => replay.sync(snapshot, fetchedAt), [replay, snapshot, fetchedAt]);
-  const [selectedRef, setSelectedRef] = useState<string | null>(null);
+  const [selectedRef, setSelectedRef] = useState<string | null>(INITIAL_URL.s);
   const [followRef, setFollowRef] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("shipments");
@@ -75,7 +87,13 @@ export function App() {
     routes: true,
   });
   const [focus, setFocus] = useState<Focus | null>(null);
-  const [prefs, setPrefs] = useState<MapPrefs>(loadPrefs);
+  const [prefs, setPrefs] = useState<MapPrefs>(() => {
+    const p = loadPrefs();
+    if (INITIAL_URL.basemap) p.basemap = INITIAL_URL.basemap; // ссылка важнее сохранённого
+    return p;
+  });
+  const [view, setView] = useState<UrlView | null>(INITIAL_URL.view);
+  const [toast, setToast] = useState<string | null>(null);
   const [styleFallback, setStyleFallback] = useState(false);
   const [windHint, setWindHint] = useState(false); // частицы выключены автоматически
   const [sheetHeight, setSheetHeight] = useState(0); // видимая высота шторки на мобильном
@@ -85,6 +103,60 @@ export function App() {
       savePrefs(next);
       return next;
     });
+  }, []);
+
+  // deep link: момент и груз применяем после первого живого снимка — он синхронизирует
+  // серверные часы (replay.sync выше), иначе at из ссылки обрежется по часам клиента
+  // и сервер ответит 400 (в моке с MOCK_TIME_SCALE часы расходятся на дни)
+  const scrub = replay.scrub;
+  const deepLinkApplied = useRef(false);
+  useEffect(() => {
+    if (!snapshot || deepLinkApplied.current) return;
+    deepLinkApplied.current = true;
+    if (INITIAL_URL.at) scrub(INITIAL_URL.at);
+    if (!INITIAL_URL.s) return;
+    const s = snapshot.shipments.find((x) => x.ref === INITIAL_URL.s);
+    if (!s) {
+      setSelectedRef(null);
+      return;
+    }
+    setTab("shipments");
+    if (!INITIAL_URL.view)
+      setFocus({ lon: s.position.lon, lat: s.position.lat, zoom: 6, key: Date.now() });
+  }, [snapshot, scrub]);
+
+  // адрес отражает состояние: груз, вид, подложка, момент replay
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const next = buildSearch({
+        s: selectedRef,
+        view,
+        basemap: prefs.basemap,
+        at: replay.replayAt,
+      });
+      if (sameSearch(next, window.location.search)) return;
+      window.history.replaceState(null, "", next ? `?${next}` : window.location.pathname);
+    }, URL_SYNC_MS);
+    return () => clearTimeout(t);
+  }, [selectedRef, view, prefs.basemap, replay.replayAt]);
+
+  useEffect(() => {
+    document.title = selectedRef
+      ? `${selectedRef} · Middle Corridor`
+      : "Middle Corridor · карта статуса";
+  }, [selectedRef]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const share = useCallback(async () => {
+    const result = await shareLink(window.location.href, document.title);
+    if (result === "copied") setToast("Ссылка скопирована");
+    else if (result === "failed")
+      setToast("Не удалось поделиться — скопируйте адрес из строки браузера");
   }, []);
 
   const selectShipment = useCallback((ref: string | null) => {
@@ -157,6 +229,8 @@ export function App() {
               selectedRef={selectedRef}
               followRef={followRef}
               focus={focus}
+              initialView={INITIAL_URL.view}
+              onViewChange={setView}
               onSelectShipment={selectShipment}
               onSelectNode={selectNodeFromMap}
               onStyleResolved={setStyleFallback}
@@ -241,8 +315,14 @@ export function App() {
           onFocusShipment={focusShipment}
           onFocusNode={focusNode}
           onSheetChange={setSheetHeight}
+          onShare={share}
         />
       </ErrorBoundary>
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

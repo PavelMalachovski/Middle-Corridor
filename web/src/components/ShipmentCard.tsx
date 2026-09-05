@@ -22,6 +22,7 @@ interface Props {
   onBack: () => void;
   onFocus: () => void;
   onToggleFollow: () => void;
+  onShare: () => void;
 }
 
 function positionText(s: Shipment, snapshot: Snapshot): { title: string; detail: string } {
@@ -68,6 +69,7 @@ export function ShipmentCard({
   onBack,
   onFocus,
   onToggleFollow,
+  onShare,
 }: Props) {
   const ref = new Date(snapshot.generated_at);
   const pos = positionText(s, snapshot);
@@ -94,6 +96,14 @@ export function ShipmentCard({
               {following ? "◉ следим" : "◎ следить"}
             </button>
           )}
+          <button
+            type="button"
+            className="link"
+            onClick={onShare}
+            title="Ссылка откроет этот груз в этом же месте карты"
+          >
+            ⇪ поделиться
+          </button>
         </span>
       </div>
       <div className="card__head">

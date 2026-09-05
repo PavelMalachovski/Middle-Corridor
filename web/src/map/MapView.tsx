@@ -68,6 +68,8 @@ interface Props {
   selectedRef: string | null;
   followRef: string | null; // груз, за которым едет камера
   focus: Focus | null;
+  initialView: { lon: number; lat: number; zoom: number } | null; // из адреса; null — весь коридор
+  onViewChange: (view: { lon: number; lat: number; zoom: number }) => void; // после moveend
   onSelectShipment: (ref: string | null) => void;
   onSelectNode: (code: string) => void;
   onStyleResolved: (fallback: boolean) => void;
@@ -309,6 +311,8 @@ export function MapView({
   selectedRef,
   followRef,
   focus,
+  initialView,
+  onViewChange,
   onSelectShipment,
   onSelectNode,
   onStyleResolved,
@@ -342,6 +346,7 @@ export function MapView({
     onStyleResolved,
     onFollowBroken,
     onWindTooSlow,
+    onViewChange,
   });
   callbacks.current = {
     onSelectShipment,
@@ -349,6 +354,7 @@ export function MapView({
     onStyleResolved,
     onFollowBroken,
     onWindTooSlow,
+    onViewChange,
   };
   const particles = useRef<WindParticleLayer | null>(null);
   const snapshotRef = useRef(snapshot);
@@ -396,9 +402,14 @@ export function MapView({
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: BOOT_STYLE,
-      bounds: CORRIDOR_BOUNDS,
-      // на старте шторка ещё не отчиталась о высоте — берём её положение по умолчанию
-      fitBoundsOptions: { padding: viewportPadding(window.innerHeight * 0.45) },
+      // вид из адреса, иначе весь коридор; на старте шторка ещё не отчиталась о
+      // высоте — берём её положение по умолчанию
+      ...(initialView
+        ? { center: [initialView.lon, initialView.lat] as [number, number], zoom: initialView.zoom }
+        : {
+            bounds: CORRIDOR_BOUNDS,
+            fitBoundsOptions: { padding: viewportPadding(window.innerHeight * 0.45) },
+          }),
       minZoom: 1.5,
       maxZoom: 12,
       maxPitch: MAX_PITCH,
@@ -408,6 +419,8 @@ export function MapView({
     map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
     mapRef.current = map;
     (window as unknown as { __mcMap?: MLMap }).__mcMap = map; // отладка из консоли
+    // ссылка с грузом и видом: вид важнее подлёта к грузу — считаем, что уже подлетели
+    if (initialView && selectedRef) flownRef.current = selectedRef;
     const particleLayer = new WindParticleLayer({
       count: window.innerWidth <= MOBILE_MAX_WIDTH ? MOBILE_PARTICLES : DEFAULT_WIND_OPTIONS.count,
     });
@@ -421,6 +434,10 @@ export function MapView({
     };
     map.on("zoom", updateZoomBand);
     updateZoomBand();
+    map.on("moveend", () => {
+      const c = map.getCenter();
+      callbacks.current.onViewChange({ lon: c.lng, lat: c.lat, zoom: map.getZoom() });
+    });
 
     // клик по пустой карте снимает выбор; жест пользователя снимает слежение.
     // Снимаем синхронно: покадровый jumpTo вызывает map.stop(), который сбрасывает
@@ -673,7 +690,9 @@ export function MapView({
     if (!shipment) {
       done.setData(emptyFC());
       rest.setData(emptyFC());
-      flownRef.current = null;
+      // снимка ещё нет — груз из ссылки остаётся «уже подлетевшим», иначе первый
+      // снимок увёл бы карту с вида из адреса
+      if (!selectedRef) flownRef.current = null;
       return;
     }
     const parts = splitTrack(shipment.track as LonLat[], shipment.progress);

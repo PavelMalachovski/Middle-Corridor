@@ -3,7 +3,8 @@ import { expect, type Page } from "@playwright/test";
 /** Ждём первый снимок и маркеры грузов — карта и панель живы. */
 export async function openMap(page: Page, path = "/"): Promise<void> {
   await page.goto(path, { waitUntil: "domcontentloaded" });
-  await expect(page.locator(".list .card").first()).toBeVisible();
+  // список грузов или, по ссылке с ?s=, сразу карточка
+  await expect(page.locator(".list .card, .detail").first()).toBeVisible();
   await expect(page.locator(".ship-marker").first()).toBeAttached();
 }
 

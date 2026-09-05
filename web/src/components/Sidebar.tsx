@@ -12,6 +12,7 @@ import { ShipmentList } from "./ShipmentList";
 
 export type Tab = "shipments" | "ports" | "news";
 
+import { EMPTY_FILTER, type ShipmentFilter } from "../shipmentFilter";
 /**
  * На узких экранах сайдбар — шторка снизу с тремя положениями:
  * peek (только ручка и вкладки), half (пол-экрана), full (почти весь экран).
@@ -87,6 +88,7 @@ interface Props {
   onFocusShipment: (ref: string) => void;
   onFocusNode: (code: string) => void;
   onSheetChange: (visiblePx: number) => void;
+  onShare: () => void;
 }
 
 interface DragInfo {
@@ -112,8 +114,10 @@ export function Sidebar({
   onFocusShipment,
   onFocusNode,
   onSheetChange,
+  onShare,
 }: Props) {
   const mobile = useIsMobile();
+  const [filter, setFilter] = useState<ShipmentFilter>(EMPTY_FILTER);
   const viewportH = useViewportHeight();
   const [sheet, setSheet] = useState<SheetState>("half");
   const [dragOffset, setDragOffset] = useState<number | null>(null);
@@ -242,9 +246,15 @@ export function Sidebar({
               onBack={() => onSelectShipment(null)}
               onFocus={() => onFocusShipment(selected.ref)}
               onToggleFollow={() => onToggleFollow(selected.ref)}
+              onShare={onShare}
             />
           ) : (
-            <ShipmentList snapshot={snapshot} onSelect={onFocusShipment} />
+            <ShipmentList
+              snapshot={snapshot}
+              filter={filter}
+              onFilter={setFilter}
+              onSelect={onFocusShipment}
+            />
           )
         ) : tab === "ports" ? (
           <Suspense fallback={<PanelLoading />}>
