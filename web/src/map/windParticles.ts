@@ -1,5 +1,6 @@
 import type { CustomLayerInterface, CustomRenderMethodInput, Map as MLMap } from "maplibre-gl";
 import type { WindField } from "../api";
+import { FrameWatch } from "./frameWatch";
 import { buildWindGrid, colorRamp, type WindGrid } from "./windGrid";
 
 /**
@@ -48,8 +49,6 @@ export const DEFAULT_WIND_OPTIONS: WindParticleOptions = {
 };
 
 const REFERENCE_ZOOM = 4.5;
-const SLOW_FRAME_MS = 55; // средний кадр дольше — устройство не тянет
-const SLOW_FRAMES_TO_DECIDE = 120;
 
 interface Program {
   program: WebGLProgram;
@@ -194,10 +193,7 @@ export class WindParticleLayer implements CustomLayerInterface {
   private updateProgram: Program | null = null;
   private drawPrograms = new Map<string, Program>();
   private lastMatrix: number[] | null = null;
-  private lastFrameAt = 0;
-  private frameMsAvg = 16;
-  private slowFrames = 0;
-  private slowReported = false;
+  private watch = new FrameWatch(); // «не тянет» — по часам, не по счётчику кадров
 
   constructor(opts: Partial<WindParticleOptions> = {}) {
     this.opts = { ...DEFAULT_WIND_OPTIONS, ...opts };
@@ -232,8 +228,7 @@ export class WindParticleLayer implements CustomLayerInterface {
     this.createParticles(gl);
     if (this.grid) this.uploadWind(gl);
     this.lastMatrix = null;
-    this.slowFrames = 0;
-    this.frameMsAvg = 16;
+    this.watch.reset();
   }
 
   onRemove(): void {
@@ -321,18 +316,7 @@ export class WindParticleLayer implements CustomLayerInterface {
   // --- внутреннее ------------------------------------------------------------------
 
   private watchFrameTime(): void {
-    const now = performance.now();
-    if (this.lastFrameAt) {
-      const dt = Math.min(now - this.lastFrameAt, 250);
-      this.frameMsAvg = this.frameMsAvg * 0.9 + dt * 0.1;
-      if (this.frameMsAvg > SLOW_FRAME_MS) this.slowFrames += 1;
-      else this.slowFrames = 0;
-      if (this.slowFrames > SLOW_FRAMES_TO_DECIDE && !this.slowReported) {
-        this.slowReported = true;
-        this.onTooSlow?.();
-      }
-    }
-    this.lastFrameAt = now;
+    if (this.watch.tick(performance.now())) this.onTooSlow?.();
   }
 
   private createParticles(gl: GL): void {
@@ -450,7 +434,7 @@ export class WindParticleLayer implements CustomLayerInterface {
     // темп оставался похожим; кадр длиннее 16 мс — шаг больше
     const zoom = this.map.getZoom();
     const zoomScale = Math.min(Math.max(2 ** (REFERENCE_ZOOM - zoom), 0.08), 4);
-    const frameScale = Math.min(Math.max(this.frameMsAvg / 16.7, 0.5), 3);
+    const frameScale = Math.min(Math.max(this.watch.frameMs / 16.7, 0.5), 3);
     gl.uniform1f(p.uniforms.get("u_speed_factor")!, this.opts.speedFactor * zoomScale * frameScale);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }

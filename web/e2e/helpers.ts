@@ -58,3 +58,18 @@ export async function dragMap(page: Page, dx: number, dy: number): Promise<void>
   await page.mouse.move(x + dx, y + dy, { steps: 8 });
   await page.mouse.up();
 }
+
+/** Настройки карты по умолчанию для тестов, где ветер ни при чём: стрелки вместо
+ * частиц — на SwiftShader (CI) частицы держат перерисовку каждый кадр, а с
+ * объёмным рельефом кадр там длится секунды и страница замирает. */
+export const ARROWS_PREFS = {
+  basemap: "dark",
+  globe: true,
+  terrain: false,
+  terrain3d: false,
+  windMode: "arrows",
+};
+
+export async function pinPrefs(page: Page, prefs: object = ARROWS_PREFS): Promise<void> {
+  await page.addInitScript((p) => localStorage.setItem("mc-map-prefs", JSON.stringify(p)), prefs);
+}

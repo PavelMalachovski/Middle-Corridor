@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mapState, openMap } from "./helpers";
+import { mapState, openMap, pinPrefs } from "./helpers";
 
 test("смена подложки пересоздаёт наши слои; настройки запоминаются", async ({ page }) => {
   await openMap(page);
@@ -14,6 +14,7 @@ test("смена подложки пересоздаёт наши слои; на
 });
 
 test("3D: наклон камеры и terrain, обратно — плоская карта", async ({ page }) => {
+  await pinPrefs(page); // тест про рельеф и наклон, не про ветер (см. ARROWS_PREFS)
   await openMap(page);
   await page.getByText("3D", { exact: true }).click();
   await expect.poll(async () => Math.round((await mapState(page)).pitch)).toBe(55);
