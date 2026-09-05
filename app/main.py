@@ -12,10 +12,12 @@
 
 import asyncio
 import hashlib
+from collections.abc import Callable
 from datetime import timedelta
 
 import structlog
 import uvicorn
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.main import create_app
@@ -48,6 +50,7 @@ from app.services.map_snapshot import (
 from app.services.news_feed import NewsFeedService
 from app.services.status_aggregator import StatusAggregatorService
 from app.services.weather_predictor import WeatherPredictor, WindThresholds
+from app.services.wind_grid import WindGridService
 
 logger = structlog.get_logger(__name__)
 
@@ -90,12 +93,27 @@ def build_map_service(
     if session_factory is None:
         raise ValueError("без MOCK_DATA карте нужна БД (session_factory)")
     adapter = CorridorStatusAdapter(StatusAggregatorService(session_factory))
-    # Отправки и поле ветра в проде пока без источника — фронт покажет «нет данных»
+    # Поле ветра над морями — Open-Meteo по сетке, снимки в БД (replay по at);
+    # отправки в проде пока без источника — фронт покажет «нет данных»
+    wind = (
+        WindGridService(
+            session_factory,
+            OpenMeteoProvider(),
+            step_deg=settings.wind_grid_step_deg,
+            forecast_hours=settings.wind_grid_forecast_hours,
+            refresh_minutes=settings.wind_grid_refresh_minutes,
+            history_hours=settings.wind_grid_history_hours,
+            lazy_refresh=settings.wind_grid_lazy_refresh,
+        )
+        if settings.wind_grid_enabled
+        else None
+    )
     return MapSnapshotService(
         nodes=adapter,
         vessels=adapter,
         reports=adapter,
         news=DbNewsSource(session_factory),
+        wind=wind,
         thresholds=thresholds,
         live=live,
     )
@@ -135,6 +153,7 @@ async def run() -> None:  # noqa: PLR0915 — точка сборки всего
     bot = None
     dp = None
     scheduler = None
+    make_scheduler: Callable[[WindGridService | None], AsyncIOScheduler] | None = None
     webhook_mode = bool(settings.bot_token and settings.bot_webhook_url)
     if settings.bot_token:
         bot = create_bot(settings.bot_token)
@@ -157,7 +176,10 @@ async def run() -> None:  # noqa: PLR0915 — точка сборки всего
             settings, reports_service, status_service, weather_predictor, news_service
         )
         if settings.scheduler_enabled:
-            scheduler = create_scheduler(settings, weather_predictor, news_service)
+
+            def make_scheduler(wind_grid: WindGridService | None) -> AsyncIOScheduler:
+                return create_scheduler(settings, weather_predictor, news_service, wind_grid)
+
         if translator is None:
             logger.info("news_translation_disabled", detail="ANTHROPIC_API_KEY не задан")
     else:
@@ -167,6 +189,9 @@ async def run() -> None:  # noqa: PLR0915 — точка сборки всего
     map_service = build_map_service(settings, session_factory)
     if settings.mock_data:
         logger.warning("mock_data_enabled", detail="API карты отдаёт синтетику (MOCK_DATA=true)")
+    wind_grid = map_service.wind_source
+    if make_scheduler is not None:
+        scheduler = make_scheduler(wind_grid if isinstance(wind_grid, WindGridService) else None)
     api_app = create_app(
         engine=engine,
         settings=settings,

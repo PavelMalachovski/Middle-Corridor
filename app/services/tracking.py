@@ -75,6 +75,7 @@ class ShipmentPlan:
     hold_code: str | None = None  # код причины: weather_ban, customs_wait, ferry_*_wait
     hold_node: str | None = None  # узел причины (порт, граница)
     hold_vessel: str | None = None  # судно причины
+    cargo_en: str | None = None  # описание груза по-английски (для карты в EN)
 
     @property
     def route(self) -> list[str]:
@@ -108,6 +109,7 @@ class Shipment(BaseModel):
     ref: str
     client: str
     cargo: str
+    cargo_en: str | None = None
     origin: str
     destination: str
     origin_code: str = ""
@@ -241,6 +243,7 @@ def project_shipment(  # noqa: PLR0912, PLR0915 — линейный разбо�
         ref=plan.ref,
         client=plan.client,
         cargo=plan.cargo,
+        cargo_en=plan.cargo_en,
         origin=NODES[route[0]].name,
         destination=NODES[route[-1]].name,
         origin_code=route[0],

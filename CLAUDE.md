@@ -15,7 +15,7 @@ docker compose up -d db                # Postgres на ПОРТУ 5433 (5432 з�
 .venv\Scripts\alembic upgrade head     # миграции
 .venv\Scripts\alembic revision --autogenerate -m "..."    # новая миграция
 .venv\Scripts\python -m app.main      # запуск всего (API :8000 + бот + AIS)
-.venv\Scripts\python -m app.scheduler.jobs weather|news   # ручной прогон джобы из терминала
+.venv\Scripts\python -m app.scheduler.jobs weather|news|wind   # ручной прогон джобы из терминала
 $env:MOCK_DATA='true'; .venv\Scripts\python -m app.main   # API карты на синтетике, без Postgres
 cd web; npm install; npm run dev                            # фронт с hot reload на :5173 (прокси /api → :8000)
 cd web; npm run build                                       # web/dist → раздаёт FastAPI по /
@@ -31,6 +31,8 @@ cd web; npm run e2e                                         # Playwright: нуж
 ```
 integrations/  внешние API за Protocol-интерфейсами (weather, ais, news)
 services/      бизнес-логика; НЕ импортирует aiogram/fastapi
+               corridor.py — узлы, сегменты и полигоны морей (sea_at/sea_grid); wind_grid.py — поле ветра
+               над морями из Open-Meteo со снимками в БД (replay по at)
 bot/           только aiogram-хендлеры/клавиатуры/тексты; вызывают services
 api/           только FastAPI-роуты; вызывают services
 db/            модели SQLAlchemy 2 async + repositories (запросы только тут)
@@ -147,6 +149,17 @@ api/index.py   точка входа Vercel (serverless FastAPI: только /a
 - Deep link `?at=`: применять только после первого снимка (нужны серверные
   часы и окно replay), «сейчас» экстраполировать с `live.time_scale` — иначе
   через минуту 400 от сервера при `MOCK_TIME_SCALE`.
+- Ветер — только над морем: `sea_grid(step)` в `services/corridor.py`
+  (полигоны Каспия и Чёрного моря, прибрежный допуск 0,2°). Узлы над сушей в
+  поле отсутствуют, фронт это умеет (alpha 0 в текстуре, частицы перерождаются
+  только над водой). Сетка выровнена по кратным шага: мок и Open-Meteo дают
+  одни и те же узлы. Open-Meteo считает каждую точку отдельным вызовом —
+  не мельчить сетку и не частить снимками (лимит 10 000 в сутки).
+- Программный WebGL (SwiftShader в CI, llvmpipe): `softwareGl()` в
+  `web/src/map/webgl.ts` прячет «3D» и делает стрелки режимом по умолчанию;
+  e2e, которым нужен «3D», ставят `localStorage["mc-force-gpu"]="1"`.
+- Автодеградация частиц — состояние сессии (`autoArrows` в App), не
+  настройка: в localStorage пишется только явный выбор пользователя.
 - Фронт: подписи узлов/грузов — HTML-маркеры (без glyph-сервера), иконки
   symbol-слоёв рисуются на canvas. Подложки — пресеты в `web/src/map/style.ts`
   с цепочкой кандидатов (вектор без ключа → растр CARTO/Esri); стиль
@@ -161,7 +174,8 @@ api/index.py   точка входа Vercel (serverless FastAPI: только /a
   понижение critical→warning — тихие (антиспам через жизненный цикл алерта).
 - Модерация ручных сводок: AUTO_PUBLISH_REPORTS=false → /approve админом.
 - Фаза 2: веб-карта — прототип на `MOCK_DATA=true` (`integrations/mock/`);
-  боевой режим отдаёт порты/суда/новости из БД, отправки и поле ветра — пока
-  без источника. Сделано: живая карта с частицами ветра, replay, графики и
+  боевой режим отдаёт порты/суда/новости из БД и поле ветра из снимков
+  Open-Meteo (`wind_grids`); отправки — пока без источника (бэклог: нет
+  данных от экспедиторов). Сделано: живая карта с частицами ветра, replay, графики и
   прогноз, поиск/фильтры/ссылки (`?s=&view=&basemap=&at=`), RU/EN.
   Следующее — Telegram Mini App поверх того же `/api/v1`.

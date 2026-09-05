@@ -7,10 +7,11 @@
 """
 
 import enum
+import math
 from dataclasses import dataclass, replace
 
 from app.db.models import CorridorLeg
-from app.services.geo import LatLon, polyline_length_km
+from app.services.geo import LatLon, point_in_polygon, polyline_length_km
 
 
 class NodeKind(enum.StrEnum):
@@ -194,6 +195,156 @@ SEGMENTS: dict[tuple[str, str], CorridorSegment] = {
         _seg("BUCHAREST", "BUDAPEST", _R, 24, (45.66, 25.6), (46.77, 23.6), (47.07, 21.93)),
     ]
 }
+
+
+# --- моря ------------------------------------------------------------------------
+# Ветер важен там, где он что-то останавливает: паромы и порты Каспия и
+# Чёрного моря. Над степью и горами поле ветра — шум. Полигоны (lat, lon)
+# по береговой линии, грубо (±20 км): Каспий без Кара-Богаз-Гола, Чёрное
+# море без Азова. Порядок обхода — по часовой стрелке от северо-запада.
+SEAS: dict[str, tuple[LatLon, ...]] = {
+    "caspian": (
+        (46.3, 47.3),
+        (46.9, 48.0),
+        (46.9, 49.4),
+        (46.7, 50.6),
+        (46.5, 51.5),
+        (46.0, 52.2),
+        (45.4, 52.0),
+        (44.9, 51.0),
+        (44.5, 50.3),
+        (44.0, 50.8),
+        (43.65, 51.17),
+        (43.2, 51.32),
+        (42.7, 52.6),
+        (42.1, 52.8),
+        (41.5, 52.6),
+        (40.6, 52.9),
+        (40.0, 53.0),
+        (39.4, 53.1),
+        (38.6, 53.9),
+        (37.5, 53.9),
+        (36.9, 53.4),
+        (36.7, 52.2),
+        (36.8, 51.0),
+        (37.4, 49.7),
+        (38.0, 49.0),
+        (38.8, 48.9),
+        (39.4, 49.2),
+        (39.95, 49.4),
+        (40.18, 49.45),
+        (40.3, 49.8),
+        (40.32, 50.1),
+        (40.4, 50.4),
+        (40.6, 50.0),
+        (40.65, 49.7),
+        (41.3, 49.4),
+        (41.9, 48.6),
+        (42.6, 47.9),
+        (43.2, 47.6),
+        (44.0, 47.4),
+        (44.6, 47.0),
+        (45.3, 47.1),
+        (45.9, 47.4),
+    ),
+    "black_sea": (
+        (45.2, 29.75),
+        (45.8, 30.0),
+        (46.3, 30.8),
+        (46.6, 31.5),
+        (46.5, 32.3),
+        (46.0, 32.8),
+        (45.5, 32.8),
+        (45.3, 32.5),
+        (44.6, 33.4),
+        (44.4, 33.8),
+        (44.5, 34.4),
+        (44.9, 35.3),
+        (45.2, 36.0),
+        (45.0, 36.5),
+        (44.9, 37.3),
+        (44.7, 37.7),
+        (44.4, 38.4),
+        (44.1, 39.0),
+        (43.7, 39.6),
+        (43.4, 40.0),
+        (43.0, 40.9),
+        (42.7, 41.5),
+        (42.2, 41.6),
+        (41.7, 41.6),
+        (41.4, 41.3),
+        (41.1, 40.3),
+        (40.95, 39.7),
+        (41.1, 38.5),
+        (41.2, 37.4),
+        (41.4, 36.3),
+        (41.7, 35.5),
+        (42.0, 35.0),
+        (41.8, 34.0),
+        (41.7, 32.8),
+        (41.5, 31.8),
+        (41.3, 30.5),
+        (41.2, 29.2),
+        (41.5, 28.4),
+        (42.0, 28.0),
+        (42.5, 27.6),
+        (43.0, 27.9),
+        (43.5, 28.4),
+        (44.1, 28.7),
+        (44.7, 29.0),
+        (45.0, 29.6),
+    ),
+}
+
+# lat_min, lon_min, lat_max, lon_max — общий охват морей; сетка ветра живёт в нём
+SEA_BBOX: tuple[float, float, float, float] = (36.5, 27.5, 47.0, 54.0)
+
+
+# Прибрежная полоса тоже «море»: порты и рейды стоят на самой линии грубого
+# полигона, а ветер у берега — то, ради чего слой и нужен.
+COAST_TOLERANCE_DEG = 0.2
+
+
+def sea_at(lat: float, lon: float, tolerance_deg: float = 0.0) -> str | None:
+    """Код моря под точкой или None над сушей.
+
+    tolerance_deg > 0 — точка считается морской, если море есть в пределах
+    ±tolerance по широте или долготе (прибрежная полоса).
+    """
+    probes = [(lat, lon)]
+    if tolerance_deg > 0:
+        probes += [
+            (lat + tolerance_deg, lon),
+            (lat - tolerance_deg, lon),
+            (lat, lon + tolerance_deg),
+            (lat, lon - tolerance_deg),
+        ]
+    for code, polygon in SEAS.items():
+        if any(point_in_polygon(probe, polygon) for probe in probes):
+            return code
+    return None
+
+
+def sea_grid(step_deg: float, bbox: tuple[float, float, float, float] = SEA_BBOX) -> list[LatLon]:
+    """Узлы регулярной сетки с шагом step_deg, лежащие над морем.
+
+    Узлы выровнены по кратным шага (не по краю bbox), чтобы сетки мока и
+    боевого источника совпадали при любом bbox. Порядок — по широте, затем
+    по долготе, как ждёт текстура ветра на фронте.
+    """
+    lat_min, lon_min, lat_max, lon_max = bbox
+    lat0 = math.ceil(lat_min / step_deg - 1e-9) * step_deg
+    lon0 = math.ceil(lon_min / step_deg - 1e-9) * step_deg
+    points: list[LatLon] = []
+    lat = lat0
+    while lat <= lat_max + 1e-9:
+        lon = lon0
+        while lon <= lon_max + 1e-9:
+            if sea_at(lat, lon, COAST_TOLERANCE_DEG) is not None:
+                points.append((round(lat, 4), round(lon, 4)))
+            lon += step_deg
+        lat += step_deg
+    return points
 
 
 def segment(a: str, b: str) -> CorridorSegment:

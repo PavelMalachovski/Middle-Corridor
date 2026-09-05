@@ -151,6 +151,23 @@ class WeatherSnapshot(Base):
     port: Mapped[Port] = relationship()
 
 
+class WindGrid(Base):
+    """Снимок прогноза ветра по сетке над морями — поле ветра карты и её replay.
+
+    hours — ISO-часы прогноза (UTC), points — [{lat, lon, s: [...], g: [...], d: [...]}]
+    с рядами по этим часам (null, где провайдер не ответил).
+    """
+
+    __tablename__ = "wind_grids"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    step_deg: Mapped[float]
+    hours: Mapped[list[str]] = mapped_column(JsonVariant)
+    points: Mapped[list[dict[str, Any]]] = mapped_column(JsonVariant)
+    source: Mapped[str] = mapped_column(String(32), default="open-meteo")
+
+
 class WeatherAlert(Base):
     """Погодный алерт.
 

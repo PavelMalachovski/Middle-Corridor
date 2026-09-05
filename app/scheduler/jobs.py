@@ -3,7 +3,7 @@
 Подключение к APScheduler — на шаге 9. Каждую джобу можно запустить
 вручную один раз:
 
-    python -m app.scheduler.jobs weather
+    python -m app.scheduler.jobs weather|news|wind
 """
 
 import asyncio
@@ -23,6 +23,7 @@ from app.integrations.weather.open_meteo import OpenMeteoProvider
 from app.logging import configure_logging
 from app.services.news_feed import NewsFeedService
 from app.services.weather_predictor import WeatherPredictor, WindThresholds
+from app.services.wind_grid import WindGridService
 
 logger = structlog.get_logger(__name__)
 
@@ -80,7 +81,29 @@ async def poll_news() -> None:
         await engine.dispose()
 
 
-JOBS = {"weather": poll_weather, "news": poll_news}
+async def refresh_wind_grid() -> None:
+    """Один снимок поля ветра над морями (Open-Meteo по сетке) в БД."""
+    settings = get_settings()
+    engine = create_engine(settings.database_url)
+    session_factory = create_session_factory(engine)
+    provider = OpenMeteoProvider()
+    service = WindGridService(
+        session_factory,
+        provider,
+        step_deg=settings.wind_grid_step_deg,
+        forecast_hours=settings.wind_grid_forecast_hours,
+        refresh_minutes=settings.wind_grid_refresh_minutes,
+        history_hours=settings.wind_grid_history_hours,
+    )
+    try:
+        points = await service.refresh_once()
+        logger.info("wind_grid_job_done", points=points)
+    finally:
+        await provider.aclose()
+        await engine.dispose()
+
+
+JOBS = {"weather": poll_weather, "news": poll_news, "wind": refresh_wind_grid}
 
 
 if __name__ == "__main__":

@@ -12,16 +12,18 @@ import math
 from collections.abc import Callable
 from datetime import UTC, datetime
 
+from app.services.corridor import SEA_BBOX, sea_grid
 from app.services.wind_field import WindField, WindPoint
 
 _EPOCH = datetime(2026, 1, 1, tzinfo=UTC)
 GUST_FACTOR = 1.3
 GUST_OFFSET = 1.5
 
-# lat_min, lon_min, lat_max, lon_max — от Балкан до Синьцзяна
-DEFAULT_BBOX = (34.0, 18.0, 49.0, 110.0)
-DEFAULT_STEP = 2.0
-MAX_POINTS = 8000  # 0.5° над всем bbox ≈ 5 700 точек
+# Поле считается только над морем (SEA_BBOX + маска sea_grid): над степью и
+# горами ветер ничего не останавливает, а частицы там — шум и нагрузка на GPU.
+DEFAULT_BBOX = SEA_BBOX
+DEFAULT_STEP = 1.0
+MAX_POINTS = 8000  # 0.25° над морями ≈ 1 700 точек
 
 
 def _hours(t: datetime) -> float:
@@ -110,27 +112,27 @@ class MockWindField:
         self, at: datetime | None = None, step_deg: float | None = None
     ) -> WindField | None:
         now = at or self._clock()
-        lat_min, lon_min, lat_max, lon_max = self._bbox
         step = step_deg or self._step
-        points: list[WindPoint] = []
-        lat = lat_min
-        while lat <= lat_max + 1e-9 and len(points) < MAX_POINTS:
-            lon = lon_min
-            while lon <= lon_max + 1e-9 and len(points) < MAX_POINTS:
-                speed, gust, direction = wind_at(lat, lon, now)
-                points.append(
-                    WindPoint(
-                        lat=round(lat, 3), lon=round(lon, 3), speed=speed, gust=gust, dir=direction
-                    )
-                )
-                lon += step
-            lat += step
-        return WindField(
-            ts=now,
-            lat_min=lat_min,
-            lon_min=lon_min,
-            lat_max=lat_max,
-            lon_max=lon_max,
-            step_deg=step,
-            points=points,
-        )
+        return field_from_points(sea_grid(step, self._bbox)[:MAX_POINTS], step, now)
+
+
+def field_from_points(
+    cells: list[tuple[float, float]], step: float, now: datetime
+) -> WindField | None:
+    """Поле по узлам сетки (lat, lon) над морем; bbox — по крайним узлам."""
+    if not cells:
+        return None
+    points = [
+        WindPoint(lat=lat, lon=lon, speed=speed, gust=gust, dir=direction)
+        for lat, lon in cells
+        for speed, gust, direction in (wind_at(lat, lon, now),)
+    ]
+    return WindField(
+        ts=now,
+        lat_min=min(p.lat for p in points),
+        lon_min=min(p.lon for p in points),
+        lat_max=max(p.lat for p in points),
+        lon_max=max(p.lon for p in points),
+        step_deg=step,
+        points=points,
+    )
