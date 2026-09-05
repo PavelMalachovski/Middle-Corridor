@@ -2,6 +2,10 @@ import type { FeatureCollection } from "geojson";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { type GeoJSONSource, Marker, type Map as MLMap, Popup } from "maplibre-gl";
+// Воркер MapLibre 6 ищется как ./maplibre-gl-worker.mjs рядом с чанком — в сборке
+// Vite такого файла нет. Собираем воркер сами и говорим MapLibre его адрес; без
+// воркера не грузятся ни тайлы, ни GeoJSON-слои (коридор, стрелки) — карта чёрная.
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Snapshot, VesselStatus, WindField } from "../api";
 import { fmtRelative } from "../format";
@@ -65,6 +69,8 @@ const TRACK_COLOR = "#2fd39a";
 const CORRIDOR_COLOR = "#8f86e6"; // лента коридора: не спорит ни с ветром, ни с грузами, ни со статусами
 const FIRST_OVERLAY_LAYER = "corridor-glow"; // рельеф вставляется под него
 const CORRIDOR_LAYERS = ["corridor-glow", "corridor-band", "routes-rail", "routes-sea"];
+
+maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
 const SIDEBAR_PADDING = { top: 90, bottom: 40, left: 40, right: 420 };
 const MOBILE_MAX_WIDTH = 900;
