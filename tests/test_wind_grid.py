@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.integrations.weather.base import GridPointForecast, WindObservation
 from app.integrations.weather.open_meteo import GRID_BATCH, OpenMeteoProvider
 from app.services.corridor import COAST_TOLERANCE_DEG, sea_at, sea_grid
-from app.services.wind_grid import WindGridService
+from app.services.wind_grid import LAZY_RETRY_AFTER_S, WindGridService
 
 NOW = datetime(2026, 9, 5, 12, 0, tzinfo=UTC)
 H = timedelta(hours=1)
@@ -169,3 +169,49 @@ async def test_without_provider_field_is_none(
     service = _service(session_factory, None)
     assert await service.refresh_once() == 0
     assert await service.get_field() is None
+
+
+class FailingGridProvider:
+    """Open-Meteo лежит: каждый вызов — ошибка."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def get_wind_grid(
+        self, points: list[tuple[float, float]], forecast_hours: int
+    ) -> list[GridPointForecast]:
+        self.calls += 1
+        raise httpx.ConnectError("open-meteo down")
+
+
+async def test_failed_lazy_refresh_backs_off(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    provider = FailingGridProvider()
+    mono = [1000.0]
+    service = WindGridService(
+        session_factory, provider, step_deg=1.0, clock=lambda: NOW, monotonic=lambda: mono[0]
+    )
+    assert await service.get_field() is None
+    assert provider.calls == 1
+    # пока идёт пауза, запросы /wind не ходят за сеткой снова
+    mono[0] += LAZY_RETRY_AFTER_S - 1
+    assert await service.get_field() is None
+    assert provider.calls == 1
+    # пауза вышла — пробуем ещё раз
+    mono[0] += 2
+    assert await service.get_field() is None
+    assert provider.calls == 2
+
+
+async def test_aclose_closes_provider(session_factory: async_sessionmaker[AsyncSession]) -> None:
+    class ClosableProvider(FakeGridProvider):
+        closed = False
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+    provider = ClosableProvider()
+    await _service(session_factory, provider).aclose()
+    assert provider.closed
+    await _service(session_factory, None).aclose()  # без провайдера — не падает

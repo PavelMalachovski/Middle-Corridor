@@ -228,6 +228,19 @@ async def test_vesselapi_webhook(
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         denied = await client.post("/webhooks/vesselapi", json=payload)
         assert denied.status_code == 403  # без секрета
+        # секрет проверяется раньше разбора тела: мусор без секрета — тоже 403
+        garbage = await client.post("/webhooks/vesselapi", content=b"{not json")
+        assert garbage.status_code == 403
+        wrong = await client.post(
+            "/webhooks/vesselapi", json=payload, headers={"X-Webhook-Secret": "s3cret!"}
+        )
+        assert wrong.status_code == 403
+        bad_body = await client.post(
+            "/webhooks/vesselapi",
+            json={"mmsi": "x", "event": "sunk"},
+            headers={"X-Webhook-Secret": "s3cret"},
+        )
+        assert bad_body.status_code == 422
 
         ok = await client.post(
             "/webhooks/vesselapi", json=payload, headers={"X-Webhook-Secret": "s3cret"}

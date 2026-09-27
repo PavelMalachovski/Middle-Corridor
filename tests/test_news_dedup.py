@@ -1,5 +1,6 @@
 """Тесты новостной ленты: дедуп, троттлинг, архив старья, RSS-парсер (§7.3)."""
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -225,3 +226,54 @@ async def test_rss_provider_error_on_http_error() -> None:
     with pytest.raises(NewsProviderError):
         await provider.fetch("https://example.com/feed")
     await client.aclose()
+
+
+def _feed(*items: str) -> bytes:
+    body = "".join(f"<item>{item}</item>" for item in items)
+    return f'<?xml version="1.0"?><rss version="2.0"><channel>{body}</channel></rss>'.encode()
+
+
+async def test_rss_provider_drops_unsafe_links_and_clips_ids() -> None:
+    long_url = "https://example.com/" + "a" * 1100
+    feed = _feed(
+        "<title>JS link</title><link>javascript:alert(1)</link>",
+        "<title>FTP link</title><link>ftp://example.com/file</link>",
+        f"<title>Too long</title><link>{long_url}</link>",
+        f"<title>{'T' * 600}</title><link>https://example.com/ok</link><guid>{'g' * 300}</guid>",
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=feed)
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    entries = await RssNewsProvider(client=client).fetch("https://example.com/feed")
+    await client.aclose()
+
+    assert [e.url for e in entries] == ["https://example.com/ok"]  # только http(s) в лимите
+    assert len(entries[0].external_id or "") == 256  # колонка String(256)
+    assert len(entries[0].title) == 512  # колонка String(512)
+
+
+class _SlowProvider(FakeNewsProvider):
+    def __init__(self) -> None:
+        super().__init__()
+        self.active = 0
+        self.max_active = 0
+
+    async def fetch(self, feed_url: str) -> list[NewsEntry]:
+        self.active += 1
+        self.max_active = max(self.max_active, self.active)
+        await asyncio.sleep(0.01)
+        self.active -= 1
+        return [_entry("https://e/1")]
+
+
+async def test_run_once_does_not_overlap(
+    session_factory: async_sessionmaker[AsyncSession], sink: FakeSink, session: AsyncSession
+) -> None:
+    """/poll_news админа во время джобы планировщика ждёт, а не публикует дубли."""
+    provider = _SlowProvider()
+    service = _service(session_factory, provider, sink)  # type: ignore[arg-type]
+    await asyncio.gather(service.run_once(), service.run_once())
+    assert provider.max_active == 1
+    assert len(sink.messages) == 1 and len(await _all_items(session)) == 1

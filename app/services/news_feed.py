@@ -8,6 +8,7 @@ NEWS_MAX_AGE_DAYS сохраняются сразу как «отправлен�
 не блокирует публикацию — уходит оригинал.
 """
 
+import asyncio
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -18,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.db.models import NewsItem
 from app.db.repositories.news import NewsRepository
-from app.integrations.news.base import NewsProvider
+from app.integrations.news.base import MAX_TITLE_LEN, NewsProvider
 from app.services.formatting import format_news_item
 from app.services.sinks import MessageSink
 
@@ -60,6 +61,9 @@ class NewsFeedService:
         self._max_per_run = max_per_run
         self._max_age = timedelta(days=max_age_days)
         self._translator = translator
+        # /poll_news админа идёт мимо max_instances планировщика: без замка два
+        # прогона разом опубликовали бы одни и те же новости дважды
+        self._lock = asyncio.Lock()
 
     async def fetch_and_store(self) -> int:
         """Собирает все источники, сохраняет новые элементы. Возвращает число новых."""
@@ -70,8 +74,8 @@ class NewsFeedService:
             for source_url in self._sources:
                 try:
                     entries = await self._provider.fetch(source_url)
-                except Exception as exc:  # noqa: BLE001 — один источник не роняет прогон
-                    logger.error("news_source_failed", source=source_url, error=str(exc))
+                except Exception:  # noqa: BLE001 — один источник не роняет прогон
+                    logger.exception("news_source_failed", source=source_url)
                     continue
 
                 seen = await repo.existing_urls(entry.url for entry in entries)
@@ -98,9 +102,9 @@ class NewsFeedService:
                 await self._maybe_translate(item)
                 try:
                     await self._sink.publish(format_news_item(item))
-                except Exception as exc:  # noqa: BLE001
+                except Exception:  # noqa: BLE001
                     # канал недоступен — оставшиеся уйдут в следующий прогон
-                    logger.error("news_publish_failed", item_id=item.id, error=str(exc))
+                    logger.exception("news_publish_failed", item_id=item.id)
                     break
                 item.is_sent = True
                 sent += 1
@@ -114,14 +118,16 @@ class NewsFeedService:
         if self._translator is None or not needs_translation(item):
             return
         try:
-            item.title_ru, item.summary_ru = await self._translator.translate(
-                item.title, item.summary
-            )
+            title_ru, item.summary_ru = await self._translator.translate(item.title, item.summary)
         except Exception as exc:  # noqa: BLE001 — публикуем оригинал
             logger.warning("news_translation_failed", item_id=item.id, error=str(exc))
+            return
+        # ответ LLM не ограничен по длине, а колонка title_ru — String(512)
+        item.title_ru = title_ru[:MAX_TITLE_LEN]
 
     async def run_once(self) -> "NewsRunStats":
         """Полный цикл джобы: сбор + публикация."""
-        stored = await self.fetch_and_store()
-        published = await self.publish_pending()
-        return NewsRunStats(stored=stored, published=published)
+        async with self._lock:
+            stored = await self.fetch_and_store()
+            published = await self.publish_pending()
+            return NewsRunStats(stored=stored, published=published)

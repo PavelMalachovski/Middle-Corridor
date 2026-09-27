@@ -5,12 +5,14 @@ POST /webhooks/vesselapi — события портов (arrival/departure) о�
 если секрет в конфиге пуст, вебхук выключен (403).
 """
 
+import hmac
+import json
 from datetime import datetime
 from typing import Literal
 
 import structlog
 from fastapi import APIRouter, Header, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from app.db.models import PortEventType
 
@@ -26,18 +28,26 @@ class VesselApiEvent(BaseModel):
     timestamp: datetime | None = None
 
 
+def _secret_ok(given: str | None, expected: str) -> bool:
+    if not expected or given is None:
+        return False
+    return hmac.compare_digest(given.encode(), expected.encode())
+
+
 @router.post("/webhooks/vesselapi")
 async def vesselapi_webhook(
-    event: VesselApiEvent,
     request: Request,
     x_webhook_secret: str | None = Header(default=None),
 ) -> dict[str, bool]:
     settings = request.app.state.settings
-    if (
-        not settings.vesselapi_webhook_secret
-        or x_webhook_secret != settings.vesselapi_webhook_secret
-    ):
+    if not _secret_ok(x_webhook_secret, settings.vesselapi_webhook_secret):
         raise HTTPException(status_code=403, detail="invalid webhook secret")
+
+    # тело разбираем только после проверки секрета
+    try:
+        event = VesselApiEvent.model_validate(json.loads(await request.body()))
+    except (ValueError, ValidationError) as exc:
+        raise HTTPException(status_code=422, detail="invalid payload") from exc
 
     tracker = request.app.state.ais_tracker
     if tracker is None:

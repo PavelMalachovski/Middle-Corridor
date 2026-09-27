@@ -59,10 +59,11 @@ def _replay_at(service: MapSnapshotService, at: datetime | None) -> datetime | N
     """Нормализует at к UTC и проверяет окно replay; вне окна — 400."""
     if at is None:
         return None
-    at = at.replace(tzinfo=UTC) if at.tzinfo is None else at.astimezone(UTC)
     try:
+        # 9999-12-31T23:59:59-14:00 в UTC выходит за datetime.max → OverflowError
+        at = at.replace(tzinfo=UTC) if at.tzinfo is None else at.astimezone(UTC)
         service.check_replay_window(at)
-    except ValueError as exc:
+    except (OverflowError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return at
 

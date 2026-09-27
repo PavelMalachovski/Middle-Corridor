@@ -52,7 +52,7 @@ def format_weather_alert(
     else:
         body = f"Ветер {obs.wind_speed:.0f} м/с, порывы до {obs.wind_gust:.0f} м/с. "
     return (
-        f"{LEVEL_EMOJI[level]} <b>{port.name} — {_LEVEL_TITLE[level]}</b>\n"
+        f"{LEVEL_EMOJI[level]} <b>{html.escape(port.name)} — {_LEVEL_TITLE[level]}</b>\n"
         f"{body}{_impact_phrase(port)} в ближайшие 12–24 ч.\n"
         f"<i>Обновлено: {_fmt_ts(obs.ts)}</i>"
     )
@@ -60,7 +60,7 @@ def format_weather_alert(
 
 def format_weather_all_clear(port: Port, obs: WindObservation) -> str:
     return (
-        f"✅ <b>{port.name} — отбой штормового предупреждения</b>\n"
+        f"✅ <b>{html.escape(port.name)} — отбой штормового предупреждения</b>\n"
         f"Ветер {obs.wind_speed:.0f} м/с, порывы до {obs.wind_gust:.0f} м/с. "
         f"Условия для операций восстанавливаются.\n"
         f"<i>Обновлено: {_fmt_ts(obs.ts)}</i>"
@@ -146,7 +146,7 @@ def _port_line(port: "PortStatus") -> str:
     else:
         marker = "⚪️"
         detail = "нет данных о погоде"
-    return f"{marker} {port.name} — {detail}"
+    return f"{marker} {html.escape(port.name)} — {html.escape(detail)}"
 
 
 def format_corridor_status(status: "CorridorStatus") -> str:
@@ -188,7 +188,8 @@ def format_corridor_status(status: "CorridorStatus") -> str:
 
 
 def format_port_detail(port: "PortStatus") -> str:
-    lines = [f"<b>{port.name}</b> ({port.country}) · {_LEG_TITLE[port.leg]}"]
+    name, country = html.escape(port.name), html.escape(port.country)
+    lines = [f"<b>{name}</b> ({country}) · {_LEG_TITLE[port.leg]}"]
     if port.alert_level is not None:
         marker = LEVEL_EMOJI[port.alert_level]
         lines.append(f"{marker} <b>{_LEVEL_TITLE[port.alert_level]}</b>")

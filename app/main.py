@@ -250,6 +250,8 @@ async def run() -> None:  # noqa: PLR0915 — точка сборки всего
         await asyncio.gather(*tasks, return_exceptions=True)
         await weather_provider.aclose()
         await news_provider.aclose()
+        if isinstance(wind_grid, WindGridService):
+            await wind_grid.aclose()  # свой OpenMeteoProvider поля ветра
         if translator is not None:
             await translator.aclose()
         if bot is not None:

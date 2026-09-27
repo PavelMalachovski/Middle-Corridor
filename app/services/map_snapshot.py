@@ -6,7 +6,9 @@
 прототипе — синтетика из integrations/mock. Сервис не знает, кто за ним.
 """
 
+import asyncio
 import dataclasses
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from statistics import mean
@@ -347,11 +349,35 @@ class CorridorStatusAdapter:
     без погоды (ж/д, границы) — из справочника corridor.py.
     """
 
-    def __init__(self, status: StatusSourceProto) -> None:
+    def __init__(
+        self,
+        status: StatusSourceProto,
+        ttl_s: float = 2.0,
+        monotonic: Callable[[], float] = time.monotonic,
+    ) -> None:
         self._status = status
+        self._ttl_s = ttl_s
+        self._monotonic = monotonic
+        self._cached: tuple[float, CorridorStatus] | None = None
+        self._lock = asyncio.Lock()
+
+    async def _corridor_status(self) -> CorridorStatus:
+        """Статус агрегатора с кешем на ttl_s.
+
+        Снимок спрашивает узлы, суда и сводки подряд — агрегатор (N+1 запросов
+        к БД) дёргаем раз на TTL, а не трижды. Статус от at не зависит
+        (агрегатор знает только «сейчас»), поэтому кеш общий для любого at.
+        """
+        async with self._lock:
+            started = self._monotonic()
+            if self._cached is not None and started - self._cached[0] < self._ttl_s:
+                return self._cached[1]
+            status = await self._status.get_corridor_status()
+            self._cached = (started, status)
+            return status
 
     async def list_nodes(self, at: datetime | None = None) -> list[NodeStatus]:
-        status = await self._status.get_corridor_status()
+        status = await self._corridor_status()
         db_codes = {port.code for port in status.ports}
         nodes = [
             NodeStatus(
@@ -392,7 +418,7 @@ class CorridorStatusAdapter:
         return nodes
 
     async def list_vessels(self, at: datetime | None = None) -> list[VesselMapStatus]:
-        status = await self._status.get_corridor_status()
+        status = await self._corridor_status()
         return [
             VesselMapStatus(
                 name=v.name,
@@ -407,7 +433,7 @@ class CorridorStatusAdapter:
         ]
 
     async def list_reports(self, at: datetime | None = None) -> list[ReportStatus]:
-        return (await self._status.get_corridor_status()).recent_reports
+        return (await self._corridor_status()).recent_reports
 
 
 class DbNewsSource:

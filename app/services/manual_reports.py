@@ -189,8 +189,8 @@ class ManualReportsService:
         try:
             await self._sink.publish(self._format(report, port.name if port else None))
             return True
-        except Exception as exc:  # noqa: BLE001 — сводка останется в pending
-            logger.error("manual_report_publish_failed", report_id=report.id, error=str(exc))
+        except Exception:  # noqa: BLE001 — сводка останется в pending
+            logger.exception("manual_report_publish_failed", report_id=report.id)
             return False
 
     @staticmethod

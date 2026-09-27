@@ -27,7 +27,8 @@ class NewsTranslation(BaseModel):
 
 class ClaudeNewsTranslator:
     def __init__(self, api_key: str, model: str = "claude-opus-4-8") -> None:
-        self._client = AsyncAnthropic(api_key=api_key)
+        # по умолчанию SDK ждёт до 600 с — прогон новостей повис бы на одном переводе
+        self._client = AsyncAnthropic(api_key=api_key, timeout=30.0)
         self._model = model
 
     async def translate(self, title: str, summary: str | None) -> tuple[str, str | None]:

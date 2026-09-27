@@ -25,8 +25,8 @@ def _safe(name: str, fn: Callable[[], Awaitable[object]]) -> Callable[[], Awaita
         try:
             result = await fn()
             logger.info("scheduled_job_done", job=name, result=str(result))
-        except Exception as exc:  # noqa: BLE001
-            logger.error("scheduled_job_failed", job=name, error=str(exc))
+        except Exception:  # noqa: BLE001
+            logger.exception("scheduled_job_failed", job=name)
 
     return wrapper
 

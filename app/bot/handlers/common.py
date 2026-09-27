@@ -1,5 +1,7 @@
 """Базовые команды бота: /start, /help, /status + кнопки главного меню."""
 
+import html
+
 from aiogram import F, Router
 from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import CallbackQuery, Message
@@ -36,7 +38,8 @@ async def cmd_status(
     if command.args:
         port = await status_service.get_port_status(command.args)
         if port is None:
-            await message.answer(texts.STATUS_PORT_NOT_FOUND.format(query=command.args))
+            query = html.escape(command.args)
+            await message.answer(texts.STATUS_PORT_NOT_FOUND.format(query=query))
             return
         await message.answer(format_port_detail(port))
         return

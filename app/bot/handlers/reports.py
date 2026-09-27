@@ -5,6 +5,7 @@
 Роутер закрыт TrustedSourceMiddleware (подключается в bot/main.py).
 """
 
+import html
 from datetime import date
 
 from aiogram import F, Router
@@ -186,7 +187,7 @@ async def _submit(
             port_id=data.get("port_id"),
         )
     except ManualReportError as exc:
-        await message.answer(texts.REPORT_FAILED.format(error=exc))
+        await message.answer(texts.REPORT_FAILED.format(error=html.escape(str(exc))))
         return
 
     template = (
