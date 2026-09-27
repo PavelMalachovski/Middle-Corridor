@@ -4,11 +4,21 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+
+# Новый пуш в PR отменяет старый прогон; на main доводим каждый до конца
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
 
 jobs:
   backend:
-    name: Backend (ruff, black, pytest)
+    name: Backend (ruff, black, pytest + coverage)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,12 +32,86 @@ jobs:
         run: |
           ruff check .
           black --check .
-      - name: Tests
-        run: python -m pytest -q
+      - name: Tests + coverage (порог — fail_under в pyproject.toml)
+        run: python -m pytest -q --cov --cov-report=term-missing:skip-covered --cov-report=xml
+      - name: Coverage summary
+        if: always()
+        run: |
+          {
+            echo "### Покрытие бэкенда"
+            coverage report --format=markdown --skip-covered 2>/dev/null || echo "нет данных"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  postgres:
+    # Юнит-тесты ходят в SQLite; здесь — настоящий Postgres, как на Railway:
+    # миграции туда-обратно, дрейф моделей и старт в боевом режиме (не MOCK_DATA)
+    name: Postgres (migrations, drift, prod smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mc
+          POSTGRES_PASSWORD: mc
+          POSTGRES_DB: mc
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mc"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://mc:mc@127.0.0.1:5432/mc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install
+        run: pip install -e .
+      - name: Migrations up → down → up
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+          alembic upgrade head
+      - name: Models match migrations (alembic check)
+        run: alembic check
+      - name: Prod smoke (API на Postgres, без моков)
+        env:
+          MOCK_DATA: "false"
+          BOT_TOKEN: ""
+          AISSTREAM_API_KEY: ""
+          SCHEDULER_ENABLED: "false"
+          WIND_GRID_LAZY_REFRESH: "false"
+          LOG_LEVEL: WARNING
+          PORT: "8000"
+        run: |
+          python -m app.main > api.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8000/health > health.json && break
+            sleep 1
+          done
+          cat health.json
+          python - <<'PY'
+          import json, urllib.request
+          health = json.load(open("health.json"))
+          assert health["db"] is True, health
+          snap = json.load(urllib.request.urlopen("http://127.0.0.1:8000/api/v1/snapshot"))
+          assert snap["mock"] is False, "боевой режим не должен отдавать синтетику"
+          assert len(snap["nodes"]) > 0, "сиды портов не доехали"
+          print(f"snapshot ok: {len(snap['nodes'])} nodes, {len(snap['vessels'])} vessels")
+          PY
+      - name: API log on failure
+        if: failure()
+        run: cat api.log || true
 
   web:
-    name: Web (lint, unit, build, e2e)
+    name: Web (lint, unit, build, e2e, a11y, screenshots)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: web
@@ -48,6 +132,16 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+      - name: Bundle size
+        run: |
+          {
+            echo "### Размер бандла (gzip)"
+            echo "| файл | KB |"
+            echo "|---|---|"
+            for f in dist/assets/*.js dist/assets/*.css; do
+              printf "| %s | %s |\n" "$(basename "$f")" "$(gzip -c "$f" | wc -c | awk '{printf "%.1f", $1/1024}')"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
       # E2E: собранный фронт раздаёт FastAPI с MOCK_DATA=true (как в проде)
       - uses: actions/setup-python@v5
         with:
@@ -58,8 +152,25 @@ jobs:
         run: pip install -e ..
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
-      - name: E2E (Playwright)
+      - name: E2E (Playwright, включая a11y и галерею экранов)
         run: npm run e2e
+      - name: Screenshots summary
+        if: always()
+        run: |
+          {
+            echo "### Экраны"
+            echo "Скриншоты — в артефакте **screenshots** этого прогона:"
+            for f in screenshots/*.png; do [ -e "$f" ] && echo "- $(basename "$f")"; done
+          } >> "$GITHUB_STEP_SUMMARY"
+      # Галерея экранов — на каждый прогон: ревью интерфейса без запуска приложения
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: web/screenshots
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Upload e2e report
         if: failure()
         uses: actions/upload-artifact@v4
