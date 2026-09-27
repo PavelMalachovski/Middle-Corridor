@@ -94,6 +94,15 @@ export const LEVEL_COLOR: Record<AlertLevel | "ok" | "none", string> = {
   critical: "#d03b3b",
 };
 
+/** Тот же статус для ТЕКСТА: CSS-токены, на светлой теме — темнее заливок. */
+export const LEVEL_TEXT: Record<AlertLevel | "ok" | "none", string> = {
+  none: "var(--muted)",
+  ok: "var(--ok-text)",
+  watch: "var(--watch-text)",
+  warning: "var(--warning-text)",
+  critical: "var(--critical-text)",
+};
+
 export function levelOf(node: NodeStatus): AlertLevel | "ok" | "none" {
   if (!node.is_weather_tracked || node.wind_speed == null) return "none";
   return node.alert_level ?? "ok";

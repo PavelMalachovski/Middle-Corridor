@@ -4,7 +4,7 @@ import { mapState, openLayers, openMap, pinPrefs } from "./helpers";
 test("смена подложки пересоздаёт наши слои; настройки запоминаются", async ({ page }) => {
   await openMap(page);
   await openLayers(page);
-  await page.getByRole("button", { name: "Светлая" }).click();
+  await page.getByRole("button", { name: "Светлая", exact: true }).click();
   await expect(page.locator(".map")).toHaveAttribute("data-basemap", "light");
   await expect
     .poll(async () => (await mapState(page)).layers.includes("corridor-glow"), { timeout: 30_000 })

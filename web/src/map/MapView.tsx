@@ -84,7 +84,12 @@ interface Props {
 
 // Сила ветра → одна синяя шкала (тёмная подложка: слабый = темнее, сильный = светлее)
 const WIND_BUCKETS = [4, 8, 12, 16, 20];
-const WIND_COLORS = ["#1c5cab", "#2a78d6", "#3987e5", "#6da7ec", "#9ec5f4", "#cde2fb"];
+// Сила ветра цветом — одна шкала для стрелок и частиц. На тёмной подложке ярче =
+// сильнее; на светлой почти белая стрелка сильного ветра пропадала — там темнее = сильнее
+const WIND_COLORS = {
+  dark: DEFAULT_WIND_OPTIONS.colors,
+  light: ["#a9cdf6", "#6da7ec", "#3987e5", "#2a78d6", "#1c5cab", "#0f3f7d"],
+};
 const TRACK_COLOR = "#2fd39a";
 const CORRIDOR_COLOR = "#8f86e6"; // лента коридора: не спорит ни с ветром, ни с грузами, ни со статусами
 // Нитки маршрута: почти белые на тёмной подложке, на светлой — тёмные (белые там пропадали)
@@ -221,9 +226,9 @@ function tintIcon(
 }
 
 /** Наши источники и слои поверх любой подложки. Вызывается на каждый style.load. */
-function setupLayers(map: MLMap, particles: WindParticleLayer | null): void {
+function setupLayers(map: MLMap, particles: WindParticleLayer | null, windColors: string[]): void {
   const arrow = windArrow(32);
-  WIND_COLORS.forEach((color, i) => {
+  windColors.forEach((color, i) => {
     if (!map.hasImage(`wind-${i}`)) map.addImage(`wind-${i}`, tintIcon(arrow, color));
   });
 
@@ -460,6 +465,8 @@ export function MapView({
   const sheetRef = useRef(sheetHeight);
   sheetRef.current = sheetHeight;
   const terrain3dRef = useRef(terrain3d);
+  const basemapRef = useRef(basemap); // палитра ветра на style.load — по текущей подложке
+  basemapRef.current = basemap;
   terrain3dRef.current = terrain3d;
 
   const runDeclutter = useCallback(() => {
@@ -579,7 +586,9 @@ export function MapView({
     // (офлайн, прокси) — оверлеи должны появляться независимо от подложки.
     // Срабатывает на каждую смену подложки: слои пересоздаются заново.
     map.on("style.load", () => {
-      setupLayers(map, particles.current);
+      const windColors = WIND_COLORS[isDarkBasemap(basemapRef.current) ? "dark" : "light"];
+      particles.current?.setOptions({ colors: windColors }); // рампа пересоздаётся в onAdd
+      setupLayers(map, particles.current, windColors);
       setStyleVersion((v) => v + 1);
     });
 

@@ -64,7 +64,7 @@ test("подложка меняется — слой частиц пересоз
     .poll(() => page.evaluate(() => window.__mcWind?.ready ?? false), { timeout: 20_000 })
     .toBe(true);
   await openLayers(page);
-  await page.getByRole("button", { name: "Светлая" }).click();
+  await page.getByRole("button", { name: "Светлая", exact: true }).click();
   await expect
     .poll(
       () =>

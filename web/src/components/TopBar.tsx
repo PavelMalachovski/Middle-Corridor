@@ -3,17 +3,20 @@ import type { Snapshot } from "../api";
 import { fmtTs } from "../format";
 import { type Key, type Lang, useI18n } from "../i18n";
 import type { LiveMode } from "../live";
+import type { Theme } from "../theme";
 
 interface Props {
   snapshot: Snapshot | null;
   error: string | null;
   fetchedAt: Date | null;
   mode: LiveMode;
+  theme: Theme;
+  onToggleTheme: () => void;
 }
 
 const LANGS: Lang[] = ["ru", "en"];
 
-export function TopBar({ snapshot, error, fetchedAt, mode }: Props) {
+export function TopBar({ snapshot, error, fetchedAt, mode, theme, onToggleTheme }: Props) {
   const { t, lang, setLang } = useI18n();
   const [, setTick] = useState(0); // перерисовка «N с назад» раз в секунду
   useEffect(() => {
@@ -103,6 +106,15 @@ export function TopBar({ snapshot, error, fetchedAt, mode }: Props) {
             </span>
           )}
         </div>
+        <button
+          type="button"
+          className="theme-btn"
+          onClick={onToggleTheme}
+          aria-label={theme === "dark" ? t("theme.toLight") : t("theme.toDark")}
+          title={theme === "dark" ? t("theme.toLight") : t("theme.toDark")}
+        >
+          <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+        </button>
         <fieldset className="lang">
           <legend className="sr-only">{t("lang.switch")}</legend>
           {LANGS.map((code) => (

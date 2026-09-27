@@ -186,6 +186,9 @@ export const en: Record<Key, string> = {
   "time.moment": "Moment in time",
   "time.live": "Back to live data",
 
+  "theme.toLight": "Light theme",
+  "theme.toDark": "Dark theme",
+  "a11y.skip": "Skip to cargo list",
   "ctl.layers": "Layers",
   "ctl.legend": "Legend",
   "intro.title": "Middle Corridor status in real time",
@@ -229,7 +232,7 @@ export const en: Record<Key, string> = {
   "legend.cargoConfirmed": "cargo: confirmed position",
   "legend.cargoProjected": "cargo: schedule estimate",
   "legend.ferry": "ferry (AIS)",
-  "legend.wind": "wind: particles or arrows along the flow, brighter = stronger",
+  "legend.wind": "wind: particles or arrows along the flow, more contrast = stronger",
 
   "err.mapTitle": "The map failed to render",
   "err.mapDetail": "The panel on the right still works. Error: {message}",

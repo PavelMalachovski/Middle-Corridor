@@ -47,6 +47,7 @@ web/           фронт карты: React 19 + Vite 8 + TS 7 + MapLibre 6; х�
                src/map/animate.ts — интерполятор движения; components/sheet.ts — геометрия шторки;
                src/map/windParticles.ts — WebGL-слой частиц ветра (windGrid.ts — текстура поля);
                src/forecast.ts + components/charts/ — прогноз и SVG-графики; src/urlState.ts — состояние в адресе;
+               src/theme.ts — тема UI (система/явный выбор, пара подложек); styles.css — токены обеих тем;
                src/i18n/ — словари ru/en (ru.ts — источник ключей), t()/useI18n(), labels.ts — подписи из кодов бэкенда;
                *.test.ts рядом с кодом (Vitest), e2e/ — Playwright (+ a11y, галерея экранов), biome.json — линт и формат
 .github/       ci.yml (backend · postgres · web), security.yml (pip-audit/npm audit), dependabot.yml
@@ -202,6 +203,31 @@ api/index.py   точка входа Vercel (serverless FastAPI: только /a
 - Цвета: оранжевый — статус «риск», поэтому паромы нейтральные (`--vessel`,
   светлые; на светлой подложке — тёмные). Новые размеры — из шкал
   `--fs-*`, `--radius-*`, `--shadow-panel` в `:root`.
+- Цвета — только токены: hex/`rgb()` допустимы лишь в блоках из одних custom
+  properties (`:root`, `:root[data-theme="light"]`, `.map[data-basemap="light"]`),
+  иначе падает `src/styles.test.ts`. Полупрозрачность — `rgb(var(--ink) / a)`
+  или `color-mix(in srgb, var(--x) N%, transparent)`. Заливки статусов общие
+  для тем, текст — `*-text` (на белом нужен тёмный оттенок для AA). В TS цвет
+  для DOM — строкой `var(--…)` (`LEVEL_TEXT`); слоям MapLibre и canvas нужны
+  литералы (переменные они не читают). Custom property, ссылающаяся на другую,
+  вычисляется там, где объявлена: составные значения (ореол подписей) писать
+  в правиле-потребителе, иначе переопределение в `.map[…]` не доедет.
+- Тема UI и подложка — разные оси. Тема (`<html data-theme>`, по умолчанию
+  `prefers-color-scheme`, явный выбор — `mc-ui.theme`) красит панели; подписи
+  и ореолы маркеров берут `--map-*` от `.map[data-basemap]` (яркость
+  подложки: спутник «тёмный» и в светлой теме). Смена темы переключает только
+  пару тёмная ↔ светлая подложка. Тема ставится в `main.tsx` до рендера.
+  Playwright без настройки эмулирует СВЕТЛУЮ систему — в конфиге закреплён
+  `colorScheme: "dark"`, светлую проверяют `theme.spec`, a11y и `light-*` в
+  галерее. Кнопки «Светлая»/«Тёмная» (подложка) и «Светлая тема» совпадают
+  по префиксу — в e2e `exact: true`.
+- Vitest: `import css from "./x.css?raw"` отдаёт пустую строку (CSS не
+  обрабатывается) — тест, читающий CSS, берёт файл через `readFileSync`.
+- Фокус и a11y: общее кольцо `:where(…):focus-visible` (`--focus`); первая по
+  Tab — кнопка «К списку грузов» (`#panel-main`, не ссылка: Biome
+  `useValidAnchor`); открытие карточки ставит фокус на `.detail__ref` (h2),
+  «← все грузы» возвращает его на `.card[data-ref]` списка. Заголовки блоков —
+  h2/h3 с классом `.block__title`. На `pointer: coarse` цели от 36 px.
 - Инварианты раскладки и a11y проверяют `e2e/screens.spec.ts` и
   `e2e/a11y.spec.ts` (axe: падение на serious/critical). Скриншоты —
   артефакт **screenshots** каждого прогона CI; после правок UI — посмотреть.

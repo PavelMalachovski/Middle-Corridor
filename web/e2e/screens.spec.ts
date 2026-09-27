@@ -178,6 +178,36 @@ test.describe("экраны: десктоп", () => {
   });
 });
 
+const LIGHT_PREFS = PREFS.replace('"basemap":"dark"', '"basemap":"light"');
+
+test.describe("экраны: светлая тема", () => {
+  test.use({ colorScheme: "light" }); // тема — как в системе
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(seedStorage, LIGHT_PREFS);
+  });
+
+  test("обзор, панели и карточка", async ({ page }, testInfo) => {
+    await openMap(page);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expectNoOverlap(page, DESKTOP_PAIRS);
+    await shoot(page, testInfo, "light-overview");
+    await openLayers(page);
+    await openLegend(page);
+    await shoot(page, testInfo, "light-panels");
+    await page.locator(".list .card").first().click();
+    await expect(page.locator(".detail")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await shoot(page, testInfo, "light-card");
+  });
+
+  test("фокус с клавиатуры виден", async ({ page }, testInfo) => {
+    await openMap(page);
+    await page.keyboard.press("Tab");
+    await expect(page.locator(".skip-link")).toBeInViewport();
+    await shoot(page, testInfo, "light-focus");
+  });
+});
+
 const { defaultBrowserType: _browser, ...pixel } = devices["Pixel 7"];
 
 test.describe("экраны: телефон", () => {
@@ -208,6 +238,17 @@ test.describe("экраны: телефон", () => {
     await page.getByRole("tab", { name: /Порты/ }).click();
     await expect(page.locator(".list .card").first()).toBeVisible();
     await shoot(page, testInfo, "mobile-ports");
+  });
+
+  test("светлая тема на телефоне", async ({ page }, testInfo) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.addInitScript(seedStorage, LIGHT_PREFS); // после общего — перекрывает подложку
+    await openMap(page);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await page.locator(".list .card").first().click();
+    await expect(page.locator(".detail")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await shoot(page, testInfo, "mobile-light-card");
   });
 
   test("панель слоёв на телефоне не уходит под шкалу и шторку", async ({ page }, testInfo) => {

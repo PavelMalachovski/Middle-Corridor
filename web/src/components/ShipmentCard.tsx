@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { Shipment, Snapshot } from "../api";
 import { checkpointDelays } from "../forecast";
 import {
@@ -7,8 +8,8 @@ import {
   fmtRelative,
   fmtTs,
   fmtWind,
-  LEVEL_COLOR,
   LEVEL_ICON,
+  LEVEL_TEXT,
   levelLabel,
   levelOf,
 } from "../format";
@@ -89,6 +90,13 @@ export function ShipmentCard({
   onShare,
 }: Props) {
   const { t, lang } = useI18n();
+  // карточка открылась (кликом, с клавиатуры, по ссылке) — фокус на её заголовок:
+  // клавиатура и скринридер продолжают отсюда, а не с <body>
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: фокус — при смене груза, не на каждый снимок
+  useEffect(() => {
+    titleRef.current?.focus({ preventScroll: true });
+  }, [s.ref]);
   const ref = new Date(snapshot.generated_at);
   const pos = positionText(s, snapshot, t, lang);
   const near = findNearestNode(snapshot.nodes, s.position.lat, s.position.lon);
@@ -105,7 +113,9 @@ export function ShipmentCard({
         </button>
       </div>
       <div className="card__head">
-        <b className="mono detail__ref">{s.ref}</b>
+        <h2 className="mono detail__ref" ref={titleRef} tabIndex={-1}>
+          {s.ref}
+        </h2>
         <StatePill shipment={s} />
       </div>
       <div className="detail__client">
@@ -145,7 +155,7 @@ export function ShipmentCard({
       </div>
 
       <section className="block">
-        <div className="block__title">{t("card.now")}</div>
+        <h3 className="block__title">{t("card.now")}</h3>
         <div className={`pos pos--${s.position.source}`}>
           <div className="pos__title">{pos.title}</div>
           <div className="muted small">{pos.detail}</div>
@@ -177,11 +187,9 @@ export function ShipmentCard({
 
       {near && (
         <section className="block">
-          <div className="block__title">
-            {t("card.weatherNear", { node: nodeName(near, lang) })}
-          </div>
+          <h3 className="block__title">{t("card.weatherNear", { node: nodeName(near, lang) })}</h3>
           <div className="weather">
-            <span className="weather__level" style={{ color: LEVEL_COLOR[nearLevel] }}>
+            <span className="weather__level" style={{ color: LEVEL_TEXT[nearLevel] }}>
               {near.alert_level
                 ? `${LEVEL_ICON[near.alert_level]} ${levelLabel(near.alert_level)}`
                 : t("common.ok")}
@@ -197,7 +205,7 @@ export function ShipmentCard({
       )}
 
       <section className="block">
-        <div className="block__title">{t("card.route")}</div>
+        <h3 className="block__title">{t("card.route")}</h3>
         <DelayChart delays={checkpointDelays(s)} nameOf={(d) => place(d.code, d.name)} />
         <div className="delay-legend">
           <span className="delay-legend__swatch is-late" /> {t("chart.late")}

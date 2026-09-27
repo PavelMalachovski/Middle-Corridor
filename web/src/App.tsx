@@ -25,6 +25,7 @@ import { BASEMAPS, type BasemapId, DEFAULT_BASEMAP } from "./map/style";
 import { softwareGl } from "./map/webgl";
 import { useReplay } from "./replay";
 import { shareLink } from "./share";
+import { applyTheme, basemapForTheme, initialTheme, systemTheme, type Theme } from "./theme";
 import { buildSearch, parseUrlState, sameSearch, type MapView as UrlView } from "./urlState";
 
 // Настройки карты живут в localStorage — только удобство, без них всё работает
@@ -44,7 +45,7 @@ const reducedMotion = () =>
   typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 function loadPrefs(): MapPrefs {
   const prefs: MapPrefs = {
-    basemap: DEFAULT_BASEMAP,
+    basemap: basemapForTheme(DEFAULT_BASEMAP, initialTheme()), // светлой теме — светлая подложка
     globe: true,
     terrain: false,
     terrain3d: false,
@@ -81,6 +82,7 @@ interface UiPrefs {
   layers: boolean;
   legend: boolean;
   introSeen: boolean;
+  theme?: Theme; // явный выбор; без него — как в системе
 }
 function loadUi(): UiPrefs {
   const ui: UiPrefs = { layers: false, legend: false, introSeen: false };
@@ -89,6 +91,7 @@ function loadUi(): UiPrefs {
     for (const key of ["layers", "legend", "introSeen"] as const) {
       if (typeof saved[key] === "boolean") ui[key] = saved[key];
     }
+    if (saved.theme === "light" || saved.theme === "dark") ui.theme = saved.theme;
   } catch {
     /* приватный режим и т.п. */
   }
@@ -151,6 +154,33 @@ export function App() {
       return next;
     });
   }, []);
+
+  // --- тема: явный выбор или как в системе; тёмная/светлая подложка — вслед
+  const [theme, setTheme] = useState<Theme>(initialTheme);
+  useEffect(() => applyTheme(theme), [theme]);
+  const switchTheme = useCallback((next: Theme) => {
+    setTheme(next);
+    setPrefs((p) => {
+      const basemap = basemapForTheme(p.basemap, next);
+      if (basemap === p.basemap) return p;
+      const updated = { ...p, basemap };
+      savePrefs(updated);
+      return updated;
+    });
+  }, []);
+  const explicitTheme = ui.theme;
+  useEffect(() => {
+    if (explicitTheme || typeof matchMedia !== "function") return;
+    const media = matchMedia("(prefers-color-scheme: light)");
+    const follow = () => switchTheme(systemTheme());
+    media.addEventListener("change", follow);
+    return () => media.removeEventListener("change", follow);
+  }, [explicitTheme, switchTheme]);
+  const toggleTheme = useCallback(() => {
+    const next: Theme = theme === "dark" ? "light" : "dark";
+    updateUi({ theme: next });
+    switchTheme(next);
+  }, [theme, updateUi, switchTheme]);
 
   // deep link: момент и груз применяем после первого живого снимка — он синхронизирует
   // серверные часы (replay.sync выше), иначе at из ссылки обрежется по часам клиента
@@ -244,11 +274,17 @@ export function App() {
     [snapshot],
   );
 
+  // первая остановка Tab: сразу к панели, минуя топбар и контролы карты
+  const skipToPanel = () => document.getElementById("panel-main")?.focus();
+
   return (
     <div
       className={`app ${sheetHeight > window.innerHeight * 0.6 ? "app--sheet-full" : ""}`}
       style={{ "--sheet-h": `${sheetHeight}px` } as CSSProperties}
     >
+      <button type="button" className="skip-link" onClick={skipToPanel}>
+        {t("a11y.skip")}
+      </button>
       {WEBGL2 ? (
         <ErrorBoundary
           scope="карта"
@@ -303,7 +339,14 @@ export function App() {
         )}
       >
         <div className="overlay-top">
-          <TopBar snapshot={snapshot} error={error} fetchedAt={fetchedAt} mode={mode} />
+          <TopBar
+            snapshot={snapshot}
+            error={error}
+            fetchedAt={fetchedAt}
+            mode={mode}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
           <div className="left-stack">
             <div className="panel-toggles">
               <button

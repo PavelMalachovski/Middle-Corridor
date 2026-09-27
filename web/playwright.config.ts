@@ -31,6 +31,9 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${PORT}`,
     serviceWorkers: "block", // иначе page.route(404/503) не перехватит запросы через воркер
     locale: "ru-RU", // язык интерфейса по умолчанию берётся из браузера; тесты ждут русский
+    // тема по умолчанию — как в системе, а Playwright без настройки эмулирует светлую;
+    // базовый прогон — тёмный, светлую проверяют theme.spec и светлые проходы a11y/screens
+    colorScheme: "dark",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
     video: "off",

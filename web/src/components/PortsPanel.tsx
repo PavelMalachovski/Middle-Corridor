@@ -7,6 +7,7 @@ import {
   fmtWind,
   LEVEL_COLOR,
   LEVEL_ICON,
+  LEVEL_TEXT,
   levelLabel,
   levelOf,
   payloadLabel,
@@ -92,7 +93,7 @@ function NodeRow({
           <b>{nodeName(node, lang)}</b>
           <span
             className="pill"
-            style={{ color: LEVEL_COLOR[level], borderColor: LEVEL_COLOR[level] }}
+            style={{ color: LEVEL_TEXT[level], borderColor: LEVEL_COLOR[level] }}
           >
             {node.alert_level
               ? `${LEVEL_ICON[node.alert_level]} ${levelLabel(node.alert_level)}`
@@ -138,7 +139,7 @@ export function PortsPanel({ snapshot, selectedNode, onFocusNode }: Props) {
 
   return (
     <div>
-      <div className="block__title">{t("ports.title")}</div>
+      <h2 className="block__title">{t("ports.title")}</h2>
       <ul className="list">
         {ports.map((n) => (
           <NodeRow
@@ -153,7 +154,7 @@ export function PortsPanel({ snapshot, selectedNode, onFocusNode }: Props) {
         ))}
       </ul>
 
-      <div className="block__title">{t("ports.ferries")}</div>
+      <h2 className="block__title">{t("ports.ferries")}</h2>
       <ul className="list">
         {vessels.map((v) => (
           <li key={v.name} className="card">
@@ -181,7 +182,7 @@ export function PortsPanel({ snapshot, selectedNode, onFocusNode }: Props) {
 
       {snapshot.reports.length > 0 && (
         <>
-          <div className="block__title">{t("ports.reports")}</div>
+          <h2 className="block__title">{t("ports.reports")}</h2>
           <ul className="list">
             {snapshot.reports.map((r) => {
               const port = reportPort(r, snapshot.nodes, lang);
@@ -216,7 +217,7 @@ export function PortsPanel({ snapshot, selectedNode, onFocusNode }: Props) {
         </>
       )}
 
-      <div className="block__title">{t("ports.otherNodes")}</div>
+      <h2 className="block__title">{t("ports.otherNodes")}</h2>
       <ul className="chips">
         {others.map((n) => (
           <li key={n.code}>
