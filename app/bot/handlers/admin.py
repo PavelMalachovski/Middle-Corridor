@@ -40,7 +40,7 @@ def _parse_id(command: CommandObject) -> int | None:
 
 def _pending_line(report: ManualReport) -> str:
     header = REPORT_TYPE_LABELS.get(report.report_type.value, report.report_type.value)
-    port = f" · {report.port.name}" if report.port is not None else ""
+    port = f" · {html.escape(report.port.name)}" if report.port is not None else ""
     payload = ", ".join(f"{k}={v}" for k, v in report.payload.items()) or "—"
     author = report.source.name if report.source is not None else "?"
     return (
@@ -98,7 +98,7 @@ async def cmd_approve(
     try:
         await reports_service.approve(report_id)
     except ManualReportError as exc:
-        await message.answer(f"⚠️ {exc}")
+        await message.answer(f"⚠️ {html.escape(str(exc))}")
         return
     await message.answer(texts.APPROVED.format(report_id=report_id))
 
@@ -114,7 +114,7 @@ async def cmd_reject(
     try:
         await reports_service.reject(report_id)
     except ManualReportError as exc:
-        await message.answer(f"⚠️ {exc}")
+        await message.answer(f"⚠️ {html.escape(str(exc))}")
         return
     await message.answer(texts.REJECTED.format(report_id=report_id))
 

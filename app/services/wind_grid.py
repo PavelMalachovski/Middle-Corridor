@@ -13,6 +13,7 @@
 """
 
 import asyncio
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -30,6 +31,9 @@ logger = structlog.get_logger(__name__)
 
 # Час прогноза считается подходящим для at, если он не дальше этого
 MAX_HOUR_DISTANCE = timedelta(minutes=90)
+# Пауза после неудачного ленивого обновления: иначе каждый запрос /wind при
+# лежащем Open-Meteo снова пошёл бы за всей сеткой
+LAZY_RETRY_AFTER_S = 600.0
 
 
 class WindGridService:
@@ -46,6 +50,7 @@ class WindGridService:
         history_hours: int = 96,
         lazy_refresh: bool = True,
         clock: Callable[[], datetime] | None = None,
+        monotonic: Callable[[], float] = time.monotonic,
     ) -> None:
         self._session_factory = session_factory
         self._provider = provider
@@ -55,7 +60,9 @@ class WindGridService:
         self._history = timedelta(hours=history_hours)
         self._lazy = lazy_refresh
         self._clock = clock or (lambda: datetime.now(UTC))
+        self._monotonic = monotonic
         self._lock = asyncio.Lock()
+        self._retry_after = float("-inf")
 
     # --- джоба ------------------------------------------------------------------------
 
@@ -130,12 +137,25 @@ class WindGridService:
                 latest = await WindGridRepository(session).latest()
             if latest is not None and not self._is_stale(latest, now):
                 return True  # кто-то обновил, пока ждали
+            if self._monotonic() < self._retry_after:
+                return False  # недавно не вышло — ждём паузу, отдаём что есть
             try:
                 await self.refresh_once()
             except Exception as exc:  # noqa: BLE001 — карта без ветра лучше, чем 500
-                logger.warning("wind_grid_lazy_refresh_failed", error=str(exc))
+                self._retry_after = self._monotonic() + LAZY_RETRY_AFTER_S
+                logger.warning(
+                    "wind_grid_lazy_refresh_failed",
+                    error=str(exc),
+                    retry_in_s=LAZY_RETRY_AFTER_S,
+                )
                 return latest is not None
             return True
+
+    async def aclose(self) -> None:
+        """Закрыть HTTP-клиент провайдера (если он у него есть)."""
+        aclose = getattr(self._provider, "aclose", None)
+        if aclose is not None:
+            await aclose()
 
 
 def field_from_row(

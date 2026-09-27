@@ -193,12 +193,12 @@ export function ShipmentCard({
       <section className="block">
         <div className="block__title">{t("card.route")}</div>
         <DelayChart delays={checkpointDelays(s)} />
-        <ol className="timeline">
+        <ol className="checkpoints">
           {s.checkpoints.map((cp) => (
-            <li key={cp.code} className={`timeline__item timeline__item--${cp.state}`}>
-              <span className="timeline__marker" />
+            <li key={cp.code} className={`checkpoints__item checkpoints__item--${cp.state}`}>
+              <span className="checkpoints__marker" />
               <div>
-                <div className="timeline__name">{place(cp.code, cp.name)}</div>
+                <div className="checkpoints__name">{place(cp.code, cp.name)}</div>
                 <div className="muted small">
                   {cp.actual_at
                     ? t("card.fact", { ts: fmtTs(cp.actual_at) })

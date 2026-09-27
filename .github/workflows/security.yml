@@ -1,0 +1,48 @@
+name: Security
+
+# Уязвимости зависимостей: на PR, который меняет зависимости, и раз в неделю
+# (новые CVE появляются без наших коммитов). Падение = есть известная уязвимость.
+on:
+  pull_request:
+    paths:
+      - pyproject.toml
+      - requirements.txt
+      - web/package.json
+      - web/package-lock.json
+      - .github/workflows/security.yml
+  schedule:
+    - cron: "17 6 * * 1" # понедельник, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Audit runtime dependencies
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt --progress-spinner off
+
+  web:
+    name: npm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Audit (high и выше)
+        run: npm audit --audit-level=high

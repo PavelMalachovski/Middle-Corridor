@@ -23,9 +23,9 @@ export function Timeline({ replay, disabled }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
-      if (e.code !== "Space" || disabled) return;
-      if (el && (el.tagName === "INPUT" || el.tagName === "BUTTON" || el.tagName === "TEXTAREA"))
-        return;
+      if (e.code !== "Space" || disabled || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      // пробел в поле, кнопке, списке или ссылке — их собственное действие
+      if (el?.closest?.("input, button, select, textarea, a, [contenteditable]")) return;
       e.preventDefault();
       replay.togglePlay();
     };
@@ -59,6 +59,7 @@ export function Timeline({ replay, disabled }: Props) {
               key={s}
               type="button"
               className={`timeline__speed ${speed === s ? "is-on" : ""}`}
+              aria-pressed={speed === s}
               onClick={() => replay.setSpeed(s)}
               disabled={disabled}
               title={`×${s}: ${t(`time.speed${s}` as Key)}`}

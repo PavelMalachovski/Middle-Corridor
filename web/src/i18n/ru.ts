@@ -57,6 +57,7 @@ export const ru = {
   "tab.shipments": "Грузы",
   "tab.ports": "Порты",
   "tab.news": "Новости",
+  "panel.label": "Грузы, порты и новости",
   "panel.loadingSnapshot": "Загружаем снимок коридора…",
   "panel.apiDown": "API не отвечает",
   "panel.apiNoBackend":
@@ -233,6 +234,7 @@ export const ru = {
   // --- ошибки и системное ---
   "err.mapTitle": "Карта не отрисовалась",
   "err.mapDetail": "Панель справа работает. Ошибка: {message}",
+  "err.streamSource": "ошибка источника",
   "err.retry": "Попробовать снова",
   "err.noWebgl": "Карта недоступна в этом браузере",
   "err.noWebglDetail":

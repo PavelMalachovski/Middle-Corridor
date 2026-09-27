@@ -1,0 +1,13 @@
+# Секреты и локальные окружения не должны попасть в контекст сборки
+.env
+.env.*
+!.env.example
+.venv
+**/node_modules
+.git
+web/dist
+web/test-results
+web/playwright-report
+**/__pycache__
+.pytest_cache
+.ruff_cache

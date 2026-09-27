@@ -35,7 +35,7 @@ export function MapControls({
 }: Props) {
   const { t } = useI18n();
   return (
-    <aside className="mapctl">
+    <aside className="mapctl" aria-label={t("ctl.basemap")}>
       <div className="mapctl__title">{t("ctl.basemap")}</div>
       <div className="mapctl__row">
         {AVAILABLE_BASEMAPS.map((preset) => (
@@ -43,6 +43,7 @@ export function MapControls({
             key={preset.id}
             type="button"
             className={`chip ${basemap === preset.id ? "chip--on" : ""}`}
+            aria-pressed={basemap === preset.id}
             title={t(`${preset.label}.hint` as Key)}
             onClick={() => onBasemap(preset.id)}
           >
@@ -81,6 +82,7 @@ export function MapControls({
         <button
           type="button"
           className={`chip ${windMode === "particles" ? "chip--on" : ""}`}
+          aria-pressed={windMode === "particles"}
           title={t("ctl.particlesTitle")}
           onClick={() => onWindMode("particles")}
         >
@@ -89,6 +91,7 @@ export function MapControls({
         <button
           type="button"
           className={`chip ${windMode === "arrows" ? "chip--on" : ""}`}
+          aria-pressed={windMode === "arrows"}
           title={t("ctl.arrowsTitle")}
           onClick={() => onWindMode("arrows")}
         >

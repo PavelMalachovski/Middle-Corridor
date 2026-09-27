@@ -16,6 +16,7 @@
 и есть уникальная ценность продукта.
 """
 
+import asyncio
 from dataclasses import dataclass, field
 
 import structlog
@@ -108,30 +109,34 @@ class WeatherPredictor:
         self._provider = provider
         self._thresholds = thresholds
         self._sink = sink
+        # /poll_weather админа идёт мимо max_instances планировщика: два прогона
+        # разом открыли бы по два алерта и дважды опубликовали эскалацию
+        self._lock = asyncio.Lock()
 
     async def poll_once(self) -> WeatherPollStats:
         """Один прогон предиктора по всем отслеживаемым портам.
 
         Ошибка по одному порту не прерывает обработку остальных.
         """
-        stats = WeatherPollStats()
-        async with self._session_factory() as session:
-            repo = WeatherRepository(session)
-            ports = await repo.get_tracked_ports()
-            for port in ports:
-                try:
-                    report = await self._provider.get_wind(port.lat, port.lon)
-                except Exception as exc:  # noqa: BLE001 — джоба не должна падать
-                    logger.error("weather_fetch_failed", port=port.code, error=str(exc))
-                    stats.errors += 1
-                    continue
-                await repo.add_snapshot(port.id, report.current)
-                stats.ports_polled += 1
-                transition = await self._apply_transition(repo, port, report)
-                if transition is not None:
-                    stats.transitions.append(transition)
-            await session.commit()
-        return stats
+        async with self._lock:
+            stats = WeatherPollStats()
+            async with self._session_factory() as session:
+                repo = WeatherRepository(session)
+                ports = await repo.get_tracked_ports()
+                for port in ports:
+                    try:
+                        report = await self._provider.get_wind(port.lat, port.lon)
+                    except Exception:  # noqa: BLE001 — джоба не должна падать
+                        logger.exception("weather_fetch_failed", port=port.code)
+                        stats.errors += 1
+                        continue
+                    await repo.add_snapshot(port.id, report.current)
+                    stats.ports_polled += 1
+                    transition = await self._apply_transition(repo, port, report)
+                    if transition is not None:
+                        stats.transitions.append(transition)
+                await session.commit()
+            return stats
 
     async def _apply_transition(
         self, repo: WeatherRepository, port: Port, report: WindReport
@@ -196,5 +201,5 @@ class WeatherPredictor:
             return
         try:
             await self._sink.publish(text)
-        except Exception as exc:  # noqa: BLE001 — сбой публикации не роняет прогон
-            logger.error("weather_alert_publish_failed", error=str(exc))
+        except Exception:  # noqa: BLE001 — сбой публикации не роняет прогон
+            logger.exception("weather_alert_publish_failed")

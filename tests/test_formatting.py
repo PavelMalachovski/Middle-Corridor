@@ -5,10 +5,14 @@ from datetime import UTC, datetime
 from app.db.models import AlertLevel, CorridorLeg, NewsItem, Port
 from app.integrations.weather.base import WindObservation
 from app.services.formatting import (
+    format_corridor_status,
     format_manual_report,
     format_news_item,
+    format_port_detail,
     format_weather_alert,
+    format_weather_all_clear,
 )
+from app.services.status_aggregator import CorridorStatus, PortStatus
 
 TS = datetime(2026, 7, 17, 9, 40, tzinfo=UTC)
 
@@ -83,3 +87,34 @@ def test_long_summary_truncated() -> None:
     text = format_news_item(item)
     assert "…" in text
     assert len(text) < 600
+
+
+def test_port_strings_from_db_are_escaped() -> None:
+    """Имя/страна порта из БД в HTML-режиме: сырой «<» валит сообщение."""
+    obs = WindObservation(wind_speed=15.0, wind_gust=19.0, wind_dir=210.0, ts=TS)
+    port = Port(
+        code="X", name="Порт <b>&", country="<Страна>", leg=CorridorLeg.caspian, lat=0, lon=0
+    )
+    status = PortStatus(
+        code="X",
+        name=port.name,
+        country=port.country,
+        leg=port.leg,
+        lat=0,
+        lon=0,
+        alert_level=AlertLevel.warning,
+        alert_message="порывы <30 м/с",
+    )
+    texts = [
+        format_weather_alert(port, AlertLevel.warning, obs),
+        format_weather_all_clear(port, obs),
+        format_port_detail(status),
+        format_corridor_status(
+            CorridorStatus(generated_at=TS, ports=[status], vessels=[], recent_reports=[])
+        ),
+    ]
+    for text in texts:
+        assert "Порт &lt;b&gt;&amp;" in text
+        assert "<b>&" not in text
+    assert "(&lt;Страна&gt;)" in texts[2]
+    assert "порывы &lt;30 м/с" in texts[3]

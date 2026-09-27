@@ -56,6 +56,7 @@ export const en: Record<Key, string> = {
   "tab.shipments": "Cargo",
   "tab.ports": "Ports",
   "tab.news": "News",
+  "panel.label": "Cargo, ports and news",
   "panel.loadingSnapshot": "Loading the corridor snapshot…",
   "panel.apiDown": "API is not responding",
   "panel.apiNoBackend":
@@ -222,6 +223,7 @@ export const en: Record<Key, string> = {
 
   "err.mapTitle": "The map failed to render",
   "err.mapDetail": "The panel on the right still works. Error: {message}",
+  "err.streamSource": "source error",
   "err.retry": "Try again",
   "err.noWebgl": "The map is unavailable in this browser",
   "err.noWebglDetail":

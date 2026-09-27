@@ -26,6 +26,8 @@ function detect(): Lang {
 }
 
 let current: Lang = typeof window === "undefined" ? "ru" : detect();
+// <html lang> сразу по выбранному языку: иначе до первого переключения остаётся "ru"
+if (typeof document !== "undefined") document.documentElement.lang = current;
 
 export function getLang(): Lang {
   return current;

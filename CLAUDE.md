@@ -10,7 +10,7 @@ Telegram-бот + публичный канал + веб-карта (фаза 2,
 ```powershell
 .venv\Scripts\activate                 # виртуальное окружение (Python 3.11)
 docker compose up -d db                # Postgres на ПОРТУ 5433 (5432 занят системным!)
-.venv\Scripts\python -m pytest -q      # тесты (in-memory SQLite, без сети)
+.venv\Scripts\python -m pytest -q      # тесты (in-memory SQLite, без сети); --cov — с покрытием (порог в pyproject)
 .venv\Scripts\ruff check --fix .; .venv\Scripts\black .   # линт+формат (обязательно перед коммитом)
 .venv\Scripts\alembic upgrade head     # миграции
 .venv\Scripts\alembic revision --autogenerate -m "..."    # новая миграция
@@ -21,6 +21,7 @@ cd web; npm install; npm run dev                            # фронт с hot 
 cd web; npm run build                                       # web/dist → раздаёт FastAPI по /
 cd web; npm run lint; npm test; npm run typecheck           # Biome + Vitest + tsc (обязательно перед коммитом)
 cd web; npm run e2e                                         # Playwright: нужен build; API с MOCK_DATA поднимет сам (или возьмёт :8000)
+cd web; npx playwright test e2e/screens.spec.ts             # галерея экранов → web/screenshots/*.png (смотреть глазами после правок UI)
 ```
 
 Конфиг — только через ENV/`.env` (pydantic-settings, `app/config.py`).
@@ -44,7 +45,9 @@ web/           фронт карты: React 19 + Vite 8 + TS 7 + MapLibre 6; х�
                src/map/windParticles.ts — WebGL-слой частиц ветра (windGrid.ts — текстура поля);
                src/forecast.ts + components/charts/ — прогноз и SVG-графики; src/urlState.ts — состояние в адресе;
                src/i18n/ — словари ru/en (ru.ts — источник ключей), t()/useI18n(), labels.ts — подписи из кодов бэкенда;
-               *.test.ts рядом с кодом (Vitest), e2e/ — Playwright, biome.json — линт и формат
+               *.test.ts рядом с кодом (Vitest), e2e/ — Playwright (+ a11y, галерея экранов), biome.json — линт и формат
+.github/       ci.yml (backend · postgres · web), security.yml (pip-audit/npm audit), dependabot.yml
+docs/          AUDIT.md — аудит и бэклог крупных улучшений; GROWTH.md — фичи, продвижение, монетизация
 api/index.py   точка входа Vercel (serverless FastAPI: только /api/v1 и /health); vercel.json — маршрутизация
 ```
 
@@ -167,6 +170,24 @@ api/index.py   точка входа Vercel (serverless FastAPI: только /a
   `style.load`. Не перезаписывать `className` у элементов маркеров
   (слетает `maplibregl-marker`) — только `setOwnClasses`. Из песочницы CI
   тайлы недоступны — карта пустая, оверлеи проверяются скриншотами.
+
+- Класс `.timeline` — шкала времени (absolute внизу карты). Список точек
+  маршрута в карточке груза — `.checkpoints`: с общим классом он получал
+  стили шкалы и рисовался обрезанной полоской поверх карты, а e2e «видимо»
+  проходил. Новые блоки — со своим префиксом класса.
+- Топбар и левая колонка (легенда, подложка) — один flex-столбец
+  `.overlay-top`: высота топбара зависит от языка и ширины, абсолютный `top`
+  у легенды уезжал под него. Базовые правила ставить ДО `@media` — при
+  равной специфичности побеждает последнее (так `.topbar__week` не прятался
+  на телефоне).
+- Вкладки сайдбара — `role="tab"` + `aria-selected`: в e2e
+  `getByRole("tab", …)`, не `button`. Кнопки-переключатели — с `aria-pressed`.
+- Инварианты раскладки и a11y проверяют `e2e/screens.spec.ts` и
+  `e2e/a11y.spec.ts` (axe: падение на serious/critical). Скриншоты —
+  артефакт **screenshots** каждого прогона CI; после правок UI — посмотреть.
+- CI-джоба Postgres гоняет миграции туда-обратно и `alembic check`: новая
+  колонка в модели без миграции = красный CI. Локально в песочнице Postgres
+  16 есть без Docker: `initdb`/`pg_ctl` через `runuser -u postgres`, порт 5433.
 
 ## Продукт (для контекста решений)
 

@@ -85,6 +85,11 @@ const WIND_BUCKETS = [4, 8, 12, 16, 20];
 const WIND_COLORS = ["#1c5cab", "#2a78d6", "#3987e5", "#6da7ec", "#9ec5f4", "#cde2fb"];
 const TRACK_COLOR = "#2fd39a";
 const CORRIDOR_COLOR = "#8f86e6"; // лента коридора: не спорит ни с ветром, ни с грузами, ни со статусами
+// Нитки маршрута: почти белые на тёмной подложке, на светлой — тёмные (белые там пропадали)
+const ROUTE_COLORS = {
+  dark: { rail: "#e4e7ee", sea: "#cfe0f5" },
+  light: { rail: "#3a3f4b", sea: "#2f5f93" },
+} as const;
 const FIRST_OVERLAY_LAYER = "corridor-glow"; // рельеф вставляется под него
 const CORRIDOR_LAYERS = ["corridor-glow", "corridor-band", "routes-rail", "routes-sea"];
 // Стрелки ветра: на мелком зуме — каждая четвёртая точка сетки, дальше гуще
@@ -97,7 +102,8 @@ const MOBILE_PARTICLES = 2500;
 
 maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
-const SIDEBAR_PADDING = { top: 90, bottom: 40, left: 40, right: 420 };
+// сверху топбар, слева легенда и подложка (258 px + отступы), снизу шкала времени
+const SIDEBAR_PADDING = { top: 150, bottom: 110, left: 290, right: 420 };
 const MOBILE_MAX_WIDTH = 900;
 const FOLLOW_ZOOM = 6;
 const PITCH_3D = 55; // наклон камеры при включении объёмного рельефа
@@ -185,7 +191,7 @@ function setupLayers(map: MLMap, particles: WindParticleLayer | null): void {
     source: "routes",
     filter: ["==", ["get", "mode"], "rail"],
     layout: { "line-cap": "round", "line-join": "round" },
-    paint: { "line-color": "#e4e7ee", "line-width": 1.6, "line-opacity": 0.85 },
+    paint: { "line-color": ROUTE_COLORS.dark.rail, "line-width": 1.6, "line-opacity": 0.85 },
   });
   map.addLayer({
     id: "routes-sea",
@@ -193,7 +199,7 @@ function setupLayers(map: MLMap, particles: WindParticleLayer | null): void {
     source: "routes",
     filter: ["==", ["get", "mode"], "sea"],
     paint: {
-      "line-color": "#cfe0f5",
+      "line-color": ROUTE_COLORS.dark.sea,
       "line-width": 1.6,
       "line-opacity": 0.85,
       "line-dasharray": [2, 2],
@@ -295,12 +301,22 @@ function applyHillshade(map: MLMap, on: boolean, dark: boolean): void {
   }
 }
 
-function vesselPopupHtml(v: VesselStatus, ref: Date, nodes: NodeStatus[]): string {
+/** Попап парома — DOM с textContent: имя судна приходит из AIS и может содержать `<`. */
+function vesselPopup(v: VesselStatus, ref: Date, nodes: NodeStatus[]): HTMLElement {
   const age = v.ts ? fmtRelative(v.ts, ref) : t("common.noData");
   const sog = v.sog != null ? `${v.sog.toFixed(1)} ${t("common.kn")}` : "—";
   const route = vesselRoute(v, nodes) ?? "";
   const phase = vesselPhase(v, nodes) ?? "";
-  return `<div class="popup"><b>${v.name}</b><div>${route} · ${phase}</div><div>${sog} · AIS ${age}</div></div>`;
+  const root = document.createElement("div");
+  root.className = "popup";
+  const name = document.createElement("b");
+  name.textContent = v.name;
+  const where = document.createElement("div");
+  where.textContent = `${route} · ${phase}`;
+  const speed = document.createElement("div");
+  speed.textContent = `${sog} · AIS ${age}`;
+  root.append(name, where, speed);
+  return root;
 }
 
 export function MapView({
@@ -523,6 +539,15 @@ export function MapView({
     });
   }, [globe, basemap, styleVersion]);
 
+  // --- цвет ниток маршрута под подложку ------------------------------------------
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !styleVersion || !map.getLayer("routes-rail")) return;
+    const colors = ROUTE_COLORS[isDarkBasemap(basemap) ? "dark" : "light"];
+    map.setPaintProperty("routes-rail", "line-color", colors.rail);
+    map.setPaintProperty("routes-sea", "line-color", colors.sea);
+  }, [basemap, styleVersion]);
+
   // --- рельеф: светотень поверх подложки под оверлеями; объём — terrain на том же DEM
   useEffect(() => {
     const map = mapRef.current;
@@ -607,7 +632,7 @@ export function MapView({
           popupRef.current?.remove();
           popupRef.current = new Popup({ closeButton: false, offset: 14 })
             .setLngLat(m.getLngLat())
-            .setHTML(vesselPopupHtml(vessel, new Date(snap.generated_at), snap.nodes))
+            .setDOMContent(vesselPopup(vessel, new Date(snap.generated_at), snap.nodes))
             .addTo(map);
         });
         marker = new Marker({ element: el, anchor: "center" }).setLngLat([v.lon, v.lat]).addTo(map);

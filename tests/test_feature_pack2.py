@@ -1,5 +1,6 @@
 """Тесты фича-пакета 2: скрейпер middlecorridor, перевод новостей, Telegram-вебхук."""
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -7,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.main import create_app
+from app.api.routes import telegram as telegram_routes
 from app.config import Settings
 from app.db.models import NewsItem
 from app.integrations.news.base import NewsEntry
@@ -51,6 +53,24 @@ async def test_middlecorridor_scraper_parses_listing() -> None:
     assert first.published_at == datetime(2026, 6, 26, tzinfo=UTC)
     assert entries[1].title == "Новое партнёрство ассоциации"
     await client.aclose()
+
+
+async def test_middlecorridor_scraper_clips_long_slug_and_url() -> None:
+    listing = "https://middlecorridor.com/ru/press-tsentr/novosti"
+    html = (
+        f'<a href="/ru/press-tsentr/novosti/{"s" * 300}"><h3>Длинный слаг</h3></a>'
+        f'<a href="/ru/press-tsentr/novosti/{"x" * 1100}"><h3>Слишком длинная ссылка</h3></a>'
+    ).encode()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=html)
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    entries = await MiddleCorridorScraper(client=client).fetch(listing)
+    await client.aclose()
+
+    assert [e.title for e in entries] == ["Длинный слаг"]
+    assert len(entries[0].external_id or "") == 256
 
 
 def test_scraper_matches_only_middlecorridor() -> None:
@@ -155,6 +175,26 @@ async def test_translation_failure_publishes_original(
     assert "Cargo volumes doubled" in sink.messages[0]  # оригинал, публикация не сорвалась
 
 
+async def test_long_llm_title_clipped_to_column(
+    session_factory: async_sessionmaker[AsyncSession], session: AsyncSession
+) -> None:
+    class VerboseTranslator:
+        async def translate(self, title: str, summary: str | None) -> tuple[str, str | None]:
+            return "Я" * 2000, None
+
+    service = NewsFeedService(
+        session_factory,
+        FakeNewsProvider([_entry("https://e/long", "Cargo volumes doubled")]),
+        sources=["https://example.com/feed"],
+        sink=FakeSink(),
+        translator=VerboseTranslator(),
+    )
+    await service.run_once()
+
+    item = (await session.execute(select(NewsItem))).scalar_one()
+    assert item.title_ru == "Я" * 512  # String(512): Postgres отверг бы длиннее
+
+
 def test_format_news_prefers_russian() -> None:
     item = NewsItem(
         source="astanatimes.com",
@@ -196,6 +236,50 @@ async def test_telegram_webhook_secret_and_503() -> None:
             headers={"X-Telegram-Bot-Api-Secret-Token": "hook-secret"},
         )
         assert right.status_code == 503
+
+
+class _SlowFailingDispatcher:
+    """Хендлер долго думает и в конце падает — как /poll_news при сбое."""
+
+    def __init__(self) -> None:
+        self.release = asyncio.Event()
+        self.updates: list[int] = []
+
+    async def feed_update(self, bot: object, update: object) -> None:
+        self.updates.append(update.update_id)  # type: ignore[attr-defined]
+        await self.release.wait()
+        raise RuntimeError("handler crashed")
+
+
+async def test_telegram_webhook_acks_before_handler_finishes() -> None:
+    settings = Settings(_env_file=None)  # type: ignore[call-arg]
+    dispatcher = _SlowFailingDispatcher()
+    app = create_app(
+        settings=settings,
+        bot=object(),  # type: ignore[arg-type]
+        dispatcher=dispatcher,  # type: ignore[arg-type]
+        telegram_webhook_secret="hook-secret",
+    )
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/telegram/webhook",
+            json={"update_id": 7},
+            headers={"X-Telegram-Bot-Api-Secret-Token": "hook-secret"},
+        )
+    # 200 сразу, хендлер ещё работает: Telegram не повторит апдейт
+    assert response.status_code == 200 and response.json() == {"ok": True}
+    pending = list(telegram_routes._background)  # noqa: SLF001
+    assert len(pending) == 1 and not pending[0].done()
+    await asyncio.sleep(0)
+    assert dispatcher.updates == [7]
+
+    # падение хендлера не всплывает наружу и не оставляет висящих задач
+    dispatcher.release.set()
+    await asyncio.gather(*pending, return_exceptions=True)
+    await asyncio.sleep(0)
+    assert not telegram_routes._background  # noqa: SLF001
 
 
 async def test_telegram_webhook_disabled_when_no_secret() -> None:

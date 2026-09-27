@@ -156,13 +156,17 @@ export interface ResolvedStyle {
   fallback: boolean; // true = векторные кандидаты недоступны, взяли растр
 }
 
+const STYLE_CHECK_MS = 5000; // зависший хост стиля не должен держать карту на пустой заглушке
+
 /** Первый доступный кандидат пресета; последний (растровый объект) не требует проверки. */
 export async function resolveStyle(preset: BasemapPreset): Promise<ResolvedStyle> {
   let skippedVector = false; // хотя бы один векторный кандидат не ответил
   for (const candidate of preset.candidates) {
     if (typeof candidate !== "string") return { style: candidate, fallback: skippedVector };
     try {
-      const response = await fetch(candidate, { mode: "cors" });
+      const signal =
+        typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(STYLE_CHECK_MS) : undefined;
+      const response = await fetch(candidate, { mode: "cors", signal });
       if (response.ok) {
         await response.json(); // это точно style.json, а не HTML-заглушка
         return { style: candidate, fallback: false };

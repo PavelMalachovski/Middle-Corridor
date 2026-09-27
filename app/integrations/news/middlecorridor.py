@@ -13,7 +13,13 @@ import httpx
 import structlog
 from selectolax.parser import HTMLParser
 
-from app.integrations.news.base import NewsEntry, NewsProviderError
+from app.integrations.news.base import (
+    MAX_EXTERNAL_ID_LEN,
+    MAX_TITLE_LEN,
+    NewsEntry,
+    NewsProviderError,
+    is_acceptable_url,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -61,6 +67,8 @@ class MiddleCorridorScraper:
             # интересны только ссылки «внутрь» листинга: /novosti/<slug>
             if not path.startswith(listing_path + "/") or full_url in seen:
                 continue
+            if not is_acceptable_url(full_url):
+                continue
             slug = path.rsplit("/", 1)[-1]
             if not slug:
                 continue
@@ -80,8 +88,8 @@ class MiddleCorridorScraper:
                 NewsEntry(
                     source=SOURCE_NAME,
                     url=full_url,
-                    title=title[:512],
-                    external_id=slug,
+                    title=title[:MAX_TITLE_LEN],
+                    external_id=slug[:MAX_EXTERNAL_ID_LEN],
                     published_at=_slug_date(slug),
                 )
             )

@@ -1,5 +1,6 @@
 """Тесты ядра: пороги, переходы уровней, антиспам, отбой (§7.1)."""
 
+import asyncio
 from datetime import UTC, datetime
 
 import httpx
@@ -271,6 +272,31 @@ async def test_publish_failure_does_not_lose_alert(
     alerts = await _alerts(session)
     assert len(alerts) == 1
     assert alerts[0].level is AlertLevel.critical
+
+
+class SlowProvider(FakeProvider):
+    """Ответ приходит не сразу — чтобы два прогона успели пересечься."""
+
+    async def get_wind(self, lat: float, lon: float) -> WindReport:
+        await asyncio.sleep(0.01)
+        return await super().get_wind(lat, lon)
+
+
+async def test_concurrent_polls_do_not_duplicate_alert(
+    session_factory: async_sessionmaker[AsyncSession],
+    sink: FakeSink,
+    session: AsyncSession,
+    port: Port,
+) -> None:
+    """/poll_weather админа во время джобы: один алерт и одна публикация, не две."""
+    provider = SlowProvider()
+    provider.observation = _obs(15.0, 16.0)
+    predictor = WeatherPredictor(session_factory, provider, THRESHOLDS, sink)
+    await asyncio.gather(predictor.poll_once(), predictor.poll_once())
+
+    alerts = await _alerts(session)
+    assert len(alerts) == 1 and alerts[0].is_active
+    assert len(sink.messages) == 1
 
 
 # --- Прогноз ------------------------------------------------------------------

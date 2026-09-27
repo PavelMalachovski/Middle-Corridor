@@ -6,13 +6,14 @@
   --line: rgba(255, 255, 255, 0.09);
   --text: #ebe9e2;
   --text-2: #b7b5ad;
-  --muted: #86847d;
+  --muted: #9a988f; /* 5.6:1 на карточке — мелкий текст проходит WCAG AA (было #86847d, 4.3) */
   --accent: #2fd39a; /* грузы / трек */
   --vessel: #eb6834;
   --ok: #0ca30c;
   --watch: #fab219;
   --warning: #ec835a;
   --critical: #d03b3b;
+  --critical-text: #f07070; /* красный для текста: #d03b3b на панели даёт только 3.5:1 */
   --sidebar-w: 380px;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
@@ -62,11 +63,28 @@ body,
 
 /* --- верхняя панель ------------------------------------------------------ */
 
-.topbar {
+/* Топбар и левая колонка (легенда, подложка) — один столбец: высота топбара
+   зависит от языка и ширины окна, и абсолютный top у легенды уезжал под него. */
+.overlay-top {
   position: absolute;
   top: 12px;
   left: 12px;
   right: calc(var(--sidebar-w) + 24px);
+  max-height: calc(100% - 160px); /* снизу — зум, масштаб и шкала времени */
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  pointer-events: none; /* пустое место между панелями — это карта */
+}
+.overlay-top > * {
+  pointer-events: auto;
+}
+.topbar {
+  position: relative;
+  width: 100%;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -75,7 +93,6 @@ body,
   border: 1px solid var(--line);
   border-radius: 10px;
   backdrop-filter: blur(8px);
-  z-index: 5;
   flex-wrap: wrap;
 }
 .topbar__title {
@@ -107,7 +124,18 @@ body,
   color: var(--watch);
 }
 .kpi--alert b {
-  color: var(--critical);
+  color: var(--critical-text);
+}
+.topbar__week {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+.topbar__week b {
+  color: var(--text-2);
+  font-weight: 600;
 }
 .topbar__layers {
   display: flex;
@@ -120,7 +148,7 @@ body,
   white-space: nowrap;
 }
 .topbar__status--error {
-  color: var(--critical);
+  color: var(--critical-text);
 }
 .dot-live {
   display: inline-block;
@@ -211,14 +239,12 @@ body,
 /* --- легенда -------------------------------------------------------------- */
 
 .left-stack {
-  position: absolute;
-  left: 12px;
-  top: 76px;
-  z-index: 4;
   display: flex;
   flex-direction: column;
   gap: 8px;
   width: 258px;
+  min-height: 0; /* низкое окно: колонка прокручивается, а не наезжает на зум */
+  overflow-y: auto;
 }
 .legend,
 .mapctl {
@@ -352,7 +378,7 @@ body,
   gap: 8px;
 }
 .empty--error b {
-  color: var(--critical);
+  color: var(--critical-text);
 }
 
 .list {
@@ -569,18 +595,19 @@ button.card:focus-visible {
   font-weight: 600;
 }
 
-.timeline {
+/* контрольные точки маршрута в карточке груза (не путать со шкалой времени .timeline) */
+.checkpoints {
   list-style: none;
   margin: 0;
   padding: 0 0 0 4px;
 }
-.timeline__item {
+.checkpoints__item {
   position: relative;
   display: flex;
   gap: 12px;
   padding: 0 0 12px 0;
 }
-.timeline__item::before {
+.checkpoints__item::before {
   content: "";
   position: absolute;
   left: 5px;
@@ -589,10 +616,10 @@ button.card:focus-visible {
   width: 2px;
   background: var(--line);
 }
-.timeline__item:last-child::before {
+.checkpoints__item:last-child::before {
   display: none;
 }
-.timeline__marker {
+.checkpoints__marker {
   flex: none;
   width: 12px;
   height: 12px;
@@ -602,22 +629,22 @@ button.card:focus-visible {
   background: var(--panel-solid);
   z-index: 1;
 }
-.timeline__item--done .timeline__marker {
+.checkpoints__item--done .checkpoints__marker {
   background: var(--accent);
   border-color: var(--accent);
 }
-.timeline__item--done::before {
+.checkpoints__item--done::before {
   background: var(--accent);
 }
-.timeline__item--current .timeline__marker {
+.checkpoints__item--current .checkpoints__marker {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(47, 211, 154, 0.25);
 }
-.timeline__item--current .timeline__name {
+.checkpoints__item--current .checkpoints__name {
   color: var(--accent);
   font-weight: 600;
 }
-.timeline__item--planned .timeline__name {
+.checkpoints__item--planned .checkpoints__name {
   color: var(--text-2);
 }
 
@@ -978,8 +1005,15 @@ button.card:focus-visible {
   :root {
     --sidebar-w: 100%;
   }
-  .topbar {
+  .overlay-top {
     right: 12px;
+  }
+  .topbar {
+    gap: 6px 12px;
+    padding: 8px 12px;
+  }
+  .topbar__subtitle {
+    display: none; /* на телефоне каждая строка топбара отнимает карту */
   }
   .left-stack {
     display: none;
@@ -1432,24 +1466,13 @@ button.card:focus-visible {
   margin-top: 2px;
 }
 .outlook--closed {
-  color: #d03b3b;
+  color: var(--critical-text);
 }
 .outlook--soon {
   color: #ec835a;
 }
 .outlook--ok {
   color: var(--ok);
-}
-.topbar__week {
-  display: flex;
-  gap: 14px;
-  font-size: 11px;
-  color: var(--muted);
-  flex-wrap: wrap;
-}
-.topbar__week b {
-  color: var(--text-2);
-  font-weight: 600;
 }
 
 /* --- поиск, фильтры, тост ---------------------------------------------------------- */

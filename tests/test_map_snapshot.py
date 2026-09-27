@@ -16,7 +16,7 @@ from app.integrations.mock.wind import MockWindField, wind_at
 from app.main import build_map_service
 from app.services.corridor import COAST_TOLERANCE_DEG, NODES, NodeKind, sea_at, sea_grid
 from app.services.map_snapshot import CorridorStatusAdapter, DbNewsSource, MapSnapshotService
-from app.services.status_aggregator import StatusAggregatorService
+from app.services.status_aggregator import CorridorStatus, StatusAggregatorService
 from app.services.tracking import CheckpointState, PositionSource, ShipmentState, project_shipment
 from app.services.weather_predictor import WindThresholds, evaluate_level
 
@@ -307,6 +307,16 @@ async def test_replay_at_is_deterministic_and_windowed(mock_service: MapSnapshot
         ).status_code == 400
 
 
+async def test_replay_at_out_of_datetime_range_is_400(mock_service: MapSnapshotService) -> None:
+    app = create_app(settings=_settings(), map_service=mock_service)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        for at in ("9999-12-31T23:59:59-14:00", "0001-01-01T00:00:00+14:00"):
+            response = await client.get("/api/v1/snapshot", params={"at": at})
+            assert response.status_code == 400, at  # в UTC не влезает в datetime — не 500
+
+
 async def test_stream_events_and_availability(mock_service: MapSnapshotService) -> None:
     from app.api.routes.v1 import snapshot_events
     from app.services.map_snapshot import LiveInfo
@@ -400,3 +410,32 @@ async def test_real_sources_adapter(
     )
     snap = await service.snapshot()
     assert snap.mock is False and snap.shipments == [] and await service.wind() is None
+
+
+class _CountingStatus:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def get_corridor_status(self) -> CorridorStatus:
+        self.calls += 1
+        return CorridorStatus(generated_at=NOW, ports=[], vessels=[], recent_reports=[])
+
+
+async def test_adapter_hits_aggregator_once_per_snapshot() -> None:
+    """Узлы, суда и сводки одного снимка — один проход агрегатора, а не три."""
+    status = _CountingStatus()
+    clock = [100.0]
+    adapter = CorridorStatusAdapter(status, ttl_s=2.0, monotonic=lambda: clock[0])
+    service = MapSnapshotService(
+        nodes=adapter,
+        vessels=adapter,
+        reports=adapter,
+        thresholds=WindThresholds.from_settings(_settings()),
+    )
+    await service.snapshot()
+    assert status.calls == 1
+    await adapter.list_nodes()
+    assert status.calls == 1  # в пределах TTL — из кеша
+    clock[0] += 2.5
+    await adapter.list_vessels()
+    assert status.calls == 2  # TTL истёк — свежий статус

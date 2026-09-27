@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => {
           description:
             "Грузы, паромы, ветер и погода портов Каспия в реальном времени; replay за трое суток.",
           lang: "ru",
-          theme_color: "#12161f",
+          theme_color: "#0f1216",
           background_color: "#0f1216",
           display: "standalone",
           orientation: "any",

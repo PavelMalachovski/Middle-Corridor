@@ -13,7 +13,13 @@ import httpx
 import structlog
 from selectolax.parser import HTMLParser
 
-from app.integrations.news.base import NewsEntry, NewsProviderError
+from app.integrations.news.base import (
+    MAX_EXTERNAL_ID_LEN,
+    MAX_TITLE_LEN,
+    NewsEntry,
+    NewsProviderError,
+    is_acceptable_url,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -52,7 +58,7 @@ class RssNewsProvider:
         for entry in parsed.entries:
             url = (entry.get("link") or "").strip()
             title = (entry.get("title") or "").strip()
-            if not url or not title:
+            if not url or not title or not is_acceptable_url(url):
                 continue
             summary_raw = entry.get("summary") or entry.get("description") or ""
             summary = _strip_html(summary_raw).strip() or None
@@ -62,8 +68,8 @@ class RssNewsProvider:
                 NewsEntry(
                     source=source,
                     url=url,
-                    title=title,
-                    external_id=(entry.get("id") or None),
+                    title=title[:MAX_TITLE_LEN],
+                    external_id=(entry.get("id") or "")[:MAX_EXTERNAL_ID_LEN] or None,
                     summary=summary,
                     published_at=published_at,
                 )
