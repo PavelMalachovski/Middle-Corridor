@@ -5,7 +5,7 @@
 """
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Protocol
 
 
@@ -50,4 +50,12 @@ class WindGridProvider(Protocol):
         self, points: list[tuple[float, float]], forecast_hours: int
     ) -> list[GridPointForecast]:
         """Прогноз в узлах (lat, lon) на forecast_hours вперёд; порядок узлов сохраняется."""
+        ...
+
+
+class WeatherHistoryProvider(Protocol):
+    async def get_wind_history(
+        self, lat: float, lon: float, start: date, end: date
+    ) -> list[WindObservation]:
+        """Почасовой ветер за прошлые даты [start, end] включительно (UTC)."""
         ...

@@ -4,10 +4,15 @@
 вручную один раз:
 
     python -m app.scheduler.jobs weather|news|wind
+    python -m app.scheduler.jobs backfill 2024-10-01 2025-03-31 [порт]
+
+backfill — исторический ветер Open-Meteo archive в weather_snapshots для
+калибровки порогов по прошлым остановкам (/closure в боте).
 """
 
 import asyncio
 import sys
+from datetime import date
 
 import structlog
 
@@ -22,6 +27,7 @@ from app.integrations.news.rss import RssNewsProvider
 from app.integrations.weather.open_meteo import OpenMeteoProvider
 from app.logging import configure_logging
 from app.services.news_feed import NewsFeedService
+from app.services.predictor_accuracy import PredictorAccuracyService
 from app.services.weather_predictor import WeatherPredictor, WindThresholds
 from app.services.wind_grid import WindGridService
 
@@ -103,6 +109,23 @@ async def refresh_wind_grid() -> None:
         await engine.dispose()
 
 
+async def backfill_weather(start: str, end: str, port: str | None = None) -> None:
+    """Исторический ветер по отслеживаемым портам (или одному) за [start, end]."""
+    settings = get_settings()
+    engine = create_engine(settings.database_url)
+    session_factory = create_session_factory(engine)
+    provider = OpenMeteoProvider()
+    service = PredictorAccuracyService(session_factory, WindThresholds.from_settings(settings))
+    try:
+        added = await service.backfill(
+            provider, date.fromisoformat(start), date.fromisoformat(end), port
+        )
+        logger.info("weather_backfill_job_done", added=added)
+    finally:
+        await provider.aclose()
+        await engine.dispose()
+
+
 JOBS = {"weather": poll_weather, "news": poll_news, "wind": refresh_wind_grid}
 
 
@@ -111,4 +134,9 @@ if __name__ == "__main__":
     settings = get_settings()
     configure_logging(settings.log_level, settings.env)
     logger.info("manual_job_run", job=job_name)
-    asyncio.run(JOBS[job_name]())
+    if job_name == "backfill":
+        if len(sys.argv) < 4:
+            sys.exit("usage: python -m app.scheduler.jobs backfill <с ГГГГ-ММ-ДД> <по> [порт]")
+        asyncio.run(backfill_weather(*sys.argv[2:5]))
+    else:
+        asyncio.run(JOBS[job_name]())

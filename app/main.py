@@ -48,6 +48,7 @@ from app.services.map_snapshot import (
     MapSnapshotService,
 )
 from app.services.news_feed import NewsFeedService
+from app.services.predictor_accuracy import PredictorAccuracyService
 from app.services.status_aggregator import StatusAggregatorService
 from app.services.weather_predictor import WeatherPredictor, WindThresholds
 from app.services.wind_grid import WindGridService
@@ -150,6 +151,11 @@ async def run() -> None:  # noqa: PLR0915 — точка сборки всего
         else None
     )
 
+    # Журнал остановок и точность предиктора — боту (/closed, /accuracy) и API
+    accuracy_service = PredictorAccuracyService(
+        session_factory, WindThresholds.from_settings(settings)
+    )
+
     bot = None
     dp = None
     scheduler = None
@@ -173,7 +179,12 @@ async def run() -> None:  # noqa: PLR0915 — точка сборки всего
             translator=translator,
         )
         dp = create_dispatcher(
-            settings, reports_service, status_service, weather_predictor, news_service
+            settings,
+            reports_service,
+            status_service,
+            weather_predictor,
+            news_service,
+            accuracy_service,
         )
         if settings.scheduler_enabled:
 
@@ -201,6 +212,7 @@ async def run() -> None:  # noqa: PLR0915 — точка сборки всего
         dispatcher=dp,
         telegram_webhook_secret=_webhook_secret(settings) if webhook_mode else "",
         map_service=map_service,
+        accuracy_service=None if settings.mock_data else accuracy_service,
     )
     server = uvicorn.Server(
         uvicorn.Config(api_app, host="0.0.0.0", port=settings.port, log_config=None)

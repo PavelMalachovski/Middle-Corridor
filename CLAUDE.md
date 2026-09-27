@@ -16,6 +16,7 @@ docker compose up -d db                # Postgres на ПОРТУ 5433 (5432 з�
 .venv\Scripts\alembic revision --autogenerate -m "..."    # новая миграция
 .venv\Scripts\python -m app.main      # запуск всего (API :8000 + бот + AIS)
 .venv\Scripts\python -m app.scheduler.jobs weather|news|wind   # ручной прогон джобы из терминала
+.venv\Scripts\python -m app.scheduler.jobs backfill 2024-10-01 2025-03-31 [порт]   # исторический ветер для калибровки
 $env:MOCK_DATA='true'; .venv\Scripts\python -m app.main   # API карты на синтетике, без Postgres
 cd web; npm install; npm run dev                            # фронт с hot reload на :5173 (прокси /api → :8000)
 cd web; npm run build                                       # web/dist → раздаёт FastAPI по /
@@ -34,6 +35,8 @@ integrations/  внешние API за Protocol-интерфейсами (weathe
 services/      бизнес-логика; НЕ импортирует aiogram/fastapi
                corridor.py — узлы, сегменты и полигоны морей (sea_at/sea_grid); wind_grid.py — поле ветра
                над морями из Open-Meteo со снимками в БД (replay по at)
+               calibration.py — чистая сверка предиктора с фактами (POD/FAR/CSI, подбор порогов);
+               predictor_accuracy.py — журнал остановок port_closures, точность, калибровка, бэкфилл
 bot/           только aiogram-хендлеры/клавиатуры/тексты; вызывают services
 api/           только FastAPI-роуты; вызывают services
 db/            модели SQLAlchemy 2 async + repositories (запросы только тут)
@@ -77,7 +80,10 @@ api/index.py   точка входа Vercel (serverless FastAPI: только /a
 - aiogram HTML parse mode: сырой `<id>` в тексте валит сообщение
   («can't parse entities») — только `&lt;id&gt;`.
 - Пороги ветра в конфиге — СТАРТОВЫЕ; калибруются по фактическим остановкам
-  портов. Не «улучшать» на глаз.
+  портов. Не «улучшать» на глаз. Факты — таблица `port_closures` (бот:
+  `/closed`, `/reopened`, прошлые — `/closure`); `/calibrate` только
+  ПОДСКАЗЫВАЕТ пороги, в `.env` их меняет человек. В калибровку идут только
+  остановки по ветру (`cause=wind`), алерты — warning+ (watch не публикуется).
 - Покрытие AIS на Каспии слабое (проверено вживую: bbox Каспия почти пуст).
   Отсутствие позиции = «нет данных», не «судно стоит». MMSI паромов ASCO в
   сидax NULL — заполнять руками, когда суда появятся в эфире.
@@ -187,7 +193,9 @@ api/index.py   точка входа Vercel (serverless FastAPI: только /a
   артефакт **screenshots** каждого прогона CI; после правок UI — посмотреть.
 - CI-джоба Postgres гоняет миграции туда-обратно и `alembic check`: новая
   колонка в модели без миграции = красный CI. Локально в песочнице Postgres
-  16 есть без Docker: `initdb`/`pg_ctl` через `runuser -u postgres`, порт 5433.
+  16 есть без Docker: `initdb`/`pg_ctl` через `runuser -u postgres`, порт 5433,
+  данные — в `/var/lib/postgresql/…` (в scratchpad права каталога сбрасываются
+  и сервер падает).
 
 ## Продукт (для контекста решений)
 

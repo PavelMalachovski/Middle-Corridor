@@ -5,6 +5,7 @@ GET /api/v1/snapshot?at=      — узлы, суда, отправки, марш
 GET /api/v1/wind?at=&step=    — поле ветра (step — шаг сетки в градусах)
 GET /api/v1/shipments/{ref}   — одна отправка по номеру
 GET /api/v1/stream            — SSE: событие snapshot каждые refresh_s секунд
+GET /api/v1/accuracy?days=    — точность предиктора: алерты против фактических остановок
 
 Ответы не кешируются: фронт опрашивает snapshot каждые несколько секунд
 или держит поток.
@@ -13,15 +14,17 @@ GET /api/v1/stream            — SSE: событие snapshot каждые refr
 import asyncio
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TypeVar
 
 import structlog
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.services.map_snapshot import MapSnapshot, MapSnapshotService
+from app.services.predictor_accuracy import PredictorAccuracyService
 from app.services.tracking import Shipment
 from app.services.wind_field import WindField
 
@@ -134,4 +137,63 @@ async def stream(request: Request) -> StreamingResponse:
         snapshot_events(service, request.is_disconnected),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+    )
+
+
+class PortAccuracyOut(BaseModel):
+    code: str
+    name: str
+    closures: int
+    hits: int
+    alerts: int  # эпизоды warning+ (эскалация warning→critical — один эпизод)
+    false_alarms: int
+    pod: float | None  # доля предсказанных остановок
+    far: float | None  # доля ложных тревог
+    csi: float | None  # hits / (hits + misses + false alarms)
+    median_lead_h: float | None  # за сколько часов до остановки открылся алерт
+
+
+class AccuracyOut(BaseModel):
+    since: datetime
+    until: datetime
+    days: int
+    ports: list[PortAccuracyOut]
+
+
+@router.get("/accuracy", response_model=AccuracyOut)
+async def accuracy(
+    request: Request,
+    response: Response,
+    days: int = Query(default=90, ge=1, le=3650, description="Период, дней"),
+) -> AccuracyOut:
+    """Публичная точность предиктора: доверие — это опубликованный hit rate."""
+    service: PredictorAccuracyService | None = getattr(request.app.state, "accuracy_service", None)
+    if service is None:
+        raise HTTPException(
+            status_code=503, detail="точность считается только на боевых данных (нужна БД)"
+        )
+    ports = await _from_source(service.accuracy(days))
+    until = datetime.now(UTC)
+    response.headers["Cache-Control"] = "public, max-age=300"  # считается по БД, меняется редко
+    return AccuracyOut(
+        since=until - timedelta(days=days),
+        until=until,
+        days=days,
+        ports=[
+            PortAccuracyOut(
+                code=p.code,
+                name=p.name,
+                closures=p.score.closures,
+                hits=p.score.hits,
+                alerts=p.score.episodes,
+                false_alarms=p.score.false_alarms,
+                pod=p.score.pod,
+                far=p.score.far,
+                csi=p.score.csi,
+                median_lead_h=(
+                    round(p.score.median_lead_h, 1) if p.score.median_lead_h is not None else None
+                ),
+            )
+            for p in ports
+        ],
     )
