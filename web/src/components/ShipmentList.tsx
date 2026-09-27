@@ -69,6 +69,7 @@ export function ShipmentList({
               key={key}
               type="button"
               className={`chip chip--sm ${filter.status === key ? "chip--on" : ""}`}
+              aria-pressed={filter.status === key}
               onClick={() => onFilter({ ...filter, status: key })}
             >
               {t(`filter.status.${key}` as Key)}

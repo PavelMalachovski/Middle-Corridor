@@ -7,7 +7,16 @@ test("карточка груза, подлёт и слежение камеро
   const ref = (await first.locator(".mono").first().textContent())?.trim();
   await first.click();
   await expect(page.locator(".detail__ref")).toHaveText(ref ?? "");
-  await expect(page.locator(".timeline__item").first()).toBeVisible();
+  await expect(page.locator(".checkpoints__item").first()).toBeVisible();
+  // точки маршрута — столбиком внутри панели, а не полоской поверх карты
+  const panel = await page.locator(".sidebar").boundingBox();
+  const points = await page.locator(".checkpoints").boundingBox();
+  expect(
+    points && panel && points.x >= panel.x && points.x + points.width <= panel.x + panel.width,
+  ).toBe(true);
+  const items = page.locator(".checkpoints__item");
+  const [a, b] = [await items.nth(0).boundingBox(), await items.nth(1).boundingBox()];
+  expect((b?.y ?? 0) > (a?.y ?? 0) && b?.x === a?.x).toBe(true);
 
   // «показать на карте» — подлёт
   const before = await mapState(page);

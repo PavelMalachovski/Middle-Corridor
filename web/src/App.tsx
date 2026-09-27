@@ -266,35 +266,37 @@ export function App() {
           </button>
         )}
       >
-        <TopBar
-          snapshot={snapshot}
-          error={error}
-          fetchedAt={fetchedAt}
-          mode={mode}
-          layers={layers}
-          windAvailable={windAvailable}
-          onToggle={(key) => setLayers((l) => ({ ...l, [key]: !l[key] }))}
-        />
-        <div className="left-stack">
-          <Legend />
-          <MapControls
-            basemap={prefs.basemap}
-            globe={prefs.globe}
-            terrain={prefs.terrain}
-            terrain3d={prefs.terrain3d}
-            fallback={styleFallback}
-            onBasemap={(basemap) => updatePrefs({ basemap })}
-            onGlobe={(globe) => updatePrefs({ globe })}
-            onTerrain={(terrain) => updatePrefs({ terrain })}
-            onTerrain3d={(terrain3d) => updatePrefs({ terrain3d })}
-            software={softGl}
-            windMode={windMode}
-            windHint={autoArrows}
-            onWindMode={(mode) => {
-              setAutoArrows(false);
-              updatePrefs({ windMode: mode });
-            }}
+        <div className="overlay-top">
+          <TopBar
+            snapshot={snapshot}
+            error={error}
+            fetchedAt={fetchedAt}
+            mode={mode}
+            layers={layers}
+            windAvailable={windAvailable}
+            onToggle={(key) => setLayers((l) => ({ ...l, [key]: !l[key] }))}
           />
+          <div className="left-stack">
+            <Legend />
+            <MapControls
+              basemap={prefs.basemap}
+              globe={prefs.globe}
+              terrain={prefs.terrain}
+              terrain3d={prefs.terrain3d}
+              fallback={styleFallback}
+              onBasemap={(basemap) => updatePrefs({ basemap })}
+              onGlobe={(globe) => updatePrefs({ globe })}
+              onTerrain={(terrain) => updatePrefs({ terrain })}
+              onTerrain3d={(terrain3d) => updatePrefs({ terrain3d })}
+              software={softGl}
+              windMode={windMode}
+              windHint={autoArrows}
+              onWindMode={(mode) => {
+                setAutoArrows(false);
+                updatePrefs({ windMode: mode });
+              }}
+            />
+          </div>
         </div>
         <Timeline replay={replay} disabled={!snapshot} />
       </ErrorBoundary>

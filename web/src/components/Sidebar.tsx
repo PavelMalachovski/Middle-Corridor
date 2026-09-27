@@ -208,7 +208,11 @@ export function Sidebar({
     : undefined;
 
   return (
-    <aside className={`sidebar ${mobile ? `sidebar--sheet sidebar--${sheet}` : ""}`} style={style}>
+    <aside
+      className={`sidebar ${mobile ? `sidebar--sheet sidebar--${sheet}` : ""}`}
+      style={style}
+      aria-label={t("panel.label")}
+    >
       <div
         className="sheet-header"
         onPointerDown={onPointerDown}
@@ -219,11 +223,13 @@ export function Sidebar({
         <div className="sheet-handle" aria-hidden="true">
           <span />
         </div>
-        <nav className="tabs">
+        <div className="tabs" role="tablist">
           {tabs.map((t) => (
             <button
               key={t.key}
               type="button"
+              role="tab"
+              aria-selected={tab === t.key}
               data-tab={t.key}
               className={`tab ${tab === t.key ? "tab--active" : ""}`}
               onClick={() => onTabClick(t.key)}
@@ -232,7 +238,7 @@ export function Sidebar({
               {t.count > 0 && <span className="tab__count">{t.count}</span>}
             </button>
           ))}
-        </nav>
+        </div>
       </div>
       <div className="sidebar__body">
         {!snapshot ? (

@@ -61,6 +61,7 @@ export function TopBar({
   const alerts =
     snapshot?.nodes.filter((n) => n.alert_level === "warning" || n.alert_level === "critical")
       .length ?? 0;
+  const kpi = (n: number) => (snapshot ? n : "—"); // нет снимка — не «0 в пути», а «нет данных»
   const errorCode = error?.match(/HTTP \d{3}/)?.[0] ?? null; // 404 = нет бэкенда, 5xx = упал
   const hourUnit = t("common.h");
 
@@ -77,13 +78,13 @@ export function TopBar({
       )}
       <div className="topbar__kpis">
         <span className="kpi">
-          <b>{inTransit}</b> {t("top.inTransit")}
+          <b>{kpi(inTransit)}</b> {t("top.inTransit")}
         </span>
         <span className={`kpi ${delayed ? "kpi--warn" : ""}`}>
-          <b>{delayed}</b> {t("top.delayed")}
+          <b>{kpi(delayed)}</b> {t("top.delayed")}
         </span>
         <span className={`kpi ${alerts ? "kpi--alert" : ""}`}>
-          <b>{alerts}</b> {alerts === 1 ? t("top.portAtRisk") : t("top.portsAtRisk")}
+          <b>{kpi(alerts)}</b> {alerts === 1 ? t("top.portAtRisk") : t("top.portsAtRisk")}
         </span>
       </div>
       {snapshot?.summary && (
@@ -116,6 +117,7 @@ export function TopBar({
             key={key}
             type="button"
             className={`chip ${layers[key] ? "chip--on" : ""}`}
+            aria-pressed={layers[key]}
             onClick={() => onToggle(key)}
             disabled={key === "wind" && !windAvailable}
             title={key === "wind" && !windAvailable ? t("layer.windUnavailable") : undefined}

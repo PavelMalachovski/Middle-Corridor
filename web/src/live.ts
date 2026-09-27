@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchSnapshot, fetchWind, type Snapshot, streamUrl, type WindField } from "./api";
+import { t } from "./i18n";
 
 /**
  * Живые данные карты.
@@ -132,11 +133,14 @@ export function useLiveData(replayAt: Date | null): LiveData {
           try {
             setError(`/api/v1/stream: ${(JSON.parse(detail) as { detail: string }).detail}`);
           } catch {
-            setError("/api/v1/stream: ошибка источника");
+            setError(`/api/v1/stream: ${t("err.streamSource")}`);
           }
           return;
         }
         failures += 1;
+        // HTTP-ошибка (502, не text/event-stream) закрывает EventSource насовсем —
+        // он сам не переподключится, ждать ещё двух ошибок бессмысленно
+        if (source?.readyState === EventSource.CLOSED) failures = STREAM_FAILURES_BEFORE_POLL;
         if (failures >= STREAM_FAILURES_BEFORE_POLL) {
           source?.close();
           source = null;

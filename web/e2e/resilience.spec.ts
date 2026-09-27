@@ -23,6 +23,14 @@ test("источник упал: 503 с detail показывается в ст�
   await expect(status(page)).toContainText("HTTP 503");
 });
 
+test("поток отвечает HTTP-ошибкой — сразу переходим на поллинг", async ({ page }) => {
+  // EventSource после не-200 закрывается насовсем и сам не переподключится
+  await page.route("**/api/v1/stream**", (route) => route.fulfill({ status: 502, body: "" }));
+  await openMap(page);
+  await expect(status(page)).toContainText("поллинг");
+  await expect(page.getByRole("tab", { name: /Грузы/ })).toHaveAttribute("aria-selected", "true");
+});
+
 test("без WebGL 2 — заглушка вместо карты, панель работает", async ({ page }) => {
   await page.addInitScript(() => {
     const orig = HTMLCanvasElement.prototype.getContext;
@@ -47,8 +55,8 @@ test("без WebGL 2 — заглушка вместо карты, панель 
 
 test("вкладки портов и новостей догружаются лениво", async ({ page }) => {
   await openMap(page);
-  await page.getByRole("button", { name: /Порты/ }).click();
+  await page.getByRole("tab", { name: /Порты/ }).click();
   await expect(page.locator(".list .card").first()).toBeVisible();
-  await page.getByRole("button", { name: /Новости/ }).click();
+  await page.getByRole("tab", { name: /Новости/ }).click();
   await expect(page.locator(".sidebar__body li").first()).toBeVisible();
 });
