@@ -1,23 +1,110 @@
 :root {
   color-scheme: dark;
+  /* --- тема: поверхности и текст; светлая — [data-theme="light"] ниже -------- */
+  --ink: 255 255 255; /* «чернила» оверлеев и границ: rgb(var(--ink) / 0.08) */
   --bg: #0f1216;
-  --panel: rgba(20, 24, 30, 0.94);
+  --panel: rgb(20 24 30 / 0.94);
   --panel-solid: #161a20;
-  --line: rgba(255, 255, 255, 0.09);
+  --line: rgb(var(--ink) / 0.09);
+  --line-strong: rgb(var(--ink) / 0.22);
   --text: #ebe9e2;
   --text-2: #b7b5ad;
-  --muted: #9a988f; /* 5.6:1 на карточке — мелкий текст проходит WCAG AA (было #86847d, 4.3) */
+  --muted: #9a988f; /* 5.6:1 на карточке — мелкий текст проходит WCAG AA */
+  --shadow-panel: 0 6px 20px rgb(0 0 0 / 0.35);
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.4);
+  --shadow-thumb: 0 1px 4px rgb(0 0 0 / 0.5);
+  --focus: #5ee8b6;
+  /* текст статусов и акцентов — на светлой теме темнее заливок */
+  --accent-text: #2fd39a;
+  --ok-text: #3ddc5f;
+  --watch-text: #fab219;
+  --warning-text: #ec835a;
+  --critical-text: #f07070; /* #d03b3b на панели даёт только 3.5:1 */
+  --vessel: #dce6f2; /* паромы в панелях; на карте — --map-vessel */
+  --vessel-text: #dce6f2;
+  --wind-text: #86b6ef;
+  --wind-chart: #86b6ef;
+  --replay: #ffc45c;
+  --replay-text: #ffc45c;
+  --on-replay: #1a1408;
+  --live-text: #3ddc5f;
+  --thumb: #fff;
+  /* --- заливки: одинаковые в обеих темах (читаются и на светлом, и на тёмном) - */
   --accent: #2fd39a; /* грузы / трек */
-  --vessel: #eb6834;
   --ok: #0ca30c;
   --watch: #fab219;
   --warning: #ec835a;
   --critical: #d03b3b;
-  --critical-text: #f07070; /* красный для текста: #d03b3b на панели даёт только 3.5:1 */
+  --status-none: #6b6b66;
+  --corridor: #8f86e6;
+  /* --- карта: маркеры следуют подложке, а не теме интерфейса ----------------- */
+  --map-label: #ebe9e2;
+  --map-label-2: #d9d7cf;
+  --map-label-warn: #ffd2b0;
+  --map-halo: #000;
+  --map-cargo-label: #2fd39a;
+  --map-waiting-label: #fab219;
+  --map-delivered: #8a8f99;
+  --map-delivered-ring: #cfd2d8;
+  --map-delivered-label: #b7b5ad;
+  --map-vessel: #dce6f2; /* нейтральный: оранжевый путался с «риском остановки» */
+  --map-vessel-label: #c9d4e2;
+  --map-dot-ring: #fff;
+  --map-shadow: rgb(0 0 0 / 0.45);
+  --map-icon-shadow: rgb(0 0 0 / 0.6);
   --sidebar-w: 380px;
+  /* шкалы: шрифт, радиусы — новые правила берут значения отсюда */
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
   line-height: 1.35;
+}
+
+/* Светлая тема: только поверхности и текст; заливки статусов общие */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ink: 15 23 42;
+  --bg: #e9edf2;
+  --panel: rgb(255 255 255 / 0.95);
+  --panel-solid: #fff;
+  --text: #15181d;
+  --text-2: #3c434d;
+  --muted: #5c6470;
+  --shadow-panel: 0 4px 16px rgb(15 23 42 / 0.14);
+  --shadow-pop: 0 8px 24px rgb(15 23 42 / 0.18);
+  --focus: #0b7a55;
+  --accent-text: #0b7a55;
+  --ok-text: #0f7a33;
+  --watch-text: #8a5a00;
+  --warning-text: #b24a1c;
+  --critical-text: #b42318;
+  --vessel: #64748b;
+  --vessel-text: #475569;
+  --wind-text: #1f6fcf;
+  --wind-chart: #2a78d6;
+  --replay: #d99100;
+  --replay-text: #8a5a00;
+  --live-text: #15803d;
+}
+
+/* Светлая подложка: подписи маркеров тёмные с белым ореолом */
+.map[data-basemap="light"] {
+  --map-label: #14171c;
+  --map-label-2: #2b3038;
+  --map-label-warn: #9a3412;
+  --map-halo: #fff;
+  --map-cargo-label: #0e7a55;
+  --map-waiting-label: #8a5a00;
+  --map-delivered-label: #4b5563;
+  --map-vessel: #334155; /* светлый паром на светлой подложке не виден */
+  --map-vessel-label: #1e293b;
 }
 
 * {
@@ -47,6 +134,34 @@ body,
   inset: 0;
 }
 
+/* Кольцо фокуса с клавиатуры — одно на всё приложение (:where — нулевая
+   специфичность: у отдельных элементов свой фокус, как у ползунка шкалы) */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.skip-link {
+  position: absolute;
+  z-index: 30;
+  font: inherit;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  left: 12px;
+  top: -60px;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  background: var(--panel-solid);
+  color: var(--text);
+  box-shadow: var(--shadow-pop);
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 12px;
+}
+.sidebar:focus-visible {
+  outline-offset: -2px;
+}
+
 .mono {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
@@ -58,7 +173,7 @@ body,
   font-size: 12px;
 }
 .warn {
-  color: var(--warning);
+  color: var(--warning-text);
 }
 
 /* --- верхняя панель ------------------------------------------------------ */
@@ -86,42 +201,48 @@ body,
   width: 100%;
   flex: none;
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  gap: 2px;
   padding: 8px 14px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-panel);
+}
+.topbar__row {
+  display: flex;
+  align-items: center;
+  gap: 8px 16px;
   flex-wrap: wrap;
 }
 .topbar__title {
+  margin: 0;
   font-weight: 700;
-  font-size: 16px;
+  font-size: var(--fs-lg);
   letter-spacing: 0.01em;
-}
-.topbar__subtitle {
-  font-size: 11px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 .topbar__kpis {
   display: flex;
-  gap: 12px;
+  align-items: baseline;
+  gap: 14px;
   flex-wrap: wrap;
 }
 .kpi {
   color: var(--text-2);
-  font-size: 13px;
+  font-size: var(--fs-md);
+  white-space: nowrap;
 }
 .kpi b {
   color: var(--text);
-  font-size: 15px;
-  margin-right: 2px;
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-right: 3px;
 }
 .kpi--warn b {
-  color: var(--watch);
+  color: var(--watch-text);
 }
 .kpi--alert b {
   color: var(--critical-text);
@@ -129,7 +250,7 @@ body,
 .topbar__week {
   display: flex;
   gap: 14px;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted);
   flex-wrap: wrap;
 }
@@ -137,13 +258,9 @@ body,
   color: var(--text-2);
   font-weight: 600;
 }
-.topbar__layers {
-  display: flex;
-  gap: 6px;
-  margin-left: auto;
-}
 .topbar__status {
-  font-size: 12px;
+  margin-left: auto; /* статус и язык — к правому краю */
+  font-size: var(--fs-sm);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -157,29 +274,29 @@ body,
   border-radius: 50%;
   background: var(--ok);
   margin-right: 5px;
-  box-shadow: 0 0 0 0 rgba(12, 163, 12, 0.6);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent);
   animation: live 2s infinite;
 }
 @keyframes live {
   0% {
-    box-shadow: 0 0 0 0 rgba(12, 163, 12, 0.6);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent);
   }
   100% {
-    box-shadow: 0 0 0 7px rgba(12, 163, 12, 0);
+    box-shadow: 0 0 0 7px transparent;
   }
 }
 
 .badge {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  padding: 3px 8px;
-  border-radius: 6px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
 }
 .badge--mock {
-  background: rgba(250, 178, 25, 0.15);
-  color: var(--watch);
-  border: 1px solid rgba(250, 178, 25, 0.5);
+  background: color-mix(in srgb, var(--watch) 15%, transparent);
+  color: var(--watch-text);
+  border: 1px solid color-mix(in srgb, var(--watch) 50%, transparent);
 }
 
 .chip {
@@ -193,16 +310,32 @@ body,
   cursor: pointer;
 }
 .chip:hover {
-  border-color: rgba(255, 255, 255, 0.25);
+  border-color: rgb(var(--ink) / 0.25);
 }
 .chip--on {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgb(var(--ink) / 0.1);
+  border-color: rgb(var(--ink) / 0.2);
 }
 .chip:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+.theme-btn {
+  font: inherit;
+  font-size: var(--fs-md);
+  line-height: 1;
+  color: var(--text-2);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  width: 28px;
+  height: 24px;
+  cursor: pointer;
+}
+.theme-btn:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
 }
 .lang {
   display: inline-flex;
@@ -225,7 +358,7 @@ body,
 }
 .lang__btn.is-on {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.12);
+  background: rgb(var(--ink) / 0.12);
 }
 .chips {
   list-style: none;
@@ -238,19 +371,58 @@ body,
 
 /* --- легенда -------------------------------------------------------------- */
 
+.panel-toggles {
+  display: flex;
+  gap: 6px;
+}
+.chip--tool {
+  background: var(--panel-solid); /* непрозрачно: на светлой подложке кнопка не пропадает */
+  border-color: var(--line-strong); /* без тени: overflow колонки обрезал её прямоугольником */
+  font-size: var(--fs-sm);
+  padding: 6px 12px;
+}
+.chip--tool.chip--on {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 22%, var(--panel-solid));
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.chip--tool span {
+  opacity: 0.8;
+  margin-right: 2px;
+}
+.intro {
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: blur(8px);
+  padding: 12px 14px;
+}
+.intro__title {
+  margin: 0 0 6px;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text);
+}
+.intro__body {
+  margin: 0 0 10px;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--text-2);
+}
 .left-stack {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 258px;
+  width: 272px;
   min-height: 0; /* низкое окно: колонка прокручивается, а не наезжает на зум */
   overflow-y: auto;
 }
 .legend,
 .mapctl {
   background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  border: 1px solid var(--line-strong); /* без тени: overflow колонки обрезал её по правому краю */
+  border-radius: var(--radius-md);
   padding: 8px 12px;
   font-size: 12px;
   color: var(--text-2);
@@ -279,12 +451,13 @@ body,
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.85);
+  border: 2px solid var(--map-dot-ring);
+  box-shadow: 0 0 0 1px var(--line-strong);
   flex: none;
 }
 .legend__dot--cargo {
   background: var(--accent);
-  border-color: #fff;
+  border-color: var(--map-dot-ring);
 }
 .legend__dot--proj {
   background: transparent;
@@ -294,8 +467,8 @@ body,
   width: 14px;
   height: 6px;
   border-radius: 3px;
-  background: #8f86e6;
-  box-shadow: 0 0 6px 2px rgba(143, 134, 230, 0.55);
+  background: var(--corridor);
+  box-shadow: 0 0 6px 2px color-mix(in srgb, var(--corridor) 55%, transparent);
   flex: none;
 }
 .legend__ship {
@@ -304,7 +477,7 @@ body,
   text-align: center;
 }
 .legend__wind {
-  color: #86b6ef;
+  color: var(--wind-text);
   width: 10px;
   text-align: center;
 }
@@ -321,7 +494,8 @@ body,
   flex-direction: column;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
   backdrop-filter: blur(10px);
   z-index: 6;
   overflow: hidden;
@@ -357,7 +531,7 @@ body,
   font-size: 11px;
   font-weight: 600;
   color: var(--text-2);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgb(var(--ink) / 0.08);
   padding: 1px 6px;
   border-radius: 999px;
 }
@@ -390,7 +564,7 @@ body,
   gap: 8px;
 }
 .card {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgb(var(--ink) / 0.04);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 10px 12px;
@@ -407,7 +581,7 @@ button.card {
   text-align: left;
 }
 button.card:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
 .sr-only {
@@ -422,8 +596,8 @@ button.card:focus-visible {
   border: 0;
 }
 .card--clickable:hover {
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.06);
+  border-color: rgb(var(--ink) / 0.22);
+  background: rgb(var(--ink) / 0.06);
 }
 .card--selected {
   border-color: var(--accent);
@@ -457,23 +631,23 @@ button.card:focus-visible {
   color: var(--text-2);
 }
 .pill--in_transit {
-  color: var(--accent);
-  border-color: rgba(47, 211, 154, 0.5);
+  color: var(--accent-text);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
 }
 .pill--waiting {
-  color: var(--watch);
-  border-color: rgba(250, 178, 25, 0.5);
+  color: var(--watch-text);
+  border-color: color-mix(in srgb, var(--watch) 50%, transparent);
 }
 .pill--delivered {
   color: var(--muted);
 }
 .pill--delayed {
-  color: var(--warning);
-  border-color: rgba(236, 131, 90, 0.6);
+  color: var(--warning-text);
+  border-color: color-mix(in srgb, var(--warning) 60%, transparent);
 }
 .pill--ais {
-  color: var(--vessel);
-  border-color: rgba(235, 104, 52, 0.5);
+  color: var(--vessel-text);
+  border-color: color-mix(in srgb, var(--vessel) 55%, transparent);
 }
 .pill--nodata {
   color: var(--muted);
@@ -482,7 +656,7 @@ button.card:focus-visible {
 
 .progress {
   height: 4px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgb(var(--ink) / 0.08);
   border-radius: 2px;
   margin-top: 8px;
   overflow: hidden;
@@ -499,13 +673,13 @@ button.card:focus-visible {
 .hold {
   margin-top: 6px;
   font-size: 12px;
-  color: var(--watch);
+  color: var(--watch-text);
 }
 .hold--lg {
   font-size: 13px;
   padding: 8px 10px;
-  background: rgba(250, 178, 25, 0.1);
-  border: 1px solid rgba(250, 178, 25, 0.35);
+  background: color-mix(in srgb, var(--watch) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--watch) 35%, transparent);
   border-radius: 8px;
   margin: 8px 0;
 }
@@ -530,7 +704,9 @@ button.card:focus-visible {
   text-decoration: underline;
 }
 .detail__ref {
+  margin: 0;
   font-size: 18px;
+  font-weight: 700;
 }
 .detail__client {
   color: var(--text-2);
@@ -545,6 +721,7 @@ button.card:focus-visible {
   margin-top: 16px;
 }
 .block__title {
+  font-weight: 500;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -638,10 +815,10 @@ button.card:focus-visible {
 }
 .checkpoints__item--current .checkpoints__marker {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(47, 211, 154, 0.25);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 .checkpoints__item--current .checkpoints__name {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }
 .checkpoints__item--planned .checkpoints__name {
@@ -656,7 +833,7 @@ button.card:focus-visible {
   margin-bottom: 4px;
 }
 .news__source {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }
 .news__title {
@@ -675,6 +852,9 @@ button.card:focus-visible {
 
 /* --- управление подложкой ------------------------------------------------- */
 
+.mapctl__title--sub {
+  margin-top: 10px;
+}
 .mapctl__row {
   display: flex;
   flex-wrap: wrap;
@@ -707,7 +887,7 @@ button.card:focus-visible {
 .mapctl__hint {
   margin-top: 6px;
   font-size: 11px;
-  color: var(--watch);
+  color: var(--watch-text);
 }
 
 /* --- маркеры на карте ----------------------------------------------------- */
@@ -734,9 +914,9 @@ button.card:focus-visible {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  background: #6b6b66;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+  border: 2px solid var(--map-dot-ring);
+  background: var(--status-none);
+  box-shadow: 0 0 0 2px var(--map-shadow);
 }
 .node-marker--rail .node-marker__dot i {
   width: 8px;
@@ -762,49 +942,29 @@ button.card:focus-visible {
 }
 .node-marker.level-critical .node-marker__dot i {
   background: var(--critical);
-  box-shadow: 0 0 0 3px rgba(208, 59, 59, 0.35);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--critical) 35%, transparent);
 }
 .node-marker__label {
   display: flex;
   flex-direction: column;
   line-height: 1.15;
   font-size: 11px;
-  color: var(--text);
+  color: var(--map-label);
   text-shadow:
-    0 0 3px #000,
-    0 0 3px #000;
+    0 0 3px var(--map-halo),
+    0 0 3px var(--map-halo);
   white-space: nowrap;
 }
 .node-marker__label b {
   font-weight: 600;
 }
 .node-marker__label span {
-  color: #d9d7cf;
+  color: var(--map-label-2);
   font-size: 10px;
 }
 .node-marker.level-critical .node-marker__label span,
 .node-marker.level-warning .node-marker__label span {
-  color: #ffd2b0;
-}
-.map[data-basemap="light"] .node-marker__label,
-.map[data-basemap="light"] .node-marker__label span {
-  color: #14171c;
-  text-shadow:
-    0 0 3px #fff,
-    0 0 3px #fff,
-    0 0 4px #fff;
-}
-.map[data-basemap="light"] .ship-marker__label {
-  text-shadow:
-    0 0 3px #fff,
-    0 0 3px #fff,
-    0 0 4px #fff;
-}
-.map[data-basemap="light"] .ship-marker--in_transit .ship-marker__label {
-  color: #0e7a55;
-}
-.map[data-basemap="light"] .ship-marker--waiting .ship-marker__label {
-  color: #8a5a00;
+  color: var(--map-label-warn);
 }
 .map[data-zoom="far"] .node-marker--rail .node-marker__label,
 .map[data-zoom="far"] .node-marker--border .node-marker__label {
@@ -828,12 +988,12 @@ button.card:focus-visible {
   height: 14px;
   border-radius: 50%;
   background: var(--accent);
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45);
+  border: 2px solid var(--map-dot-ring);
+  box-shadow: 0 0 0 2px var(--map-shadow);
   flex: none;
 }
 .ship-marker--projection .ship-marker__dot {
-  background: rgba(47, 211, 154, 0.35);
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
   border: 2px dashed var(--accent);
 }
 .ship-marker--projection .ship-marker__dot::after {
@@ -858,29 +1018,29 @@ button.card:focus-visible {
   background: var(--watch);
 }
 .ship-marker--delivered .ship-marker__dot {
-  background: #8a8f99;
-  border-color: #cfd2d8;
+  background: var(--map-delivered);
+  border-color: var(--map-delivered-ring);
 }
 .ship-marker--ais .ship-marker__dot {
   box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.45),
-    0 0 0 4px rgba(235, 104, 52, 0.55);
+    0 0 0 2px var(--map-shadow),
+    0 0 0 4px color-mix(in srgb, var(--map-vessel) 55%, transparent);
 }
 .ship-marker__label {
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--map-cargo-label);
   text-shadow:
-    0 0 3px #000,
-    0 0 3px #000;
+    0 0 3px var(--map-halo),
+    0 0 3px var(--map-halo);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 .ship-marker--waiting .ship-marker__label {
-  color: var(--watch);
+  color: var(--map-waiting-label);
 }
 .ship-marker--delivered .ship-marker__label {
-  color: #b7b5ad;
+  color: var(--map-delivered-label);
 }
 .map[data-zoom="far"] .ship-marker:not(.is-selected) .ship-marker__label {
   display: none;
@@ -888,12 +1048,60 @@ button.card:focus-visible {
 .ship-marker.is-selected .ship-marker__dot {
   transform: scale(1.35);
   box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.45),
-    0 0 0 6px rgba(47, 211, 154, 0.3);
+    0 0 0 2px var(--map-shadow),
+    0 0 0 6px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 .ship-marker.is-selected .ship-marker__label {
   font-size: 12px;
   text-decoration: underline;
+}
+
+/* Подпись — абсолютно от точки: маркер равен точке (координата не зависит от
+   длины подписи), а map/declutter.ts может перенести подпись на другую сторону.
+   .maplibregl-marker уже position: absolute — это и есть контейнер подписи. */
+.node-marker__label,
+.ship-marker__label,
+.vessel-marker__label {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 5px);
+  transform: translateY(-50%);
+}
+[data-label-side="left"] .node-marker__label,
+[data-label-side="left"] .ship-marker__label,
+[data-label-side="left"] .vessel-marker__label {
+  left: auto;
+  right: calc(100% + 5px);
+  text-align: right;
+}
+[data-label-side="left"] .node-marker__label {
+  align-items: flex-end;
+}
+[data-label-side="bottom"] .node-marker__label,
+[data-label-side="bottom"] .ship-marker__label,
+[data-label-side="bottom"] .vessel-marker__label,
+[data-label-side="top"] .node-marker__label,
+[data-label-side="top"] .ship-marker__label,
+[data-label-side="top"] .vessel-marker__label {
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  align-items: center;
+}
+[data-label-side="bottom"] [class$="__label"] {
+  top: calc(100% + 2px);
+}
+[data-label-side="top"] [class$="__label"] {
+  top: auto;
+  bottom: calc(100% + 2px);
+}
+
+/* налезающие подписи прячет map/declutter.ts; visibility, а не display — размер
+   подписи нужен для следующего пересчёта, имя остаётся в title маркера */
+[data-label-hidden] .node-marker__label,
+[data-label-hidden] .ship-marker__label,
+[data-label-hidden] .vessel-marker__label {
+  visibility: hidden;
 }
 
 /* паромы: HTML-маркер с силуэтом, поворот по курсу — на иконке */
@@ -904,7 +1112,7 @@ button.card:focus-visible {
   width: max-content;
   cursor: pointer;
   pointer-events: auto;
-  color: var(--vessel);
+  color: var(--map-vessel);
 }
 .hide-vessels .vessel-marker {
   display: none;
@@ -913,7 +1121,7 @@ button.card:focus-visible {
   width: 22px;
   height: 22px;
   display: flex;
-  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 0 2px var(--map-icon-shadow));
 }
 .vessel-marker.is-moored .vessel-marker__icon {
   opacity: 0.8;
@@ -921,21 +1129,15 @@ button.card:focus-visible {
 }
 .vessel-marker__label {
   font-size: 10px;
-  color: #ffd2b0;
+  color: var(--map-vessel-label);
   text-shadow:
-    0 0 3px #000,
-    0 0 3px #000;
+    0 0 3px var(--map-halo),
+    0 0 3px var(--map-halo);
   white-space: nowrap;
 }
 .map[data-zoom="far"] .vessel-marker__label,
 .map[data-zoom="mid"] .vessel-marker__label {
   display: none;
-}
-.map[data-basemap="light"] .vessel-marker__label {
-  color: #8a3d12;
-  text-shadow:
-    0 0 3px #fff,
-    0 0 3px #fff;
 }
 
 /* слежение: маркер груза получает вращающееся кольцо */
@@ -954,12 +1156,51 @@ button.card:focus-visible {
 }
 .detail__actions {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
 }
-.link--active {
-  color: var(--accent);
+.detail__actions .chip {
+  white-space: nowrap;
 }
+.chip--accent {
+  color: var(--accent-text);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+/* Палец, а не мышь: цели не меньше 36 px (WCAG 2.5.8 — от 24 px) */
+@media (pointer: coarse) {
+  .chip,
+  .lang__btn,
+  .timeline__live,
+  .timeline__speed {
+    min-height: 36px;
+  }
+  .chip {
+    padding: 6px 12px;
+  }
+  .lang__btn {
+    padding: 6px 10px;
+  }
+  .theme-btn {
+    width: 36px;
+    height: 36px;
+  }
+  .timeline__play {
+    width: 40px;
+    height: 40px;
+  }
+  .map .maplibregl-ctrl-group button {
+    width: 36px;
+    height: 36px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .app .sidebar,
+  .app .timeline {
+    transition: none;
+  }
   .ship-marker.is-followed .ship-marker__dot::before,
   .ship-marker--projection .ship-marker__dot::after,
   .dot-live {
@@ -987,13 +1228,24 @@ button.card:focus-visible {
 }
 .map .maplibregl-ctrl-group {
   background: var(--panel-solid);
+  box-shadow: var(--shadow-panel);
+}
+/* иконки зума и компаса у MapLibre тёмные — на тёмной кнопке их не видно */
+:root:not([data-theme="light"]) .map .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(0.9);
+}
+.map .maplibregl-ctrl-scale {
+  background: color-mix(in srgb, var(--panel-solid) 80%, transparent);
+  color: var(--text-2);
+  border-color: var(--muted);
+  font-size: 10px;
 }
 .map .maplibregl-ctrl-group button + button {
   border-top-color: var(--line);
 }
 .map .maplibregl-ctrl-attrib,
 .map .maplibregl-ctrl-attrib.maplibregl-compact {
-  background: rgba(20, 24, 30, 0.7);
+  background: color-mix(in srgb, var(--panel-solid) 75%, transparent);
   color: var(--muted);
   font-size: 10px;
 }
@@ -1007,16 +1259,39 @@ button.card:focus-visible {
   }
   .overlay-top {
     right: 12px;
+    /* панели слоёв и легенды не уходят под шторку */
+    max-height: calc(100% - var(--sheet-h, 0px) - 100px);
   }
   .topbar {
-    gap: 6px 12px;
     padding: 8px 12px;
   }
-  .topbar__subtitle {
-    display: none; /* на телефоне каждая строка топбара отнимает карту */
+  .topbar__row {
+    gap: 4px 12px;
+  }
+  /* на телефоне каждая строка топбара отнимает карту: статус «обновлено N с
+     назад» прячем, пока всё хорошо (свежесть видна на шкале времени) — ошибку
+     и устаревшие данные показываем всегда */
+  .topbar__status:not(.topbar__status--error):not(:has(.topbar__stale)) {
+    display: none;
+  }
+  .theme-btn {
+    margin-left: auto; /* тема и язык — к правому краю первой строки */
+  }
+  .topbar__kpis {
+    order: 2; /* заголовок и язык — первой строкой, цифры — второй */
+    width: 100%;
+  }
+  .kpi {
+    font-size: var(--fs-sm);
+  }
+  .kpi b {
+    font-size: var(--fs-lg);
+  }
+  .topbar__kpis {
+    gap: 10px;
   }
   .left-stack {
-    display: none;
+    width: min(320px, 100%);
   }
   .topbar__week {
     display: none;
@@ -1042,7 +1317,7 @@ button.card:focus-visible {
     width: 40px;
     height: 5px;
     border-radius: 3px;
-    background: rgba(255, 255, 255, 0.28);
+    background: rgb(var(--ink) / 0.28);
   }
   .sidebar--sheet .tab {
     padding: 8px 8px 10px;
@@ -1074,10 +1349,10 @@ button.card:focus-visible {
   user-select: none;
 }
 .timeline--replay {
-  border-color: rgba(255, 196, 92, 0.35);
+  border-color: color-mix(in srgb, var(--replay) 45%, transparent);
   box-shadow:
-    0 0 0 1px rgba(255, 196, 92, 0.12),
-    0 8px 24px rgba(0, 0, 0, 0.35);
+    0 0 0 1px color-mix(in srgb, var(--replay) 15%, transparent),
+    var(--shadow-panel);
 }
 .timeline__controls {
   display: flex;
@@ -1089,8 +1364,8 @@ button.card:focus-visible {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgb(var(--ink) / 0.2);
+  background: rgb(var(--ink) / 0.08);
   color: var(--text);
   font-size: 12px;
   cursor: pointer;
@@ -1098,7 +1373,7 @@ button.card:focus-visible {
   place-items: center;
 }
 .timeline__play:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgb(var(--ink) / 0.16);
 }
 .timeline__play:disabled,
 .timeline__speed:disabled,
@@ -1107,9 +1382,9 @@ button.card:focus-visible {
   cursor: not-allowed;
 }
 .is-playing .timeline__play {
-  background: #ffc45c;
-  border-color: #ffc45c;
-  color: #1a1408;
+  background: var(--replay);
+  border-color: var(--replay);
+  color: var(--on-replay);
 }
 .timeline__speeds {
   display: flex;
@@ -1137,8 +1412,8 @@ button.card:focus-visible {
 }
 .timeline__speed.is-on {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgb(var(--ink) / 0.1);
+  border-color: rgb(var(--ink) / 0.15);
 }
 .timeline__track-wrap {
   position: relative;
@@ -1153,7 +1428,7 @@ button.card:focus-visible {
   top: 9px;
   height: 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgb(var(--ink) / 0.08);
   overflow: visible;
 }
 .timeline__past {
@@ -1162,7 +1437,7 @@ button.card:focus-visible {
   top: 0;
   bottom: 0;
   border-radius: 3px 0 0 3px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgb(var(--ink) / 0.12);
 }
 .timeline__future {
   position: absolute;
@@ -1170,17 +1445,13 @@ button.card:focus-visible {
   top: 0;
   bottom: 0;
   border-radius: 0 3px 3px 0;
-  background: repeating-linear-gradient(
-    -45deg,
-    rgba(255, 255, 255, 0.14) 0 3px,
-    transparent 3px 7px
-  );
+  background: repeating-linear-gradient(-45deg, rgb(var(--ink) / 0.14) 0 3px, transparent 3px 7px);
 }
 .timeline__fill {
   position: absolute;
   top: 0;
   bottom: 0;
-  background: #ffc45c;
+  background: var(--replay);
   opacity: 0.85;
 }
 .timeline--live .timeline__fill {
@@ -1247,26 +1518,26 @@ button.card:focus-visible {
   height: 14px;
   margin-top: 5px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--thumb);
   border: 2px solid var(--ok);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-thumb);
 }
 .timeline__range::-moz-range-thumb {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--thumb);
   border: 2px solid var(--ok);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-thumb);
 }
 .timeline--replay .timeline__range::-webkit-slider-thumb {
-  border-color: #ffc45c;
+  border-color: var(--replay);
 }
 .timeline--replay .timeline__range::-moz-range-thumb {
-  border-color: #ffc45c;
+  border-color: var(--replay);
 }
 .timeline__range:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 0 4px rgb(var(--ink) / 0.25);
 }
 .timeline__readout {
   display: flex;
@@ -1284,23 +1555,31 @@ button.card:focus-visible {
 .timeline__offset {
   margin-left: 6px;
   font-weight: 600;
-  color: #ffc45c;
+  color: var(--replay-text);
 }
 .timeline__offset--future {
-  color: #86b6ef;
+  color: var(--wind-text);
 }
 .timeline__live {
   padding: 3px 9px;
   font-size: 11px;
   letter-spacing: 0.06em;
 }
-.timeline__live.chip--on {
-  color: var(--ok);
-  border-color: rgba(12, 163, 12, 0.5);
-  background: rgba(12, 163, 12, 0.12);
+.timeline__onair {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--live-text);
+  padding: 3px 9px;
+  border: 1px solid color-mix(in srgb, var(--live-text) 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--live-text) 10%, transparent);
+  white-space: nowrap;
 }
 .dot-live--replay {
-  background: #ffc45c;
+  background: var(--replay);
   animation: none;
   box-shadow: none;
 }
@@ -1312,12 +1591,17 @@ button.card:focus-visible {
     width: auto;
     transform: none;
     bottom: calc(var(--sheet-h, 0px) + 10px);
-  }
-  .app--sheet-full .timeline {
-    visibility: hidden; /* под развёрнутой шторкой шкале места нет */
     padding: 6px 10px 12px;
     gap: 8px;
     transition: bottom 0.25s ease;
+  }
+  .app--sheet-full .timeline {
+    visibility: hidden; /* под развёрнутой шторкой шкале места нет */
+  }
+  /* скорость на телефоне — по умолчанию (×600): столбик из трёх кнопок
+     делал шкалу вдвое выше, а карте и так тесно */
+  .timeline__speeds {
+    display: none;
   }
   .timeline__readout {
     min-width: 0;
@@ -1383,8 +1667,8 @@ button.card:focus-visible {
   font: inherit;
   font-size: 12px;
   color: var(--text);
-  background: rgba(208, 59, 59, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--critical) 85%, transparent);
+  border: 1px solid rgb(var(--ink) / 0.2);
   border-radius: 999px;
   padding: 6px 12px;
   cursor: pointer;
@@ -1402,10 +1686,10 @@ button.card:focus-visible {
 /* --- офлайн / устаревший снимок ------------------------------------------------- */
 
 .topbar__stale {
-  color: #fab219;
+  color: var(--watch-text);
 }
 .dot-live--stale {
-  background: #fab219;
+  background: var(--watch);
   animation: none;
   box-shadow: none;
 }
@@ -1419,18 +1703,18 @@ button.card:focus-visible {
   overflow: visible;
 }
 .spark__area {
-  fill: #86b6ef;
+  fill: var(--wind-chart);
   fill-opacity: 0.12;
 }
 .spark__line {
   fill: none;
-  stroke: #86b6ef;
+  stroke: var(--wind-chart);
   stroke-width: 1.8;
   stroke-linejoin: round;
 }
 .spark__gust {
   fill: none;
-  stroke: #86b6ef;
+  stroke: var(--wind-chart);
   stroke-width: 1;
   stroke-opacity: 0.45;
   stroke-dasharray: 3 2;
@@ -1453,13 +1737,39 @@ button.card:focus-visible {
   fill-opacity: 0.55;
 }
 .delay__bar.is-late {
-  fill: #ec835a;
+  fill: var(--warning);
 }
 .delay__bar.is-early {
   fill: var(--accent);
 }
 .delay__bar.is-projected {
   fill-opacity: 0.22;
+}
+.delay-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 2px 0 10px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.delay-legend__swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: -6px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0.55;
+}
+.delay-legend__swatch.is-late {
+  background: var(--warning);
+  opacity: 1;
+}
+.delay-legend__swatch.is-projected {
+  background: var(--warning);
+  opacity: 0.25;
 }
 .outlook {
   font-size: 12px;
@@ -1469,10 +1779,10 @@ button.card:focus-visible {
   color: var(--critical-text);
 }
 .outlook--soon {
-  color: #ec835a;
+  color: var(--warning-text);
 }
 .outlook--ok {
-  color: var(--ok);
+  color: var(--ok-text);
 }
 
 /* --- поиск, фильтры, тост ---------------------------------------------------------- */
@@ -1497,7 +1807,7 @@ button.card:focus-visible {
   font: inherit;
   font-size: 13px;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgb(var(--ink) / 0.05);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 7px 10px;
@@ -1505,7 +1815,7 @@ button.card:focus-visible {
   box-sizing: border-box;
 }
 .search:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
 .chip--sm {
@@ -1516,7 +1826,7 @@ button.card:focus-visible {
   font: inherit;
   font-size: 12px;
   color: var(--text-2);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgb(var(--ink) / 0.05);
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 3px 8px;
@@ -1533,7 +1843,7 @@ button.card:focus-visible {
   border-radius: 999px;
   padding: 8px 14px;
   font-size: 13px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-pop);
 }
 .toast__action {
   margin-left: 10px;

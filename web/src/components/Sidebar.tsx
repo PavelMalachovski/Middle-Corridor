@@ -192,6 +192,8 @@ export function Sidebar({
   };
 
   const selected = snapshot?.shipments.find((s) => s.ref === selectedRef) ?? null;
+  // «← все грузы»: список откроется с фокусом на строке этого груза
+  const returnFocus = useRef<string | null>(null);
   const alerts = snapshot?.nodes.filter((n) => n.alert_level).length ?? 0;
   const tabs: { key: Tab; label: string; count: number }[] = [
     { key: "shipments", label: t("tab.shipments"), count: snapshot?.shipments.length ?? 0 },
@@ -209,6 +211,8 @@ export function Sidebar({
 
   return (
     <aside
+      id="panel-main"
+      tabIndex={-1} // цель ссылки «к списку грузов»
       className={`sidebar ${mobile ? `sidebar--sheet sidebar--${sheet}` : ""}`}
       style={style}
       aria-label={t("panel.label")}
@@ -229,7 +233,9 @@ export function Sidebar({
               key={t.key}
               type="button"
               role="tab"
+              id={`tab-${t.key}`}
               aria-selected={tab === t.key}
+              aria-controls="sidebar-panel"
               data-tab={t.key}
               className={`tab ${tab === t.key ? "tab--active" : ""}`}
               onClick={() => onTabClick(t.key)}
@@ -240,7 +246,12 @@ export function Sidebar({
           ))}
         </div>
       </div>
-      <div className="sidebar__body">
+      <div
+        className="sidebar__body"
+        id="sidebar-panel"
+        role="tabpanel"
+        aria-labelledby={`tab-${tab}`}
+      >
         {!snapshot ? (
           error ? (
             <ApiError error={error} />
@@ -253,7 +264,10 @@ export function Sidebar({
               shipment={selected}
               snapshot={snapshot}
               following={followRef === selected.ref}
-              onBack={() => onSelectShipment(null)}
+              onBack={() => {
+                returnFocus.current = selected.ref;
+                onSelectShipment(null);
+              }}
               onFocus={() => onFocusShipment(selected.ref)}
               onToggleFollow={() => onToggleFollow(selected.ref)}
               onShare={onShare}
@@ -264,6 +278,7 @@ export function Sidebar({
               filter={filter}
               onFilter={setFilter}
               onSelect={onFocusShipment}
+              returnFocusTo={returnFocus.current}
             />
           )
         ) : tab === "ports" ? (

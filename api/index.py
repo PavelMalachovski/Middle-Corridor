@@ -20,6 +20,8 @@ from app.api.main import create_app  # noqa: E402
 from app.config import get_settings  # noqa: E402
 from app.db.base import create_engine, create_session_factory  # noqa: E402
 from app.main import build_map_service  # noqa: E402
+from app.services.predictor_accuracy import PredictorAccuracyService  # noqa: E402
+from app.services.weather_predictor import WindThresholds  # noqa: E402
 
 settings = get_settings()
 engine = None if settings.mock_data else create_engine(settings.database_url)
@@ -29,4 +31,9 @@ app = create_app(
     engine=engine,
     settings=settings,
     map_service=build_map_service(settings, session_factory),
+    accuracy_service=(
+        PredictorAccuracyService(session_factory, WindThresholds.from_settings(settings))
+        if session_factory is not None
+        else None
+    ),
 )

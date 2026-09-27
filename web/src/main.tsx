@@ -4,6 +4,10 @@ import "./styles.css";
 import { registerSW } from "virtual:pwa-register";
 import { App } from "./App";
 import { I18nProvider } from "./i18n";
+import { applyTheme, initialTheme } from "./theme";
+
+// тема — до первого рендера: иначе светлая тема мигнёт тёмным фоном
+applyTheme(initialTheme());
 
 // Сервис-воркер: оболочка офлайн, последний снимок из кэша. Обновление — тихое,
 // новая версия подхватывается при следующем открытии.

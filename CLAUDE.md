@@ -16,6 +16,7 @@ docker compose up -d db                # Postgres на ПОРТУ 5433 (5432 з�
 .venv\Scripts\alembic revision --autogenerate -m "..."    # новая миграция
 .venv\Scripts\python -m app.main      # запуск всего (API :8000 + бот + AIS)
 .venv\Scripts\python -m app.scheduler.jobs weather|news|wind   # ручной прогон джобы из терминала
+.venv\Scripts\python -m app.scheduler.jobs backfill 2024-10-01 2025-03-31 [порт]   # исторический ветер для калибровки
 $env:MOCK_DATA='true'; .venv\Scripts\python -m app.main   # API карты на синтетике, без Postgres
 cd web; npm install; npm run dev                            # фронт с hot reload на :5173 (прокси /api → :8000)
 cd web; npm run build                                       # web/dist → раздаёт FastAPI по /
@@ -34,6 +35,8 @@ integrations/  внешние API за Protocol-интерфейсами (weathe
 services/      бизнес-логика; НЕ импортирует aiogram/fastapi
                corridor.py — узлы, сегменты и полигоны морей (sea_at/sea_grid); wind_grid.py — поле ветра
                над морями из Open-Meteo со снимками в БД (replay по at)
+               calibration.py — чистая сверка предиктора с фактами (POD/FAR/CSI, подбор порогов);
+               predictor_accuracy.py — журнал остановок port_closures, точность, калибровка, бэкфилл
 bot/           только aiogram-хендлеры/клавиатуры/тексты; вызывают services
 api/           только FastAPI-роуты; вызывают services
 db/            модели SQLAlchemy 2 async + repositories (запросы только тут)
@@ -44,6 +47,7 @@ web/           фронт карты: React 19 + Vite 8 + TS 7 + MapLibre 6; х�
                src/map/animate.ts — интерполятор движения; components/sheet.ts — геометрия шторки;
                src/map/windParticles.ts — WebGL-слой частиц ветра (windGrid.ts — текстура поля);
                src/forecast.ts + components/charts/ — прогноз и SVG-графики; src/urlState.ts — состояние в адресе;
+               src/theme.ts — тема UI (система/явный выбор, пара подложек); styles.css — токены обеих тем;
                src/i18n/ — словари ru/en (ru.ts — источник ключей), t()/useI18n(), labels.ts — подписи из кодов бэкенда;
                *.test.ts рядом с кодом (Vitest), e2e/ — Playwright (+ a11y, галерея экранов), biome.json — линт и формат
 .github/       ci.yml (backend · postgres · web), security.yml (pip-audit/npm audit), dependabot.yml
@@ -77,7 +81,10 @@ api/index.py   точка входа Vercel (serverless FastAPI: только /a
 - aiogram HTML parse mode: сырой `<id>` в тексте валит сообщение
   («can't parse entities») — только `&lt;id&gt;`.
 - Пороги ветра в конфиге — СТАРТОВЫЕ; калибруются по фактическим остановкам
-  портов. Не «улучшать» на глаз.
+  портов. Не «улучшать» на глаз. Факты — таблица `port_closures` (бот:
+  `/closed`, `/reopened`, прошлые — `/closure`); `/calibrate` только
+  ПОДСКАЗЫВАЕТ пороги, в `.env` их меняет человек. В калибровку идут только
+  остановки по ветру (`cause=wind`), алерты — warning+ (watch не публикуется).
 - Покрытие AIS на Каспии слабое (проверено вживую: bbox Каспия почти пуст).
   Отсутствие позиции = «нет данных», не «судно стоит». MMSI паромов ASCO в
   сидax NULL — заполнять руками, когда суда появятся в эфире.
@@ -182,12 +189,53 @@ api/index.py   точка входа Vercel (serverless FastAPI: только /a
   на телефоне).
 - Вкладки сайдбара — `role="tab"` + `aria-selected`: в e2e
   `getByRole("tab", …)`, не `button`. Кнопки-переключатели — с `aria-pressed`.
+- Слои, подложка, ветер (`MapControls`) и легенда свёрнуты за кнопками
+  «Слои»/«Легенда» слева вверху; открытость и «подсказку видели» помнит
+  `localStorage["mc-ui"]` (удобство, не настройка). В e2e сначала
+  `openLayers(page)` / `openLegend(page)` из `e2e/helpers.ts`.
+- Подписи маркеров — `position: absolute` от точки: маркер равен точке, и
+  координата не зависит от длины подписи. Налезающие подписи разводит
+  `map/declutter.ts` (справа → слева → снизу → сверху → спрятать, по
+  приоритету: выбранный груз > порты с риском > порты > грузы > паромы). Итог —
+  атрибутами `data-label-side` / `data-label-hidden`, НЕ классами: классы
+  перезаписывают `render*Marker`. Пересчёт — на `moveend` и в кадре анимации
+  с троттлингом 400 мс (чтение `getBoundingClientRect` форсирует layout).
+- Цвета: оранжевый — статус «риск», поэтому паромы нейтральные (`--vessel`,
+  светлые; на светлой подложке — тёмные). Новые размеры — из шкал
+  `--fs-*`, `--radius-*`, `--shadow-panel` в `:root`.
+- Цвета — только токены: hex/`rgb()` допустимы лишь в блоках из одних custom
+  properties (`:root`, `:root[data-theme="light"]`, `.map[data-basemap="light"]`),
+  иначе падает `src/styles.test.ts`. Полупрозрачность — `rgb(var(--ink) / a)`
+  или `color-mix(in srgb, var(--x) N%, transparent)`. Заливки статусов общие
+  для тем, текст — `*-text` (на белом нужен тёмный оттенок для AA). В TS цвет
+  для DOM — строкой `var(--…)` (`LEVEL_TEXT`); слоям MapLibre и canvas нужны
+  литералы (переменные они не читают). Custom property, ссылающаяся на другую,
+  вычисляется там, где объявлена: составные значения (ореол подписей) писать
+  в правиле-потребителе, иначе переопределение в `.map[…]` не доедет.
+- Тема UI и подложка — разные оси. Тема (`<html data-theme>`, по умолчанию
+  `prefers-color-scheme`, явный выбор — `mc-ui.theme`) красит панели; подписи
+  и ореолы маркеров берут `--map-*` от `.map[data-basemap]` (яркость
+  подложки: спутник «тёмный» и в светлой теме). Смена темы переключает только
+  пару тёмная ↔ светлая подложка. Тема ставится в `main.tsx` до рендера.
+  Playwright без настройки эмулирует СВЕТЛУЮ систему — в конфиге закреплён
+  `colorScheme: "dark"`, светлую проверяют `theme.spec`, a11y и `light-*` в
+  галерее. Кнопки «Светлая»/«Тёмная» (подложка) и «Светлая тема» совпадают
+  по префиксу — в e2e `exact: true`.
+- Vitest: `import css from "./x.css?raw"` отдаёт пустую строку (CSS не
+  обрабатывается) — тест, читающий CSS, берёт файл через `readFileSync`.
+- Фокус и a11y: общее кольцо `:where(…):focus-visible` (`--focus`); первая по
+  Tab — кнопка «К списку грузов» (`#panel-main`, не ссылка: Biome
+  `useValidAnchor`); открытие карточки ставит фокус на `.detail__ref` (h2),
+  «← все грузы» возвращает его на `.card[data-ref]` списка. Заголовки блоков —
+  h2/h3 с классом `.block__title`. На `pointer: coarse` цели от 36 px.
 - Инварианты раскладки и a11y проверяют `e2e/screens.spec.ts` и
   `e2e/a11y.spec.ts` (axe: падение на serious/critical). Скриншоты —
   артефакт **screenshots** каждого прогона CI; после правок UI — посмотреть.
 - CI-джоба Postgres гоняет миграции туда-обратно и `alembic check`: новая
   колонка в модели без миграции = красный CI. Локально в песочнице Postgres
-  16 есть без Docker: `initdb`/`pg_ctl` через `runuser -u postgres`, порт 5433.
+  16 есть без Docker: `initdb`/`pg_ctl` через `runuser -u postgres`, порт 5433,
+  данные — в `/var/lib/postgresql/…` (в scratchpad права каталога сбрасываются
+  и сервер падает).
 
 ## Продукт (для контекста решений)
 

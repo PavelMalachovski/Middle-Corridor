@@ -8,7 +8,21 @@ export async function openMap(page: Page, path = "/"): Promise<void> {
   await expect(page.locator(".ship-marker").first()).toBeAttached();
 }
 
-/** Статус в топбаре: «обновлено N с назад · поток» / «replay · …» / «нет связи с API». */
+/** Панель «Слои» (слои, подложка, ветер) свёрнута по умолчанию — раскрываем. */
+export async function openLayers(page: Page): Promise<void> {
+  const toggle = page.locator('.panel-toggles [aria-controls="panel-layers"]');
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  await expect(page.locator(".mapctl")).toBeVisible();
+}
+
+/** Легенда тоже свёрнута по умолчанию. */
+export async function openLegend(page: Page): Promise<void> {
+  const toggle = page.locator('.panel-toggles [aria-controls="panel-legend"]');
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  await expect(page.locator(".legend")).toBeVisible();
+}
+
+/** Статус в топбаре: «N с назад · поток» / «replay · …» / «нет связи с API». */
 export function status(page: Page) {
   return page.locator(".topbar__status");
 }

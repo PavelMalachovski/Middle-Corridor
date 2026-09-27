@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { openMap } from "./helpers";
+import { openLayers, openLegend, openMap } from "./helpers";
 
 /**
  * Автоматическая проверка доступности (axe-core, WCAG 2.1 A/AA). Роняем тест
@@ -29,16 +29,27 @@ async function audit(page: Page, where: string): Promise<void> {
   ).toEqual([]);
 }
 
-test("доступность: обзор, карточка груза, порты, новости", async ({ page }) => {
-  await openMap(page);
-  await audit(page, "обзор");
-  await page.locator(".list .card").first().click();
-  await expect(page.locator(".detail")).toBeVisible();
-  await audit(page, "карточка");
-  await page.getByRole("tab", { name: /Порты/ }).click();
-  await expect(page.locator(".list .card").first()).toBeVisible();
-  await audit(page, "порты");
-  await page.getByRole("tab", { name: /Новости/ }).click();
-  await expect(page.locator(".sidebar__body li").first()).toBeVisible();
-  await audit(page, "новости");
-});
+for (const scheme of ["dark", "light"] as const) {
+  test.describe(`тема ${scheme}`, () => {
+    // тема — как в системе: светлая эмуляция включает светлую тему и подложку
+    test.use({ colorScheme: scheme });
+
+    test("доступность: обзор, карточка груза, порты, новости", async ({ page }) => {
+      await openMap(page);
+      await expect(page.locator("html")).toHaveAttribute("data-theme", scheme);
+      await audit(page, `${scheme}: обзор`);
+      await page.locator(".list .card").first().click();
+      await expect(page.locator(".detail")).toBeVisible();
+      await audit(page, `${scheme}: карточка`);
+      await page.getByRole("tab", { name: /Порты/ }).click();
+      await expect(page.locator(".list .card").first()).toBeVisible();
+      await audit(page, `${scheme}: порты`);
+      await page.getByRole("tab", { name: /Новости/ }).click();
+      await expect(page.locator(".sidebar__body li").first()).toBeVisible();
+      await audit(page, `${scheme}: новости`);
+      await openLayers(page);
+      await openLegend(page);
+      await audit(page, `${scheme}: слои и легенда`);
+    });
+  });
+}

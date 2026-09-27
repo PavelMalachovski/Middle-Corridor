@@ -25,9 +25,7 @@ describe("translate / nodeName", () => {
   it("подставляет параметры на обоих языках", () => {
     expect(translate("ru", "card.delivered", { node: "Поти" })).toBe("Доставлен: Поти");
     expect(translate("en", "card.delivered", { node: "Poti" })).toBe("Delivered: Poti");
-    expect(translate("en", "top.updated", { sec: 3, mode: "stream" })).toBe(
-      "updated 3 s ago · stream",
-    );
+    expect(translate("en", "top.updated", { sec: 3, mode: "stream" })).toBe("3s ago · stream");
   });
   it("название узла: английское при наличии, иначе русское", () => {
     const n = { name: "Баку (Алят)", name_en: "Baku (Alat)" };

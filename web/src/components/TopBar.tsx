@@ -3,30 +3,20 @@ import type { Snapshot } from "../api";
 import { fmtTs } from "../format";
 import { type Key, type Lang, useI18n } from "../i18n";
 import type { LiveMode } from "../live";
-import type { LayerToggles } from "../map/MapView";
+import type { Theme } from "../theme";
 
 interface Props {
   snapshot: Snapshot | null;
   error: string | null;
   fetchedAt: Date | null;
   mode: LiveMode;
-  layers: LayerToggles;
-  windAvailable: boolean;
-  onToggle: (key: keyof LayerToggles) => void;
+  theme: Theme;
+  onToggleTheme: () => void;
 }
 
-const TOGGLES: (keyof LayerToggles)[] = ["shipments", "vessels", "wind", "routes"];
 const LANGS: Lang[] = ["ru", "en"];
 
-export function TopBar({
-  snapshot,
-  error,
-  fetchedAt,
-  mode,
-  layers,
-  windAvailable,
-  onToggle,
-}: Props) {
+export function TopBar({ snapshot, error, fetchedAt, mode, theme, onToggleTheme }: Props) {
   const { t, lang, setLang } = useI18n();
   const [, setTick] = useState(0); // перерисовка «N с назад» раз в секунду
   useEffect(() => {
@@ -67,25 +57,78 @@ export function TopBar({
 
   return (
     <header className="topbar">
-      <div className="topbar__brand">
-        <div className="topbar__title">Middle Corridor</div>
-        <div className="topbar__subtitle">{t("app.subtitle")}</div>
-      </div>
-      {snapshot?.mock && (
-        <span className="badge badge--mock" title={t("top.mockTitle")}>
-          MOCK DATA
-        </span>
-      )}
-      <div className="topbar__kpis">
-        <span className="kpi">
-          <b>{kpi(inTransit)}</b> {t("top.inTransit")}
-        </span>
-        <span className={`kpi ${delayed ? "kpi--warn" : ""}`}>
-          <b>{kpi(delayed)}</b> {t("top.delayed")}
-        </span>
-        <span className={`kpi ${alerts ? "kpi--alert" : ""}`}>
-          <b>{kpi(alerts)}</b> {alerts === 1 ? t("top.portAtRisk") : t("top.portsAtRisk")}
-        </span>
+      <div className="topbar__row">
+        <h1 className="topbar__title" title={t("app.subtitle")}>
+          Middle Corridor
+        </h1>
+        {snapshot?.mock && (
+          <span className="badge badge--mock" title={t("top.mockTitle")}>
+            MOCK
+          </span>
+        )}
+        <div className="topbar__kpis">
+          <span className="kpi">
+            <b>{kpi(inTransit)}</b> {t("top.inTransit")}
+          </span>
+          <span className={`kpi ${delayed ? "kpi--warn" : ""}`}>
+            <b>{kpi(delayed)}</b> {t("top.delayed")}
+          </span>
+          <span className={`kpi ${alerts ? "kpi--alert" : ""}`}>
+            <b>{kpi(alerts)}</b> {alerts === 1 ? t("top.portAtRisk") : t("top.portsAtRisk")}
+          </span>
+        </div>
+        <div className={`topbar__status ${error ? "topbar__status--error" : ""}`}>
+          {error ? (
+            <span title={error}>
+              {t("top.noApi")}
+              {errorCode ? ` · ${errorCode}` : ""}
+            </span>
+          ) : ageSec == null ? (
+            <span>{t("common.loading")}</span>
+          ) : (!online || stale) && snapshot ? (
+            <span
+              className="topbar__stale"
+              title={online ? t("top.staleTitle") : t("top.offlineTitle")}
+            >
+              <i className="dot-live dot-live--stale" />{" "}
+              {online ? t("top.stale") : t("top.offline")} ·{" "}
+              {t("top.dataAt", { ts: fmtTs(snapshot.generated_at) })}
+            </span>
+          ) : mode === "replay" && snapshot ? (
+            <span title={t("top.replayTitle")}>
+              <i className="dot-live dot-live--replay" />{" "}
+              {t("top.replayAt", { ts: fmtTs(snapshot.generated_at) })}
+            </span>
+          ) : (
+            <span>
+              <i className="dot-live" />{" "}
+              {t("top.updated", { sec: ageSec, mode: t(`top.mode.${mode}` as Key) })}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          className="theme-btn"
+          onClick={onToggleTheme}
+          aria-label={theme === "dark" ? t("theme.toLight") : t("theme.toDark")}
+          title={theme === "dark" ? t("theme.toLight") : t("theme.toDark")}
+        >
+          <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+        </button>
+        <fieldset className="lang">
+          <legend className="sr-only">{t("lang.switch")}</legend>
+          {LANGS.map((code) => (
+            <button
+              key={code}
+              type="button"
+              className={`lang__btn ${lang === code ? "is-on" : ""}`}
+              onClick={() => setLang(code)}
+              aria-pressed={lang === code}
+            >
+              {code.toUpperCase()}
+            </button>
+          ))}
+        </fieldset>
       </div>
       {snapshot?.summary && (
         <div className="topbar__week" title={t("top.weekTitle")}>
@@ -111,63 +154,6 @@ export function TopBar({
           )}
         </div>
       )}
-      <div className="topbar__layers">
-        {TOGGLES.map((key) => (
-          <button
-            key={key}
-            type="button"
-            className={`chip ${layers[key] ? "chip--on" : ""}`}
-            aria-pressed={layers[key]}
-            onClick={() => onToggle(key)}
-            disabled={key === "wind" && !windAvailable}
-            title={key === "wind" && !windAvailable ? t("layer.windUnavailable") : undefined}
-          >
-            {t(`layer.${key}` as Key)}
-          </button>
-        ))}
-        <fieldset className="lang">
-          <legend className="sr-only">{t("lang.switch")}</legend>
-          {LANGS.map((code) => (
-            <button
-              key={code}
-              type="button"
-              className={`lang__btn ${lang === code ? "is-on" : ""}`}
-              onClick={() => setLang(code)}
-              aria-pressed={lang === code}
-            >
-              {code.toUpperCase()}
-            </button>
-          ))}
-        </fieldset>
-      </div>
-      <div className={`topbar__status ${error ? "topbar__status--error" : ""}`}>
-        {error ? (
-          <span title={error}>
-            {t("top.noApi")}
-            {errorCode ? ` · ${errorCode}` : ""}
-          </span>
-        ) : ageSec == null ? (
-          <span>{t("common.loading")}</span>
-        ) : (!online || stale) && snapshot ? (
-          <span
-            className="topbar__stale"
-            title={online ? t("top.staleTitle") : t("top.offlineTitle")}
-          >
-            <i className="dot-live dot-live--stale" /> {online ? t("top.stale") : t("top.offline")}{" "}
-            · {t("top.dataAt", { ts: fmtTs(snapshot.generated_at) })}
-          </span>
-        ) : mode === "replay" && snapshot ? (
-          <span title={t("top.replayTitle")}>
-            <i className="dot-live dot-live--replay" />{" "}
-            {t("top.replayAt", { ts: fmtTs(snapshot.generated_at) })}
-          </span>
-        ) : (
-          <span>
-            <i className="dot-live" />{" "}
-            {t("top.updated", { sec: ageSec, mode: t(`top.mode.${mode}` as Key) })}
-          </span>
-        )}
-      </div>
     </header>
   );
 }

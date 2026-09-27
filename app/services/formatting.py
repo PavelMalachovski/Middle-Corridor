@@ -7,11 +7,15 @@
 
 import html
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.db.models import AlertLevel, CorridorLeg, NewsItem, Port
 from app.integrations.weather.base import WindObservation
+from app.services.calibration import MIN_CLOSED_SAMPLES, MIN_CLOSURES, RuleScore
 from app.services.status_aggregator import CorridorStatus, PortStatus
+
+if TYPE_CHECKING:  # predictor_accuracy → weather_predictor → formatting: цикл импорта
+    from app.services.predictor_accuracy import CalibrationReport, PortAccuracy
 
 LEVEL_EMOJI = {
     AlertLevel.watch: "🌊",
@@ -199,4 +203,94 @@ def format_port_detail(port: "PortStatus") -> str:
             lines.append(f"<i>Погода обновлена: {_fmt_ts(port.weather_ts)}</i>")
     else:
         lines.append("Данных о погоде пока нет")
+    return "\n".join(lines)
+
+
+# --- точность предиктора и калибровка (админам в боте) ------------------------------
+
+
+def _pct(value: float | None) -> str:
+    return "—" if value is None else f"{value:.0%}"
+
+
+def format_accuracy(ports: "list[PortAccuracy]", days: int) -> str:
+    """Алерты warning+ против фактических остановок по ветру, по портам."""
+    lines = [
+        f"<b>Точность предиктора · {days} дн.</b>",
+        "Алерты warning+ против фактических остановок по ветру.",
+        "",
+    ]
+    total_closures = total_hits = total_episodes = total_false = 0
+    for port in ports:
+        score = port.score
+        name = html.escape(port.name)
+        total_closures += score.closures
+        total_hits += score.hits
+        total_episodes += score.episodes
+        total_false += score.false_alarms
+        if score.closures == 0 and score.episodes == 0:
+            lines.append(f"<b>{name}</b>: ни остановок, ни тревог")
+            continue
+        lead = score.median_lead_h
+        lead_text = f", заблаговременность ~{lead:.0f} ч" if lead is not None else ""
+        lines.append(
+            f"<b>{name}</b>: остановок {score.closures}, предсказано {score.hits} "
+            f"(POD {_pct(score.pod)}); тревог {score.episodes}, ложных "
+            f"{score.false_alarms} (FAR {_pct(score.far)}); CSI {_pct(score.csi)}{lead_text}"
+        )
+    if total_closures == 0:
+        lines += [
+            "",
+            "Фактов нет — без них точность не посчитать. Остановку фиксирует "
+            "/closed &lt;порт&gt;, прошлые — /closure.",
+        ]
+    else:
+        csi_den = total_closures + total_false
+        lines += [
+            "",
+            f"Всего: POD {_pct(total_hits / total_closures)}, "
+            f"FAR {_pct(total_false / total_episodes if total_episodes else None)}, "
+            f"CSI {_pct(total_hits / csi_den if csi_den else None)}",
+        ]
+    return "\n".join(lines)
+
+
+def _rule_line(title: str, rule: RuleScore) -> str:
+    return (
+        f"{title}: ветер ≥ {rule.wind:g} или порывы ≥ {rule.gust:g} м/с — "
+        f"POD {_pct(rule.pod)}, FAR {_pct(rule.far)}, CSI {_pct(rule.csi)}"
+    )
+
+
+def format_calibration(report: "CalibrationReport", days: int) -> str:
+    """Текущие пороги против фактов и подсказка — пороги меняет человек."""
+    result = report.result
+    lines = [
+        f"<b>Калибровка · {html.escape(report.name)}</b> · {days} дн.",
+        f"Наблюдений ветра {result.samples}, из них при остановке {result.closed_samples}; "
+        f"остановок по ветру {result.closures}.",
+        "",
+        "<b>Текущие пороги</b>",
+        _rule_line("warning", result.current_warning),
+        _rule_line("critical", result.current_critical),
+    ]
+    if not result.enough_data:
+        lines += [
+            "",
+            f"Мало фактов для подбора: нужно ≥ {MIN_CLOSURES} остановок и ≥ "
+            f"{MIN_CLOSED_SAMPLES} наблюдений во время остановок. Фиксируйте "
+            "остановки (/closed, /closure); ветер за прошлые годы — "
+            "<code>python -m app.scheduler.jobs backfill &lt;с&gt; &lt;по&gt;</code>.",
+        ]
+        return "\n".join(lines)
+    lines += ["", "<b>Подсказка по фактам</b>"]
+    if result.best_critical is not None:
+        lines.append(_rule_line("critical (лучший CSI)", result.best_critical))
+    if result.best_warning is not None:
+        lines.append(_rule_line("warning (ловит ≥ 90% остановок)", result.best_warning))
+    lines += [
+        "",
+        "Пороги сами не меняются: WEATHER_CRITICAL_WIND/_GUST и "
+        "WEATHER_WARNING_WIND/_GUST в .env — после проверки на других портах.",
+    ]
     return "\n".join(lines)

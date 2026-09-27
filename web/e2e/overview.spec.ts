@@ -1,12 +1,13 @@
 import { expect, test } from "./fixtures";
-import { markerPositions, openMap, status } from "./helpers";
+import { markerPositions, openLayers, openLegend, openMap, status } from "./helpers";
 
 test("первый экран: снимок, поток, маркеры, легенда", async ({ page }, testInfo) => {
   await openMap(page);
   await expect(status(page)).toContainText(/поток|поллинг/);
   await expect(page.locator(".topbar__kpis .kpi").first()).toContainText(/\d+ в пути/);
   await expect(page.locator(".vessel-marker").first()).toBeAttached();
-  await expect(page.locator(".legend")).toBeVisible();
+  await expect(page.locator(".legend")).toHaveCount(0); // свёрнута до клика
+  await openLegend(page);
   await expect(page.locator(".timeline--live")).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("overview.png") });
   await testInfo.attach("overview", {
@@ -33,6 +34,7 @@ test("объекты движутся между снимками плавно, 
 
 test("переключатели слоёв прячут грузы и паромы", async ({ page }) => {
   await openMap(page);
+  await openLayers(page);
   await page.getByRole("button", { name: "Грузы", exact: true }).click();
   await expect(page.locator(".map")).toHaveClass(/hide-shipments/);
   await page.getByRole("button", { name: "Паромы", exact: true }).click();

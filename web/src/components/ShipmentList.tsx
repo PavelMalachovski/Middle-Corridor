@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { Shipment, Snapshot } from "../api";
 import { fmtHours, fmtRelative, stateLabel } from "../format";
 import { type Key, nodeNameByCode, useI18n } from "../i18n";
@@ -33,13 +34,25 @@ export function ShipmentList({
   filter,
   onFilter,
   onSelect,
+  returnFocusTo = null,
 }: {
   snapshot: Snapshot;
   filter: ShipmentFilter;
   onFilter: (f: ShipmentFilter) => void;
   onSelect: (ref: string) => void;
+  returnFocusTo?: string | null; // вернулись из карточки — фокус на её строку списка
 }) {
   const { t, lang } = useI18n();
+  const listRef = useRef<HTMLUListElement>(null);
+  const focusOnMount = useRef(returnFocusTo);
+  useEffect(() => {
+    const ref = focusOnMount.current;
+    if (!ref) return;
+    const card = [...(listRef.current?.querySelectorAll<HTMLElement>("[data-ref]") ?? [])].find(
+      (el) => el.dataset.ref === ref,
+    );
+    card?.focus();
+  }, []);
   const ref = new Date(snapshot.generated_at);
   const all = [...snapshot.shipments].sort(
     (a, b) => ORDER[a.state] - ORDER[b.state] || b.delay_hours - a.delay_hours,
@@ -104,10 +117,15 @@ export function ShipmentList({
           </button>
         </div>
       )}
-      <ul className="list">
+      <ul className="list" ref={listRef}>
         {items.map((s) => (
           <li key={s.ref}>
-            <button type="button" className="card card--clickable" onClick={() => onSelect(s.ref)}>
+            <button
+              type="button"
+              className="card card--clickable"
+              data-ref={s.ref}
+              onClick={() => onSelect(s.ref)}
+            >
               <div className="card__head">
                 <b className="mono">{s.ref}</b>
                 <StatePill shipment={s} />

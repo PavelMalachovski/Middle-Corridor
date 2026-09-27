@@ -64,6 +64,13 @@ class AlertLevel(enum.StrEnum):
     critical = "critical"
 
 
+class ClosureCause(enum.StrEnum):
+    """Причина остановки порта. В калибровку предиктора идёт только ветер."""
+
+    wind = "wind"  # ветер/шторм — то, что предсказывает предиктор
+    other = "other"  # туман, лёд, техника, решения властей
+
+
 class ReportType(enum.StrEnum):
     queue = "queue"
     rate = "rate"
@@ -185,6 +192,28 @@ class WeatherAlert(Base):
     opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True, index=True)
+
+    port: Mapped[Port] = relationship()
+
+
+class PortClosure(Base):
+    """Факт остановки порта (швартовка/погрузка прекращены).
+
+    Журнал фактов — эталон для калибровки порогов ветра: предиктор сверяется
+    с ним, а не с «ощущениями». ended_at = NULL — порт всё ещё закрыт.
+    """
+
+    __tablename__ = "port_closures"
+    __table_args__ = (Index("ix_port_closures_port_started", "port_id", "started_at"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    port_id: Mapped[int] = mapped_column(ForeignKey("ports.id", ondelete="CASCADE"))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cause: Mapped[ClosureCause] = mapped_column(_str_enum(ClosureCause))
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reported_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)  # Telegram id
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     port: Mapped[Port] = relationship()
 

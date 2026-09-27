@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { devices, type Page, type TestInfo } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { openMap } from "./helpers";
+import { openLayers, openLegend, openMap } from "./helpers";
 
 /**
  * Галерея экранов + инварианты раскладки. Скриншоты кладутся в web/screenshots/
@@ -20,6 +20,14 @@ const PREFS = JSON.stringify({
   terrain3d: false,
   windMode: "arrows", // частицы на SwiftShader грузят поток и не детерминированы
 });
+
+/** Настройки карты и «подсказку уже видели» — чтобы экраны были про карту, а не про онбординг. */
+function seedStorage(prefs: string): void {
+  localStorage.setItem("mc-map-prefs", prefs);
+  if (!location.search.includes("intro")) {
+    localStorage.setItem("mc-ui", JSON.stringify({ introSeen: true }));
+  }
+}
 
 async function shoot(page: Page, testInfo: TestInfo, name: string): Promise<void> {
   const dir = join(testInfo.project.testDir, "..", "screenshots");
@@ -83,7 +91,7 @@ const DESKTOP_PAIRS: [string, string][] = [
 
 test.describe("экраны: десктоп", () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript((prefs) => localStorage.setItem("mc-map-prefs", prefs), PREFS);
+    await page.addInitScript(seedStorage, PREFS);
   });
 
   for (const size of [
@@ -98,6 +106,25 @@ test.describe("экраны: десктоп", () => {
       await shoot(page, testInfo, `overview-${size.width}`);
     });
   }
+
+  test("первый визит: подсказка, открытые слои и легенда не наезжают", async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await openMap(page, "/?intro");
+    await expect(page.locator(".intro")).toBeVisible();
+    await shoot(page, testInfo, "first-visit");
+    await page.getByRole("button", { name: "Понятно" }).click();
+    await expect(page.locator(".intro")).toHaveCount(0);
+    await openLayers(page);
+    await openLegend(page);
+    // низкое окно: колонка панелей прокручивается, а не заезжает на зум и шкалу
+    await expectNoOverlap(page, [
+      ...DESKTOP_PAIRS,
+      [".left-stack", ".maplibregl-ctrl-bottom-left"],
+    ]);
+    await shoot(page, testInfo, "panels-open");
+  });
 
   test("карточка груза, порты, новости", async ({ page }, testInfo) => {
     await openMap(page);
@@ -125,6 +152,7 @@ test.describe("экраны: десктоп", () => {
     await expectNoOverlap(page, DESKTOP_PAIRS);
     await shoot(page, testInfo, "en");
 
+    await openLayers(page);
     await page.getByRole("button", { name: "Light", exact: true }).click();
     await expect(page.locator(".map")).toHaveAttribute("data-basemap", "light");
     await page.waitForTimeout(1500);
@@ -150,12 +178,42 @@ test.describe("экраны: десктоп", () => {
   });
 });
 
+const LIGHT_PREFS = PREFS.replace('"basemap":"dark"', '"basemap":"light"');
+
+test.describe("экраны: светлая тема", () => {
+  test.use({ colorScheme: "light" }); // тема — как в системе
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(seedStorage, LIGHT_PREFS);
+  });
+
+  test("обзор, панели и карточка", async ({ page }, testInfo) => {
+    await openMap(page);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expectNoOverlap(page, DESKTOP_PAIRS);
+    await shoot(page, testInfo, "light-overview");
+    await openLayers(page);
+    await openLegend(page);
+    await shoot(page, testInfo, "light-panels");
+    await page.locator(".list .card").first().click();
+    await expect(page.locator(".detail")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await shoot(page, testInfo, "light-card");
+  });
+
+  test("фокус с клавиатуры виден", async ({ page }, testInfo) => {
+    await openMap(page);
+    await page.keyboard.press("Tab");
+    await expect(page.locator(".skip-link")).toBeInViewport();
+    await shoot(page, testInfo, "light-focus");
+  });
+});
+
 const { defaultBrowserType: _browser, ...pixel } = devices["Pixel 7"];
 
 test.describe("экраны: телефон", () => {
   test.use(pixel);
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript((prefs) => localStorage.setItem("mc-map-prefs", prefs), PREFS);
+    await page.addInitScript(seedStorage, PREFS);
   });
 
   test("топбар компактный, карте остаётся место", async ({ page }, testInfo) => {
@@ -180,5 +238,26 @@ test.describe("экраны: телефон", () => {
     await page.getByRole("tab", { name: /Порты/ }).click();
     await expect(page.locator(".list .card").first()).toBeVisible();
     await shoot(page, testInfo, "mobile-ports");
+  });
+
+  test("светлая тема на телефоне", async ({ page }, testInfo) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.addInitScript(seedStorage, LIGHT_PREFS); // после общего — перекрывает подложку
+    await openMap(page);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await page.locator(".list .card").first().click();
+    await expect(page.locator(".detail")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await shoot(page, testInfo, "mobile-light-card");
+  });
+
+  test("панель слоёв на телефоне не уходит под шкалу и шторку", async ({ page }, testInfo) => {
+    await openMap(page);
+    await openLayers(page);
+    await expectNoOverlap(page, [
+      [".left-stack", ".timeline"],
+      [".left-stack", ".sidebar"],
+    ]);
+    await shoot(page, testInfo, "mobile-layers");
   });
 });

@@ -15,6 +15,7 @@ from app.api.routes.webhooks import router as webhooks_router
 from app.config import Settings, get_settings
 from app.services.ais_tracker import AISStreamWorker, AISTrackerService
 from app.services.map_snapshot import MapSnapshotService
+from app.services.predictor_accuracy import PredictorAccuracyService
 
 
 def create_app(
@@ -26,6 +27,7 @@ def create_app(
     dispatcher: Dispatcher | None = None,
     telegram_webhook_secret: str = "",
     map_service: MapSnapshotService | None = None,
+    accuracy_service: PredictorAccuracyService | None = None,
 ) -> FastAPI:
     app = FastAPI(title="mc-status", docs_url=None, redoc_url=None)
     app.state.engine = engine
@@ -36,6 +38,7 @@ def create_app(
     app.state.dispatcher = dispatcher
     app.state.telegram_webhook_secret = telegram_webhook_secret
     app.state.map_service = map_service
+    app.state.accuracy_service = accuracy_service  # None — нет БД (MOCK_DATA)
     if app.state.settings.cors_origins:
         # фронт на другом домене (Vercel) ходит в /api/v1 напрямую
         app.add_middleware(

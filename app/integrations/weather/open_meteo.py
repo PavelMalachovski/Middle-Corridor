@@ -6,7 +6,7 @@ https://open-meteo.com/en/docs — текущий ветер на высоте 1
 """
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import httpx
 import structlog
@@ -21,6 +21,9 @@ from app.integrations.weather.base import (
 logger = structlog.get_logger(__name__)
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+# Исторический ветер (реанализ ERA5 и др.) — бэкфилл для калибровки порогов;
+# отстаёт от «сейчас» на несколько дней
+OPEN_METEO_ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 _RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 _WIND_VARS = "wind_speed_10m,wind_gusts_10m,wind_direction_10m"
 GRID_BATCH = 100  # точек сетки в одном запросе
@@ -83,13 +86,31 @@ class OpenMeteoProvider:
                 out.append(GridPointForecast(lat=lat, lon=lon, hours=self._parse_hourly(item)))
         return out
 
-    async def _request(self, params: dict) -> dict | list:
+    async def get_wind_history(
+        self, lat: float, lon: float, start: date, end: date
+    ) -> list[WindObservation]:
+        """Почасовой ветер за прошлые даты [start, end] включительно (UTC)."""
+        params = {
+            "latitude": lat,
+            "longitude": lon,
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+            "hourly": _WIND_VARS,
+            "wind_speed_unit": "ms",
+            "timezone": "UTC",
+        }
+        data = await self._request(params, url=OPEN_METEO_ARCHIVE_URL)
+        if not isinstance(data, dict):
+            raise WeatherProviderError("Open-Meteo archive: ожидался объект")
+        return self._parse_hourly(data)
+
+    async def _request(self, params: dict, url: str = OPEN_METEO_URL) -> dict | list:
         last_error: Exception | None = None
         for attempt in range(self._retries):
             if attempt:
                 await asyncio.sleep(min(2**attempt, 8))
             try:
-                response = await self._client.get(OPEN_METEO_URL, params=params)
+                response = await self._client.get(url, params=params)
             except httpx.HTTPError as exc:
                 last_error = exc
                 logger.warning("open_meteo_request_failed", attempt=attempt, error=str(exc))

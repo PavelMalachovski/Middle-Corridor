@@ -25,6 +25,7 @@ import { BASEMAPS, type BasemapId, DEFAULT_BASEMAP } from "./map/style";
 import { softwareGl } from "./map/webgl";
 import { useReplay } from "./replay";
 import { shareLink } from "./share";
+import { applyTheme, basemapForTheme, initialTheme, systemTheme, type Theme } from "./theme";
 import { buildSearch, parseUrlState, sameSearch, type MapView as UrlView } from "./urlState";
 
 // Настройки карты живут в localStorage — только удобство, без них всё работает
@@ -44,7 +45,7 @@ const reducedMotion = () =>
   typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 function loadPrefs(): MapPrefs {
   const prefs: MapPrefs = {
-    basemap: DEFAULT_BASEMAP,
+    basemap: basemapForTheme(DEFAULT_BASEMAP, initialTheme()), // светлой теме — светлая подложка
     globe: true,
     terrain: false,
     terrain3d: false,
@@ -69,6 +70,36 @@ function loadPrefs(): MapPrefs {
 function savePrefs(prefs: MapPrefs): void {
   try {
     localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    /* ignore */
+  }
+}
+
+// Какие панели слева открыты и видел ли человек подсказку — удобство одного
+// зрителя, без localStorage всё работает (панели свёрнуты, подсказка показана)
+const UI_KEY = "mc-ui";
+interface UiPrefs {
+  layers: boolean;
+  legend: boolean;
+  introSeen: boolean;
+  theme?: Theme; // явный выбор; без него — как в системе
+}
+function loadUi(): UiPrefs {
+  const ui: UiPrefs = { layers: false, legend: false, introSeen: false };
+  try {
+    const saved = JSON.parse(localStorage.getItem(UI_KEY) ?? "{}") as Partial<UiPrefs>;
+    for (const key of ["layers", "legend", "introSeen"] as const) {
+      if (typeof saved[key] === "boolean") ui[key] = saved[key];
+    }
+    if (saved.theme === "light" || saved.theme === "dark") ui.theme = saved.theme;
+  } catch {
+    /* приватный режим и т.п. */
+  }
+  return ui;
+}
+function saveUi(ui: UiPrefs): void {
+  try {
+    localStorage.setItem(UI_KEY, JSON.stringify(ui));
   } catch {
     /* ignore */
   }
@@ -108,6 +139,14 @@ export function App() {
   const [softGl] = useState(() => softwareGl());
   const windMode: WindMode = autoArrows ? "arrows" : prefs.windMode;
   const [sheetHeight, setSheetHeight] = useState(0); // видимая высота шторки на мобильном
+  const [ui, setUi] = useState<UiPrefs>(loadUi);
+  const updateUi = useCallback((patch: Partial<UiPrefs>) => {
+    setUi((u) => {
+      const next = { ...u, ...patch };
+      saveUi(next);
+      return next;
+    });
+  }, []);
   const updatePrefs = useCallback((patch: Partial<MapPrefs>) => {
     setPrefs((p) => {
       const next = { ...p, ...patch };
@@ -115,6 +154,33 @@ export function App() {
       return next;
     });
   }, []);
+
+  // --- тема: явный выбор или как в системе; тёмная/светлая подложка — вслед
+  const [theme, setTheme] = useState<Theme>(initialTheme);
+  useEffect(() => applyTheme(theme), [theme]);
+  const switchTheme = useCallback((next: Theme) => {
+    setTheme(next);
+    setPrefs((p) => {
+      const basemap = basemapForTheme(p.basemap, next);
+      if (basemap === p.basemap) return p;
+      const updated = { ...p, basemap };
+      savePrefs(updated);
+      return updated;
+    });
+  }, []);
+  const explicitTheme = ui.theme;
+  useEffect(() => {
+    if (explicitTheme || typeof matchMedia !== "function") return;
+    const media = matchMedia("(prefers-color-scheme: light)");
+    const follow = () => switchTheme(systemTheme());
+    media.addEventListener("change", follow);
+    return () => media.removeEventListener("change", follow);
+  }, [explicitTheme, switchTheme]);
+  const toggleTheme = useCallback(() => {
+    const next: Theme = theme === "dark" ? "light" : "dark";
+    updateUi({ theme: next });
+    switchTheme(next);
+  }, [theme, updateUi, switchTheme]);
 
   // deep link: момент и груз применяем после первого живого снимка — он синхронизирует
   // серверные часы (replay.sync выше), иначе at из ссылки обрежется по часам клиента
@@ -208,11 +274,17 @@ export function App() {
     [snapshot],
   );
 
+  // первая остановка Tab: сразу к панели, минуя топбар и контролы карты
+  const skipToPanel = () => document.getElementById("panel-main")?.focus();
+
   return (
     <div
       className={`app ${sheetHeight > window.innerHeight * 0.6 ? "app--sheet-full" : ""}`}
       style={{ "--sheet-h": `${sheetHeight}px` } as CSSProperties}
     >
+      <button type="button" className="skip-link" onClick={skipToPanel}>
+        {t("a11y.skip")}
+      </button>
       {WEBGL2 ? (
         <ErrorBoundary
           scope="карта"
@@ -272,30 +344,69 @@ export function App() {
             error={error}
             fetchedAt={fetchedAt}
             mode={mode}
-            layers={layers}
-            windAvailable={windAvailable}
-            onToggle={(key) => setLayers((l) => ({ ...l, [key]: !l[key] }))}
+            theme={theme}
+            onToggleTheme={toggleTheme}
           />
           <div className="left-stack">
-            <Legend />
-            <MapControls
-              basemap={prefs.basemap}
-              globe={prefs.globe}
-              terrain={prefs.terrain}
-              terrain3d={prefs.terrain3d}
-              fallback={styleFallback}
-              onBasemap={(basemap) => updatePrefs({ basemap })}
-              onGlobe={(globe) => updatePrefs({ globe })}
-              onTerrain={(terrain) => updatePrefs({ terrain })}
-              onTerrain3d={(terrain3d) => updatePrefs({ terrain3d })}
-              software={softGl}
-              windMode={windMode}
-              windHint={autoArrows}
-              onWindMode={(mode) => {
-                setAutoArrows(false);
-                updatePrefs({ windMode: mode });
-              }}
-            />
+            <div className="panel-toggles">
+              <button
+                type="button"
+                className={`chip chip--tool ${ui.layers ? "chip--on" : ""}`}
+                aria-expanded={ui.layers}
+                aria-controls="panel-layers"
+                onClick={() => updateUi({ layers: !ui.layers })}
+              >
+                <span aria-hidden="true">◧</span> {t("ctl.layers")}
+              </button>
+              <button
+                type="button"
+                className={`chip chip--tool ${ui.legend ? "chip--on" : ""}`}
+                aria-expanded={ui.legend}
+                aria-controls="panel-legend"
+                onClick={() => updateUi({ legend: !ui.legend })}
+              >
+                <span aria-hidden="true">ⓘ</span> {t("ctl.legend")}
+              </button>
+            </div>
+            {!ui.introSeen && (
+              <section className="intro" aria-labelledby="intro-title">
+                <h2 id="intro-title" className="intro__title">
+                  {t("intro.title")}
+                </h2>
+                <p className="intro__body">{t("intro.body")}</p>
+                <button
+                  type="button"
+                  className="chip chip--on"
+                  onClick={() => updateUi({ introSeen: true })}
+                >
+                  {t("intro.ok")}
+                </button>
+              </section>
+            )}
+            {ui.layers && (
+              <MapControls
+                layers={layers}
+                windAvailable={windAvailable}
+                onToggle={(key) => setLayers((l) => ({ ...l, [key]: !l[key] }))}
+                basemap={prefs.basemap}
+                globe={prefs.globe}
+                terrain={prefs.terrain}
+                terrain3d={prefs.terrain3d}
+                fallback={styleFallback}
+                onBasemap={(basemap) => updatePrefs({ basemap })}
+                onGlobe={(globe) => updatePrefs({ globe })}
+                onTerrain={(terrain) => updatePrefs({ terrain })}
+                onTerrain3d={(terrain3d) => updatePrefs({ terrain3d })}
+                software={softGl}
+                windMode={windMode}
+                windHint={autoArrows}
+                onWindMode={(mode) => {
+                  setAutoArrows(false);
+                  updatePrefs({ windMode: mode });
+                }}
+              />
+            )}
+            {ui.legend && <Legend />}
           </div>
         </div>
         <Timeline replay={replay} disabled={!snapshot} />
