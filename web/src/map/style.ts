@@ -197,6 +197,18 @@ export const BOOT_STYLE: StyleSpecification = {
 };
 
 /** Весь коридор от Констанцы до Хоргоса; Китай — по зуму наружу. */
+// Стартовый кадр — Каспий и Кавказ (ядро продукта: погода портов и паромы),
+// Чёрное море слева и Казахстан справа; дальше коридор уходит за край кадра
+export const INITIAL_BOUNDS: [[number, number], [number, number]] = [
+  [27.5, 37.5],
+  [70, 48],
+];
+// На телефоне кадр уже: иначе Каспий — точка между топбаром и шторкой
+export const INITIAL_BOUNDS_MOBILE: [[number, number], [number, number]] = [
+  [39.5, 38.5],
+  [57, 47.5],
+];
+
 export const CORRIDOR_BOUNDS: [[number, number], [number, number]] = [
   [26.0, 36.5],
   [82.5, 48.5],

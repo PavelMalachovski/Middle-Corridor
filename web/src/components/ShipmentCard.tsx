@@ -13,7 +13,7 @@ import {
   levelOf,
 } from "../format";
 import { type Lang, nodeName, nodeNameByCode, useI18n } from "../i18n";
-import { alertText, cargoLabel, eventLabel, holdLabel } from "../i18n/labels";
+import { cargoLabel, eventLabel, holdLabel } from "../i18n/labels";
 import { DelayChart } from "./charts/DelayChart";
 import { StatePill } from "./ShipmentList";
 
@@ -103,24 +103,6 @@ export function ShipmentCard({
         <button type="button" className="link" onClick={onBack}>
           {t("card.all")}
         </button>
-        <span className="detail__actions">
-          <button type="button" className="link" onClick={onFocus}>
-            {t("card.showOnMap")}
-          </button>
-          {s.state !== "delivered" && (
-            <button
-              type="button"
-              className={`link ${following ? "link--active" : ""}`}
-              onClick={onToggleFollow}
-              title={t("card.followTitle")}
-            >
-              {following ? t("card.following") : t("card.follow")}
-            </button>
-          )}
-          <button type="button" className="link" onClick={onShare} title={t("card.shareTitle")}>
-            {t("card.share")}
-          </button>
-        </span>
       </div>
       <div className="card__head">
         <b className="mono detail__ref">{s.ref}</b>
@@ -136,6 +118,31 @@ export function ShipmentCard({
         <div className="progress__bar" style={{ width: `${Math.round(s.progress * 100)}%` }} />
       </div>
       <div className="muted small">{t("card.progress", { pct: Math.round(s.progress * 100) })}</div>
+      <div className="detail__actions">
+        <button
+          type="button"
+          className="chip"
+          onClick={onFocus}
+          aria-label={t("card.showOnMap")}
+          title={t("card.showOnMap")}
+        >
+          <span aria-hidden="true">⌖</span> {t("card.mapShort")}
+        </button>
+        {s.state !== "delivered" && (
+          <button
+            type="button"
+            className={`chip ${following ? "chip--on chip--accent" : ""}`}
+            aria-pressed={following}
+            onClick={onToggleFollow}
+            title={t("card.followTitle")}
+          >
+            {following ? t("card.following") : t("card.follow")}
+          </button>
+        )}
+        <button type="button" className="chip" onClick={onShare} title={t("card.shareTitle")}>
+          {t("card.share")}
+        </button>
+      </div>
 
       <section className="block">
         <div className="block__title">{t("card.now")}</div>
@@ -183,7 +190,6 @@ export function ShipmentCard({
               {fmtWind(near.wind_speed, near.wind_gust)} {fmtDir(near.wind_dir)}
             </span>
           </div>
-          {alertText(near, lang) && <div className="muted small">{alertText(near, lang)}</div>}
           <div className="muted small">
             {t("card.updated", { value: fmtRelative(near.weather_ts, ref) })}
           </div>
@@ -192,7 +198,12 @@ export function ShipmentCard({
 
       <section className="block">
         <div className="block__title">{t("card.route")}</div>
-        <DelayChart delays={checkpointDelays(s)} />
+        <DelayChart delays={checkpointDelays(s)} nameOf={(d) => place(d.code, d.name)} />
+        <div className="delay-legend">
+          <span className="delay-legend__swatch is-late" /> {t("chart.late")}
+          <span className="delay-legend__swatch is-early" /> {t("chart.onTime")}
+          <span className="delay-legend__swatch is-projected" /> {t("chart.projected")}
+        </div>
         <ol className="checkpoints">
           {s.checkpoints.map((cp) => (
             <li key={cp.code} className={`checkpoints__item checkpoints__item--${cp.state}`}>

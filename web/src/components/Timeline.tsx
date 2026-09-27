@@ -109,30 +109,33 @@ export function Timeline({ replay, disabled }: Props) {
 
       <div className="timeline__readout">
         {live ? (
-          <span className="timeline__time">
-            <i className="dot-live" /> {t("common.now")}
+          // живой режим: одна отметка вместо «сейчас» + неактивной кнопки LIVE
+          <span className="timeline__onair" title={t("common.now")}>
+            <i className="dot-live" /> LIVE
           </span>
         ) : (
-          <span className="timeline__time mono" title={fmtOffset(offsetHours)}>
-            {fmtTs(replayAt.toISOString()).replace(" UTC", "")}
-            <b
-              className={
-                offsetHours > 0 ? "timeline__offset timeline__offset--future" : "timeline__offset"
-              }
+          <>
+            <span className="timeline__time mono" title={fmtOffset(offsetHours)}>
+              {fmtTs(replayAt.toISOString()).replace(" UTC", "")}
+              <b
+                className={
+                  offsetHours > 0 ? "timeline__offset timeline__offset--future" : "timeline__offset"
+                }
+              >
+                {fmtOffset(offsetHours)}
+              </b>
+            </span>
+            <button
+              type="button"
+              className="chip timeline__live"
+              onClick={replay.goLive}
+              disabled={disabled}
+              title={t("time.live")}
             >
-              {fmtOffset(offsetHours)}
-            </b>
-          </span>
+              LIVE
+            </button>
+          </>
         )}
-        <button
-          type="button"
-          className={`chip timeline__live ${live ? "chip--on" : ""}`}
-          onClick={replay.goLive}
-          disabled={disabled || live}
-          title={t("time.live")}
-        >
-          LIVE
-        </button>
       </div>
     </div>
   );

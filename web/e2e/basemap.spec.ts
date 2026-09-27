@@ -1,8 +1,9 @@
 import { expect, test } from "./fixtures";
-import { mapState, openMap, pinPrefs } from "./helpers";
+import { mapState, openLayers, openMap, pinPrefs } from "./helpers";
 
 test("смена подложки пересоздаёт наши слои; настройки запоминаются", async ({ page }) => {
   await openMap(page);
+  await openLayers(page);
   await page.getByRole("button", { name: "Светлая" }).click();
   await expect(page.locator(".map")).toHaveAttribute("data-basemap", "light");
   await expect
@@ -27,6 +28,7 @@ test.describe("3D", () => {
     // на программном рендере приложение прячет «3D»; тесту нужен сам переключатель
     await page.addInitScript(() => localStorage.setItem("mc-force-gpu", "1"));
     await openMap(page);
+    await openLayers(page);
     await page.getByText("3D", { exact: true }).click();
     await expect.poll(async () => Math.round((await mapState(page)).pitch)).toBe(55);
     expect((await mapState(page)).terrain).toBe(true);

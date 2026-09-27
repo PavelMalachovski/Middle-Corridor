@@ -4,7 +4,7 @@ import { useI18n } from "../i18n";
 export function Legend() {
   const { t } = useI18n();
   return (
-    <aside className="legend" aria-label={t("legend.title")}>
+    <aside className="legend" id="panel-legend" aria-label={t("legend.title")}>
       <div className="legend__title">{t("legend.title")}</div>
       <div className="legend__row">
         <span className="legend__dot" style={{ background: LEVEL_COLOR.ok }} />

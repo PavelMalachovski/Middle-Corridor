@@ -29,7 +29,7 @@ export const ru = {
   "top.portsAtRisk": "портов под риском",
   "top.mockTitle": "Синтетические данные для прототипа (MOCK_DATA=true)",
   "top.noApi": "нет связи с API",
-  "top.updated": "обновлено {sec} с назад · {mode}",
+  "top.updated": "{sec} с назад · {mode}",
   "top.mode.stream": "поток",
   "top.mode.poll": "поллинг",
   "top.mode.replay": "replay",
@@ -102,6 +102,7 @@ export const ru = {
 
   // --- карточка груза ---
   "card.all": "← все грузы",
+  "card.mapShort": "на карте",
   "card.showOnMap": "показать на карте",
   "card.follow": "◎ следить",
   "card.following": "◉ следим",
@@ -162,6 +163,9 @@ export const ru = {
   "outlook.peak": "пик {speed} м/с {rel}",
   "chart.windAria": "Прогноз ветра на 48 часов с порогами предиктора",
   "chart.windTitle": "Прогноз ветра, м/с",
+  "chart.projected": "прогноз",
+  "chart.late": "опоздание",
+  "chart.onTime": "по плану или раньше",
   "chart.delayAria": "Задержка по чекпоинтам, часы",
   "chart.delayTitle": "Отклонение от плана по чекпоинтам, ч",
   "report.queue": "Очередь в порту",
@@ -191,6 +195,12 @@ export const ru = {
   "time.live": "Вернуться к живым данным",
 
   // --- управление картой ---
+  "ctl.layers": "Слои",
+  "ctl.legend": "Легенда",
+  "intro.title": "Статус Среднего коридора в реальном времени",
+  "intro.body":
+    "Порты Каспия с прогнозом остановок по ветру, паромы и грузы на карте. Нажмите на груз или порт, чтобы открыть подробности; шкала времени прокручивает события назад и вперёд. Слои и легенда — кнопки слева вверху.",
+  "intro.ok": "Понятно",
   "ctl.basemap": "Подложка",
   "ctl.globe": "Глобус",
   "ctl.terrain": "Рельеф",

@@ -8,13 +8,24 @@
   --text-2: #b7b5ad;
   --muted: #9a988f; /* 5.6:1 на карточке — мелкий текст проходит WCAG AA (было #86847d, 4.3) */
   --accent: #2fd39a; /* грузы / трек */
-  --vessel: #eb6834;
+  --vessel: #dce6f2; /* паромы — нейтральный светлый: оранжевый путался с «риском остановки» */
+  --vessel-ring: rgba(220, 230, 242, 0.55);
   --ok: #0ca30c;
   --watch: #fab219;
   --warning: #ec835a;
   --critical: #d03b3b;
   --critical-text: #f07070; /* красный для текста: #d03b3b на панели даёт только 3.5:1 */
   --sidebar-w: 380px;
+  /* шкалы: шрифт, радиусы, тени — новые правила берут значения отсюда */
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --shadow-panel: 0 6px 20px rgba(0, 0, 0, 0.35);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
   line-height: 1.35;
@@ -86,39 +97,45 @@ body,
   width: 100%;
   flex: none;
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  gap: 2px;
   padding: 8px 14px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-panel);
+}
+.topbar__row {
+  display: flex;
+  align-items: center;
+  gap: 8px 16px;
   flex-wrap: wrap;
 }
 .topbar__title {
+  margin: 0;
   font-weight: 700;
-  font-size: 16px;
+  font-size: var(--fs-lg);
   letter-spacing: 0.01em;
-}
-.topbar__subtitle {
-  font-size: 11px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 .topbar__kpis {
   display: flex;
-  gap: 12px;
+  align-items: baseline;
+  gap: 14px;
   flex-wrap: wrap;
 }
 .kpi {
   color: var(--text-2);
-  font-size: 13px;
+  font-size: var(--fs-md);
+  white-space: nowrap;
 }
 .kpi b {
   color: var(--text);
-  font-size: 15px;
-  margin-right: 2px;
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-right: 3px;
 }
 .kpi--warn b {
   color: var(--watch);
@@ -129,7 +146,7 @@ body,
 .topbar__week {
   display: flex;
   gap: 14px;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted);
   flex-wrap: wrap;
 }
@@ -137,13 +154,9 @@ body,
   color: var(--text-2);
   font-weight: 600;
 }
-.topbar__layers {
-  display: flex;
-  gap: 6px;
-  margin-left: auto;
-}
 .topbar__status {
-  font-size: 12px;
+  margin-left: auto; /* статус и язык — к правому краю */
+  font-size: var(--fs-sm);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -170,11 +183,11 @@ body,
 }
 
 .badge {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  padding: 3px 8px;
-  border-radius: 6px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
 }
 .badge--mock {
   background: rgba(250, 178, 25, 0.15);
@@ -238,11 +251,51 @@ body,
 
 /* --- легенда -------------------------------------------------------------- */
 
+.panel-toggles {
+  display: flex;
+  gap: 6px;
+}
+.chip--tool {
+  background: var(--panel-solid); /* непрозрачно: на светлой подложке кнопка не пропадает */
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-panel);
+  font-size: var(--fs-sm);
+  padding: 6px 12px;
+}
+.chip--tool.chip--on {
+  color: var(--text);
+  background: #133b31;
+  border-color: rgba(47, 211, 154, 0.55);
+}
+.chip--tool span {
+  opacity: 0.8;
+  margin-right: 2px;
+}
+.intro {
+  background: var(--panel);
+  border: 1px solid rgba(47, 211, 154, 0.35);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: blur(8px);
+  padding: 12px 14px;
+}
+.intro__title {
+  margin: 0 0 6px;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text);
+}
+.intro__body {
+  margin: 0 0 10px;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--text-2);
+}
 .left-stack {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 258px;
+  width: 272px;
   min-height: 0; /* низкое окно: колонка прокручивается, а не наезжает на зум */
   overflow-y: auto;
 }
@@ -250,7 +303,8 @@ body,
 .mapctl {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
   padding: 8px 12px;
   font-size: 12px;
   color: var(--text-2);
@@ -321,7 +375,8 @@ body,
   flex-direction: column;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
   backdrop-filter: blur(10px);
   z-index: 6;
   overflow: hidden;
@@ -473,7 +528,7 @@ button.card:focus-visible {
 }
 .pill--ais {
   color: var(--vessel);
-  border-color: rgba(235, 104, 52, 0.5);
+  border-color: var(--vessel-ring);
 }
 .pill--nodata {
   color: var(--muted);
@@ -675,6 +730,9 @@ button.card:focus-visible {
 
 /* --- управление подложкой ------------------------------------------------- */
 
+.mapctl__title--sub {
+  margin-top: 10px;
+}
 .mapctl__row {
   display: flex;
   flex-wrap: wrap;
@@ -864,7 +922,7 @@ button.card:focus-visible {
 .ship-marker--ais .ship-marker__dot {
   box-shadow:
     0 0 0 2px rgba(0, 0, 0, 0.45),
-    0 0 0 4px rgba(235, 104, 52, 0.55);
+    0 0 0 4px var(--vessel-ring);
 }
 .ship-marker__label {
   font-size: 11px;
@@ -896,6 +954,54 @@ button.card:focus-visible {
   text-decoration: underline;
 }
 
+/* Подпись — абсолютно от точки: маркер равен точке (координата не зависит от
+   длины подписи), а map/declutter.ts может перенести подпись на другую сторону.
+   .maplibregl-marker уже position: absolute — это и есть контейнер подписи. */
+.node-marker__label,
+.ship-marker__label,
+.vessel-marker__label {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 5px);
+  transform: translateY(-50%);
+}
+[data-label-side="left"] .node-marker__label,
+[data-label-side="left"] .ship-marker__label,
+[data-label-side="left"] .vessel-marker__label {
+  left: auto;
+  right: calc(100% + 5px);
+  text-align: right;
+}
+[data-label-side="left"] .node-marker__label {
+  align-items: flex-end;
+}
+[data-label-side="bottom"] .node-marker__label,
+[data-label-side="bottom"] .ship-marker__label,
+[data-label-side="bottom"] .vessel-marker__label,
+[data-label-side="top"] .node-marker__label,
+[data-label-side="top"] .ship-marker__label,
+[data-label-side="top"] .vessel-marker__label {
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  align-items: center;
+}
+[data-label-side="bottom"] [class$="__label"] {
+  top: calc(100% + 2px);
+}
+[data-label-side="top"] [class$="__label"] {
+  top: auto;
+  bottom: calc(100% + 2px);
+}
+
+/* налезающие подписи прячет map/declutter.ts; visibility, а не display — размер
+   подписи нужен для следующего пересчёта, имя остаётся в title маркера */
+[data-label-hidden] .node-marker__label,
+[data-label-hidden] .ship-marker__label,
+[data-label-hidden] .vessel-marker__label {
+  visibility: hidden;
+}
+
 /* паромы: HTML-маркер с силуэтом, поворот по курсу — на иконке */
 .vessel-marker {
   display: flex;
@@ -921,7 +1027,7 @@ button.card:focus-visible {
 }
 .vessel-marker__label {
   font-size: 10px;
-  color: #ffd2b0;
+  color: #c9d4e2;
   text-shadow:
     0 0 3px #000,
     0 0 3px #000;
@@ -931,8 +1037,11 @@ button.card:focus-visible {
 .map[data-zoom="mid"] .vessel-marker__label {
   display: none;
 }
+.map[data-basemap="light"] .vessel-marker {
+  color: #334155; /* светлый паром на светлой подложке не виден */
+}
 .map[data-basemap="light"] .vessel-marker__label {
-  color: #8a3d12;
+  color: #1e293b;
   text-shadow:
     0 0 3px #fff,
     0 0 3px #fff;
@@ -954,10 +1063,17 @@ button.card:focus-visible {
 }
 .detail__actions {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
 }
-.link--active {
+.detail__actions .chip {
+  white-space: nowrap;
+}
+.chip--accent {
   color: var(--accent);
+  border-color: rgba(47, 211, 154, 0.55);
+  background: rgba(47, 211, 154, 0.12);
 }
 @media (prefers-reduced-motion: reduce) {
   .ship-marker.is-followed .ship-marker__dot::before,
@@ -987,6 +1103,17 @@ button.card:focus-visible {
 }
 .map .maplibregl-ctrl-group {
   background: var(--panel-solid);
+  box-shadow: var(--shadow-panel);
+}
+/* иконки зума и компаса у MapLibre тёмные — на тёмной кнопке их не видно */
+.map .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1) brightness(0.9);
+}
+.map .maplibregl-ctrl-scale {
+  background: rgba(20, 24, 30, 0.75);
+  color: var(--text-2);
+  border-color: var(--muted);
+  font-size: 10px;
 }
 .map .maplibregl-ctrl-group button + button {
   border-top-color: var(--line);
@@ -1007,16 +1134,39 @@ button.card:focus-visible {
   }
   .overlay-top {
     right: 12px;
+    /* панели слоёв и легенды не уходят под шторку */
+    max-height: calc(100% - var(--sheet-h, 0px) - 100px);
   }
   .topbar {
-    gap: 6px 12px;
     padding: 8px 12px;
   }
-  .topbar__subtitle {
-    display: none; /* на телефоне каждая строка топбара отнимает карту */
+  .topbar__row {
+    gap: 4px 12px;
+  }
+  /* на телефоне каждая строка топбара отнимает карту: статус «обновлено N с
+     назад» прячем, пока всё хорошо (свежесть видна на шкале времени) — ошибку
+     и устаревшие данные показываем всегда */
+  .topbar__status:not(.topbar__status--error):not(:has(.topbar__stale)) {
+    display: none;
+  }
+  .lang {
+    margin-left: auto;
+  }
+  .topbar__kpis {
+    order: 2; /* заголовок и язык — первой строкой, цифры — второй */
+    width: 100%;
+  }
+  .kpi {
+    font-size: var(--fs-sm);
+  }
+  .kpi b {
+    font-size: var(--fs-lg);
+  }
+  .topbar__kpis {
+    gap: 10px;
   }
   .left-stack {
-    display: none;
+    width: min(320px, 100%);
   }
   .topbar__week {
     display: none;
@@ -1294,10 +1444,18 @@ button.card:focus-visible {
   font-size: 11px;
   letter-spacing: 0.06em;
 }
-.timeline__live.chip--on {
-  color: var(--ok);
-  border-color: rgba(12, 163, 12, 0.5);
-  background: rgba(12, 163, 12, 0.12);
+.timeline__onair {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #3ddc5f;
+  padding: 3px 9px;
+  border: 1px solid rgba(61, 220, 95, 0.45);
+  border-radius: 999px;
+  background: rgba(61, 220, 95, 0.1);
+  white-space: nowrap;
 }
 .dot-live--replay {
   background: #ffc45c;
@@ -1312,12 +1470,17 @@ button.card:focus-visible {
     width: auto;
     transform: none;
     bottom: calc(var(--sheet-h, 0px) + 10px);
-  }
-  .app--sheet-full .timeline {
-    visibility: hidden; /* под развёрнутой шторкой шкале места нет */
     padding: 6px 10px 12px;
     gap: 8px;
     transition: bottom 0.25s ease;
+  }
+  .app--sheet-full .timeline {
+    visibility: hidden; /* под развёрнутой шторкой шкале места нет */
+  }
+  /* скорость на телефоне — по умолчанию (×600): столбик из трёх кнопок
+     делал шкалу вдвое выше, а карте и так тесно */
+  .timeline__speeds {
+    display: none;
   }
   .timeline__readout {
     min-width: 0;
@@ -1460,6 +1623,32 @@ button.card:focus-visible {
 }
 .delay__bar.is-projected {
   fill-opacity: 0.22;
+}
+.delay-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 2px 0 10px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.delay-legend__swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: -6px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0.55;
+}
+.delay-legend__swatch.is-late {
+  background: #ec835a;
+  opacity: 1;
+}
+.delay-legend__swatch.is-projected {
+  background: #ec835a;
+  opacity: 0.25;
 }
 .outlook {
   font-size: 12px;

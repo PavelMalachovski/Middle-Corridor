@@ -74,6 +74,34 @@ function savePrefs(prefs: MapPrefs): void {
   }
 }
 
+// Какие панели слева открыты и видел ли человек подсказку — удобство одного
+// зрителя, без localStorage всё работает (панели свёрнуты, подсказка показана)
+const UI_KEY = "mc-ui";
+interface UiPrefs {
+  layers: boolean;
+  legend: boolean;
+  introSeen: boolean;
+}
+function loadUi(): UiPrefs {
+  const ui: UiPrefs = { layers: false, legend: false, introSeen: false };
+  try {
+    const saved = JSON.parse(localStorage.getItem(UI_KEY) ?? "{}") as Partial<UiPrefs>;
+    for (const key of ["layers", "legend", "introSeen"] as const) {
+      if (typeof saved[key] === "boolean") ui[key] = saved[key];
+    }
+  } catch {
+    /* приватный режим и т.п. */
+  }
+  return ui;
+}
+function saveUi(ui: UiPrefs): void {
+  try {
+    localStorage.setItem(UI_KEY, JSON.stringify(ui));
+  } catch {
+    /* ignore */
+  }
+}
+
 const WEBGL2 = hasWebGL2(); // один раз на загрузку: контекст не появится позже
 const INITIAL_URL = parseUrlState(window.location.search); // ?s=…&view=…&basemap=…&at=…
 const URL_SYNC_MS = 400; // при воспроизведении replayAt меняется каждые 400 мс — не спамим history
@@ -108,6 +136,14 @@ export function App() {
   const [softGl] = useState(() => softwareGl());
   const windMode: WindMode = autoArrows ? "arrows" : prefs.windMode;
   const [sheetHeight, setSheetHeight] = useState(0); // видимая высота шторки на мобильном
+  const [ui, setUi] = useState<UiPrefs>(loadUi);
+  const updateUi = useCallback((patch: Partial<UiPrefs>) => {
+    setUi((u) => {
+      const next = { ...u, ...patch };
+      saveUi(next);
+      return next;
+    });
+  }, []);
   const updatePrefs = useCallback((patch: Partial<MapPrefs>) => {
     setPrefs((p) => {
       const next = { ...p, ...patch };
@@ -267,35 +303,67 @@ export function App() {
         )}
       >
         <div className="overlay-top">
-          <TopBar
-            snapshot={snapshot}
-            error={error}
-            fetchedAt={fetchedAt}
-            mode={mode}
-            layers={layers}
-            windAvailable={windAvailable}
-            onToggle={(key) => setLayers((l) => ({ ...l, [key]: !l[key] }))}
-          />
+          <TopBar snapshot={snapshot} error={error} fetchedAt={fetchedAt} mode={mode} />
           <div className="left-stack">
-            <Legend />
-            <MapControls
-              basemap={prefs.basemap}
-              globe={prefs.globe}
-              terrain={prefs.terrain}
-              terrain3d={prefs.terrain3d}
-              fallback={styleFallback}
-              onBasemap={(basemap) => updatePrefs({ basemap })}
-              onGlobe={(globe) => updatePrefs({ globe })}
-              onTerrain={(terrain) => updatePrefs({ terrain })}
-              onTerrain3d={(terrain3d) => updatePrefs({ terrain3d })}
-              software={softGl}
-              windMode={windMode}
-              windHint={autoArrows}
-              onWindMode={(mode) => {
-                setAutoArrows(false);
-                updatePrefs({ windMode: mode });
-              }}
-            />
+            <div className="panel-toggles">
+              <button
+                type="button"
+                className={`chip chip--tool ${ui.layers ? "chip--on" : ""}`}
+                aria-expanded={ui.layers}
+                aria-controls="panel-layers"
+                onClick={() => updateUi({ layers: !ui.layers })}
+              >
+                <span aria-hidden="true">◧</span> {t("ctl.layers")}
+              </button>
+              <button
+                type="button"
+                className={`chip chip--tool ${ui.legend ? "chip--on" : ""}`}
+                aria-expanded={ui.legend}
+                aria-controls="panel-legend"
+                onClick={() => updateUi({ legend: !ui.legend })}
+              >
+                <span aria-hidden="true">ⓘ</span> {t("ctl.legend")}
+              </button>
+            </div>
+            {!ui.introSeen && (
+              <section className="intro" aria-labelledby="intro-title">
+                <h2 id="intro-title" className="intro__title">
+                  {t("intro.title")}
+                </h2>
+                <p className="intro__body">{t("intro.body")}</p>
+                <button
+                  type="button"
+                  className="chip chip--on"
+                  onClick={() => updateUi({ introSeen: true })}
+                >
+                  {t("intro.ok")}
+                </button>
+              </section>
+            )}
+            {ui.layers && (
+              <MapControls
+                layers={layers}
+                windAvailable={windAvailable}
+                onToggle={(key) => setLayers((l) => ({ ...l, [key]: !l[key] }))}
+                basemap={prefs.basemap}
+                globe={prefs.globe}
+                terrain={prefs.terrain}
+                terrain3d={prefs.terrain3d}
+                fallback={styleFallback}
+                onBasemap={(basemap) => updatePrefs({ basemap })}
+                onGlobe={(globe) => updatePrefs({ globe })}
+                onTerrain={(terrain) => updatePrefs({ terrain })}
+                onTerrain3d={(terrain3d) => updatePrefs({ terrain3d })}
+                software={softGl}
+                windMode={windMode}
+                windHint={autoArrows}
+                onWindMode={(mode) => {
+                  setAutoArrows(false);
+                  updatePrefs({ windMode: mode });
+                }}
+              />
+            )}
+            {ui.legend && <Legend />}
           </div>
         </div>
         <Timeline replay={replay} disabled={!snapshot} />

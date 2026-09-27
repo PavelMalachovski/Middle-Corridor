@@ -1,8 +1,13 @@
 import { type Key, useI18n } from "../i18n";
-import type { WindMode } from "../map/MapView";
+import type { LayerToggles, WindMode } from "../map/MapView";
 import { AVAILABLE_BASEMAPS, type BasemapId } from "../map/style";
 
+const TOGGLES: (keyof LayerToggles)[] = ["shipments", "vessels", "wind", "routes"];
+
 interface Props {
+  layers: LayerToggles;
+  windAvailable: boolean;
+  onToggle: (key: keyof LayerToggles) => void;
   basemap: BasemapId;
   globe: boolean;
   terrain: boolean;
@@ -19,6 +24,9 @@ interface Props {
 }
 
 export function MapControls({
+  layers,
+  windAvailable,
+  onToggle,
   basemap,
   globe,
   terrain,
@@ -35,8 +43,24 @@ export function MapControls({
 }: Props) {
   const { t } = useI18n();
   return (
-    <aside className="mapctl" aria-label={t("ctl.basemap")}>
-      <div className="mapctl__title">{t("ctl.basemap")}</div>
+    <aside className="mapctl" id="panel-layers" aria-label={t("ctl.layers")}>
+      <div className="mapctl__title">{t("ctl.layers")}</div>
+      <div className="mapctl__row">
+        {TOGGLES.map((key) => (
+          <button
+            key={key}
+            type="button"
+            className={`chip ${layers[key] ? "chip--on" : ""}`}
+            aria-pressed={layers[key]}
+            onClick={() => onToggle(key)}
+            disabled={key === "wind" && !windAvailable}
+            title={key === "wind" && !windAvailable ? t("layer.windUnavailable") : undefined}
+          >
+            {t(`layer.${key}` as Key)}
+          </button>
+        ))}
+      </div>
+      <div className="mapctl__title mapctl__title--sub">{t("ctl.basemap")}</div>
       <div className="mapctl__row">
         {AVAILABLE_BASEMAPS.map((preset) => (
           <button

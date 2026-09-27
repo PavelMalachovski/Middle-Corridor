@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { openMap } from "./helpers";
+import { openLayers, openMap } from "./helpers";
 
 /** Переключатель RU/EN в топбаре: подписи интерфейса, узлов и маркеров; выбор запоминается. */
 
@@ -13,6 +13,7 @@ test("EN переводит интерфейс, названия узлов и �
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator("[data-tab=shipments]")).toContainText("Cargo");
   await expect(page.locator(".topbar__kpis .kpi").first()).toContainText(/\d+ in transit/);
+  await openLayers(page);
   await expect(page.getByRole("button", { name: "Wind", exact: true })).toBeVisible();
   await expect(page.locator(".node-marker", { hasText: "Baku" }).first()).toBeAttached();
   await expect(page.locator(".node-marker", { hasText: "Баку" })).toHaveCount(0);

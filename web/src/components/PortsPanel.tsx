@@ -13,7 +13,7 @@ import {
   reportTitle,
 } from "../format";
 import { type Lang, nodeName, nodeNameByCode, useI18n } from "../i18n";
-import { alertText, reportPort, vesselPhase, vesselRoute } from "../i18n/labels";
+import { reportPort, vesselPhase, vesselRoute } from "../i18n/labels";
 import { WindSparkline } from "./charts/Sparkline";
 
 const RANK: Record<string, number> = { critical: 0, warning: 1, watch: 2, ok: 3, none: 4 };
@@ -81,7 +81,6 @@ function NodeRow({
 }) {
   const { t } = useI18n();
   const level = levelOf(node);
-  const alert = alertText(node, lang);
   return (
     <li>
       <button
@@ -110,7 +109,6 @@ function NodeRow({
             {lang === "en" && node.country_en ? node.country_en : node.country}
           </span>
         </div>
-        {alert && <div className="muted small">{alert}</div>}
         <OutlookLine node={node} thresholds={thresholds} now={refDate} />
         {selected && node.forecast && node.forecast.length > 1 && (
           <WindSparkline forecast={node.forecast} thresholds={thresholds} now={refDate} />

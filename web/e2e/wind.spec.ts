@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { openMap } from "./helpers";
+import { openLayers, openMap } from "./helpers";
 
 declare global {
   interface Window {
@@ -40,6 +40,7 @@ test("ветер частицами: слой рисует кадры, стре�
   expect(await vis()).toEqual({ particles: "visible", arrows: "none" });
 
   // переключение на стрелки (SwiftShader в CI сам может переключить раньше — оба пути ведут сюда)
+  await openLayers(page);
   await page.getByRole("button", { name: "Стрелки", exact: true }).click();
   await expect.poll(vis).toEqual({ particles: "none", arrows: "visible" });
   expect(await page.evaluate(() => localStorage.getItem("mc-map-prefs"))).toContain(
@@ -62,6 +63,7 @@ test("подложка меняется — слой частиц пересоз
   await expect
     .poll(() => page.evaluate(() => window.__mcWind?.ready ?? false), { timeout: 20_000 })
     .toBe(true);
+  await openLayers(page);
   await page.getByRole("button", { name: "Светлая" }).click();
   await expect
     .poll(

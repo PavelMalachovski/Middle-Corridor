@@ -18,6 +18,7 @@ import { fmtRelative } from "../format";
 import { type Lang, t } from "../i18n";
 import { eventLabel, vesselPhase, vesselRoute } from "../i18n/labels";
 import { Interpolator, type Pose } from "./animate";
+import { type Box, declutter, LABEL_PRIORITY, type LabelItem } from "./declutter";
 import { type LonLat, splitTrack } from "./geo";
 import { windArrow } from "./icons";
 import {
@@ -32,8 +33,9 @@ import {
   BASEMAPS,
   type BasemapId,
   BOOT_STYLE,
-  CORRIDOR_BOUNDS,
   DEM_SOURCE,
+  INITIAL_BOUNDS,
+  INITIAL_BOUNDS_MOBILE,
   isDarkBasemap,
   resolveStyle,
 } from "./style";
@@ -102,8 +104,9 @@ const MOBILE_PARTICLES = 2500;
 
 maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
-// сверху топбар, слева легенда и подложка (258 px + отступы), снизу шкала времени
-const SIDEBAR_PADDING = { top: 150, bottom: 110, left: 290, right: 420 };
+// сверху топбар и кнопки панелей, справа сайдбар, снизу шкала времени; панели
+// слоёв и легенды по умолчанию свёрнуты — слева только поле
+const SIDEBAR_PADDING = { top: 120, bottom: 110, left: 40, right: 420 };
 const MOBILE_MAX_WIDTH = 900;
 const FOLLOW_ZOOM = 6;
 const PITCH_3D = 55; // наклон камеры при включении объёмного рельефа
@@ -114,10 +117,80 @@ const FOLLOW_SETTLE_MS = 900; // пока камера подлетает к г�
 /** Отступы для fitBounds/flyTo: справа сайдбар на десктопе, снизу шторка на мобильном. */
 function viewportPadding(sheetPx: number) {
   if (window.innerWidth <= MOBILE_MAX_WIDTH) {
-    const bottom = Math.min(sheetPx, window.innerHeight * 0.5) + 16;
-    return { top: 170, bottom, left: 16, right: 16 };
+    const bottom = Math.min(sheetPx, window.innerHeight * 0.5) + 80; // + шкала времени над шторкой
+    return { top: 150, bottom, left: 16, right: 16 };
   }
   return SIDEBAR_PADDING;
+}
+
+const DECLUTTER_MS = 400; // не чаще: чтение getBoundingClientRect форсирует layout
+
+function rectOf(el: Element | null): Box | null {
+  if (!el || el.getClientRects().length === 0) return null; // display:none — зум или слой выключен
+  const r = el.getBoundingClientRect();
+  return { x: r.left, y: r.top, w: r.width, h: r.height };
+}
+
+function nodePriority(el: HTMLElement): number {
+  const c = el.classList;
+  if (!c.contains("node-marker--port")) return LABEL_PRIORITY.node;
+  if (c.contains("level-critical")) return LABEL_PRIORITY.portCritical;
+  if (c.contains("level-warning")) return LABEL_PRIORITY.portWarning;
+  if (c.contains("level-watch")) return LABEL_PRIORITY.portWatch;
+  return LABEL_PRIORITY.port;
+}
+
+function cargoPriority(el: HTMLElement): number {
+  const c = el.classList;
+  if (c.contains("is-selected") || c.contains("is-followed")) return LABEL_PRIORITY.selectedCargo;
+  if (c.contains("ship-marker--delivered")) return LABEL_PRIORITY.deliveredCargo;
+  return c.contains("is-delayed") ? LABEL_PRIORITY.delayedCargo : LABEL_PRIORITY.cargo;
+}
+
+// Места подписи вокруг точки — в порядке предпочтения; зазоры те же, что в styles.css
+const LABEL_SIDES = ["", "left", "bottom", "top"] as const;
+const LABEL_GAP = 5;
+const LABEL_VGAP = 2;
+
+function labelSlots(dot: Box, label: Box): Box[] {
+  const { w, h } = label;
+  const cx = dot.x + dot.w / 2;
+  const cy = dot.y + dot.h / 2;
+  return [
+    { x: dot.x + dot.w + LABEL_GAP, y: cy - h / 2, w, h },
+    { x: dot.x - LABEL_GAP - w, y: cy - h / 2, w, h },
+    { x: cx - w / 2, y: dot.y + dot.h + LABEL_VGAP, w, h },
+    { x: cx - w / 2, y: dot.y - LABEL_VGAP - h, w, h },
+  ];
+}
+
+/**
+ * Разводит подписи маркеров: справа от точки, если тесно — слева, снизу или
+ * сверху, иначе прячет.
+ * Состояние — атрибутами, а не классами: классы перезаписывают render*Marker.
+ */
+function declutterMarkers(groups: [Map<string, Marker>, string, (el: HTMLElement) => number][]) {
+  const items: LabelItem[] = [];
+  const elements = new Map<string, HTMLElement>();
+  for (const [markers, prefix, priority] of groups) {
+    for (const [key, marker] of markers) {
+      const el = marker.getElement();
+      const label = rectOf(el.querySelector('[class$="__label"]'));
+      const dot = rectOf(el.querySelector('[class$="__dot"], [class$="__icon"]'));
+      const id = `${prefix}:${key}`;
+      elements.set(id, el);
+      if (!label || !dot) continue;
+      items.push({ id, priority: priority(el), candidates: labelSlots(dot, label), anchor: dot });
+    }
+  }
+  const placed = declutter(items);
+  for (const [id, el] of elements) {
+    const index = placed.get(id) ?? 0;
+    el.toggleAttribute("data-label-hidden", index < 0);
+    const side = LABEL_SIDES[index] ?? "";
+    if (side) el.dataset.labelSide = side;
+    else delete el.dataset.labelSide;
+  }
 }
 
 /** Время «доезда» до новой позиции: интервал обновления, в replay — короткое. */
@@ -346,6 +419,7 @@ export function MapView({
   const nodeMarkers = useRef(new Map<string, Marker>());
   const shipMarkers = useRef(new Map<string, Marker>());
   const vesselMarkers = useRef(new Map<string, Marker>());
+  const declutterAt = useRef(0);
   const popupRef = useRef<Popup | null>(null);
   const flownRef = useRef<string | null>(null);
   const styleRequest = useRef(0);
@@ -388,6 +462,15 @@ export function MapView({
   const terrain3dRef = useRef(terrain3d);
   terrain3dRef.current = terrain3d;
 
+  const runDeclutter = useCallback(() => {
+    declutterAt.current = performance.now();
+    declutterMarkers([
+      [nodeMarkers.current, "n", nodePriority],
+      [shipMarkers.current, "s", cargoPriority],
+      [vesselMarkers.current, "v", () => LABEL_PRIORITY.vessel],
+    ]);
+  }, []);
+
   /** Кадр анимации: двигаем маркеры к целям, при слежении держим груз в центре. */
   const tick = useCallback(() => {
     const map = mapRef.current;
@@ -413,10 +496,13 @@ export function MapView({
         map.jumpTo({ center: [pose.lon, pose.lat] });
       }
     }
-    if (interp.current.active(now) || follow.ref) {
+    // маркеры едут — подписи пересчитываем с троттлингом, в конце движения — сразу
+    const moving = interp.current.active(now) || follow.ref;
+    if (!moving || now - declutterAt.current > DECLUTTER_MS) runDeclutter();
+    if (moving) {
       rafRef.current = requestAnimationFrame(tick);
     }
-  }, []);
+  }, [runDeclutter]);
   const ensureLoop = useCallback(() => {
     if (rafRef.current == null) rafRef.current = requestAnimationFrame(tick);
   }, [tick]);
@@ -437,7 +523,7 @@ export function MapView({
             zoom: mount.current.initialView.zoom,
           }
         : {
-            bounds: CORRIDOR_BOUNDS,
+            bounds: window.innerWidth <= MOBILE_MAX_WIDTH ? INITIAL_BOUNDS_MOBILE : INITIAL_BOUNDS,
             fitBoundsOptions: { padding: viewportPadding(window.innerHeight * 0.45) },
           }),
       minZoom: 1.5,
@@ -467,6 +553,7 @@ export function MapView({
     map.on("zoom", updateZoomBand);
     updateZoomBand();
     map.on("moveend", () => {
+      runDeclutter();
       const c = map.getCenter();
       callbacks.current.onViewChange({ lon: c.lng, lat: c.lat, zoom: map.getZoom() });
     });
@@ -505,7 +592,7 @@ export function MapView({
       vesselMarkers.current.clear();
       setStyleVersion(0);
     };
-  }, []);
+  }, [runDeclutter]); // стабилен (useCallback без зависимостей) — карта создаётся один раз
 
   // --- подложка: подбираем доступный стиль и применяем ----------------------------
   useEffect(() => {
