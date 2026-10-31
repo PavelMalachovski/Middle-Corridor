@@ -18,6 +18,7 @@ from datetime import UTC, datetime, timedelta
 from app.services.corridor import NODES, NodeKind, segment
 from app.services.geo import point_along
 from app.services.map_snapshot import VesselMapStatus
+from app.services.queue_forecast import QueueInput
 from app.services.tracking import EventKind, PlannedLeg, ShipmentPlan, TrackingEvent
 
 _EPOCH = datetime(2026, 1, 1, tzinfo=UTC)
@@ -218,6 +219,7 @@ def build_plan(  # noqa: PLR0913 — сценарий описывается п�
     hold_vessel: str | None = None,
     pivot_note: str | None = None,
     pivot_note_code: str | None = None,
+    queue: QueueInput | None = None,
 ) -> ShipmentPlan:
     """План по типичным временам сегментов, «пришпиленный» к опорному событию.
 
@@ -300,6 +302,7 @@ def build_plan(  # noqa: PLR0913 — сценарий описывается п�
         hold_code=hold_code,
         hold_node=hold_node,
         hold_vessel=hold_vessel,
+        queue=queue,
     )
 
 
@@ -339,6 +342,7 @@ class MockShipmentSource:
             hold_reason="Погодный запрет на швартовку: Актау — критический ветер",
             hold_code="weather_ban",
             hold_node="AKTAU",
+            queue=QueueInput("AKTAU", 4, 8.0, 48.0, "weather_ban"),
         )
 
         # 3. Рельсы в степи: Кызылорда → Бейнеу, 16 ч из 26 в пути
