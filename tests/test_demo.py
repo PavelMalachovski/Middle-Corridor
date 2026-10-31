@@ -1,12 +1,19 @@
 """Демо-режим мока: часы со сдвигом, история MC-26-0398, /api/v1/demo/clock."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 
+import httpx
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from app.api.main import create_app
 from app.config import Settings
 from app.integrations.mock.clock import MockClock
 from app.integrations.mock.corridor import MockNodeSource
 from app.integrations.mock.fleet import MockShipmentSource
 from app.integrations.mock.story import DemoStory
+from app.main import build_map_service
 from app.services.tracking import ShipmentState, project_shipment
 from app.services.weather_predictor import WindThresholds, evaluate_level
 
@@ -132,6 +139,11 @@ def test_story_before_start_is_first_cycle() -> None:
     assert _story().cycle_start(T0 - 5 * H) == T0
 
 
+def test_story_cycle_starts_on_the_hour() -> None:
+    story = DemoStory(lambda: T0 + timedelta(minutes=37, seconds=12))
+    assert story.cycle_start(T0 + 2 * H) == T0
+
+
 async def test_mock_nodes_follow_story() -> None:
     now = T0 + 6 * H
     nodes = await MockNodeSource(lambda: now, THRESHOLDS, story=_story()).list_nodes()
@@ -153,3 +165,83 @@ async def test_no_story_keeps_0398() -> None:
     plans = await MockShipmentSource(lambda: now).list_plans()
     plan = next(p for p in plans if p.ref == "MC-26-0398")
     assert project_shipment(plan, now).hold_code == "weather_ban"
+
+
+# --- /api/v1/demo/clock ---------------------------------------------------------
+
+
+def _demo_settings(**overrides: object) -> Settings:
+    base = {"mock_data": True, "demo_control": True, "web_dist_dir": ""}
+    return Settings(_env_file=None, **{**base, **overrides})
+
+
+@asynccontextmanager
+async def _client(settings: Settings) -> AsyncIterator[httpx.AsyncClient]:
+    app = create_app(settings=settings, map_service=build_map_service(settings, None))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
+
+
+async def test_demo_clock_404_without_flag() -> None:
+    async with _client(_demo_settings(demo_control=False)) as client:
+        assert (await client.get("/api/v1/demo/clock")).status_code == 404
+        post = await client.post("/api/v1/demo/clock", json={"action": "reset"})
+        assert post.status_code == 404
+
+
+def test_demo_disabled_without_mock(session_factory: async_sessionmaker[AsyncSession]) -> None:
+    service = build_map_service(_demo_settings(mock_data=False), session_factory)
+    assert service.demo is None
+
+
+async def test_demo_advance_moves_snapshot() -> None:
+    async with _client(_demo_settings()) as client:
+        state = await client.post("/api/v1/demo/clock", json={"action": "advance", "hours": 24})
+        assert state.status_code == 200
+        body = state.json()
+        assert body["offset_hours"] == 24
+        assert body["story_ref"] == "MC-26-0398"
+        snap = (await client.get("/api/v1/snapshot")).json()
+        server_time = datetime.fromisoformat(snap["server_time"])
+        assert abs(server_time - (datetime.now(UTC) + 24 * H)) < timedelta(minutes=1)
+
+
+async def test_demo_next_beat_storm_then_ferry() -> None:
+    async with _client(_demo_settings()) as client:
+        await client.post("/api/v1/demo/clock", json={"action": "reset"})
+        first = (await client.get("/api/v1/shipments/MC-26-0398")).json()
+        assert first["hold_code"] == "ferry_loading_wait"
+        await client.post("/api/v1/demo/clock", json={"action": "next_beat"})
+        storm = (await client.get("/api/v1/shipments/MC-26-0398")).json()
+        assert storm["hold_code"] == "weather_ban"
+        aktau = next(
+            n
+            for n in (await client.get("/api/v1/snapshot")).json()["nodes"]
+            if n["code"] == "AKTAU"
+        )
+        assert aktau["alert_level"] == "critical"
+        await client.post("/api/v1/demo/clock", json={"action": "next_beat"})
+        sailing = (await client.get("/api/v1/shipments/MC-26-0398")).json()
+        assert sailing["last_event_kind"] == "departed"
+        assert sailing["last_event_note_code"] == "loaded_on_ferry"
+
+
+async def test_demo_next_beat_wraps() -> None:
+    async with _client(_demo_settings()) as client:
+        await client.post("/api/v1/demo/clock", json={"action": "reset"})
+        await client.post("/api/v1/demo/clock", json={"action": "advance", "hours": 221})
+        done = (await client.get("/api/v1/shipments/MC-26-0398")).json()
+        assert done["state"] == "delivered"
+        await client.post("/api/v1/demo/clock", json={"action": "next_beat"})
+        again = (await client.get("/api/v1/shipments/MC-26-0398")).json()
+        assert again["state"] == "waiting"
+        assert again["hold_code"] == "ferry_loading_wait"
+
+
+async def test_demo_advance_requires_hours() -> None:
+    async with _client(_demo_settings()) as client:
+        missing = await client.post("/api/v1/demo/clock", json={"action": "advance"})
+        assert missing.status_code == 422
+        negative = await client.post("/api/v1/demo/clock", json={"action": "advance", "hours": -1})
+        assert negative.status_code == 422

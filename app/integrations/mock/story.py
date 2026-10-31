@@ -22,8 +22,10 @@ import math
 from collections.abc import Callable
 from datetime import datetime, timedelta
 
+from app.integrations.mock.clock import MockClock
 from app.integrations.mock.fleet import _DWELL_H, CARGO_EN, ROUTE_AKTAU
 from app.services.corridor import NODES, segment
+from app.services.demo_clock import DemoClockAction, DemoClockState
 from app.services.queue_forecast import QueueInput
 from app.services.tracking import EventKind, PlannedLeg, ShipmentPlan, TrackingEvent
 
@@ -37,6 +39,7 @@ SEA_VESSEL = "Black Sea Link"
 PORT = "AKTAU"
 
 PERIOD = timedelta(hours=244)
+BEAT_SETTLE = timedelta(minutes=1)  # «следующий шаг» встаёт чуть после такта
 ARRIVE_PORT_H = -8.0
 STORM_START_H = 6.0
 STORM_END_H = 66.0
@@ -88,7 +91,9 @@ class DemoStory:
         self._story_start = story_start
 
     def cycle_start(self, now: datetime) -> datetime:
-        start = self._story_start()
+        # начало часа: погода узлов округляется вниз (15 мин, прогноз — час), и
+        # такт «шторм» не должен попасть в округление до шторма
+        start = self._story_start().replace(minute=0, second=0, microsecond=0)
         if now < start:
             return start
         return start + math.floor((now - start) / PERIOD) * PERIOD
@@ -182,3 +187,33 @@ class DemoStory:
             ),
             **hold,
         )
+
+
+class DemoControl:
+    """Пульт ведущего: перевод мок-часов и шаги истории (/api/v1/demo/clock)."""
+
+    def __init__(self, clock: MockClock, story: DemoStory) -> None:
+        self._clock = clock
+        self._story = story
+
+    def state(self) -> DemoClockState:
+        return DemoClockState(
+            now=self._clock.now(),
+            offset_hours=round(self._clock.offset / H, 3),
+            story_start=self._clock.story_start,
+            story_ref=REF,
+        )
+
+    def apply(self, action: DemoClockAction) -> DemoClockState:
+        if action.action == "advance":
+            self._clock.advance(action.hours or 0.0)
+        elif action.action == "reset":
+            self._clock.reset()
+        else:
+            now = self._clock.now()
+            upcoming = [beat for beat in self._story.beats(now) if beat > now]
+            if upcoming:
+                self._clock.jump_to(upcoming[0] + BEAT_SETTLE)
+            else:  # история кончилась — начало следующего цикла
+                self._clock.jump_to(self._story.cycle_start(now) + PERIOD)
+        return self.state()
