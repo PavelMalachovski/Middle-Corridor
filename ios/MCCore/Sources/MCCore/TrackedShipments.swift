@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Где хранится список отслеживаемых номеров. Сами грузы — в памяти (офлайн-кэш — неделя 2).
+/// Где хранится список отслеживаемых номеров. Последние данные по ним — в `ShipmentCache`.
 public protocol RefStorage: Sendable {
     func load() -> [String]
     func save(_ refs: [String])
@@ -65,13 +65,30 @@ public final class TrackedShipments {
 
     private let api: any CorridorAPI
     private let storage: any RefStorage
+    private let cache: any ShipmentCache
     private let now: @Sendable () -> Date
 
-    public init(api: any CorridorAPI, storage: any RefStorage, now: @escaping @Sendable () -> Date = { Date() }) {
+    public init(
+        api: any CorridorAPI,
+        storage: any RefStorage,
+        cache: any ShipmentCache = MemoryShipmentCache(),
+        now: @escaping @Sendable () -> Date = { Date() }
+    ) {
         self.api = api
         self.storage = storage
+        self.cache = cache
         self.now = now
-        self.refs = storage.load()
+        let refs = storage.load()
+        self.refs = refs
+        if let cached = cache.load() {
+            shipments = cached.shipments.filter { refs.contains($0.key) }
+            snapshot = cached.snapshot
+            updatedAt = cached.updatedAt
+        }
+    }
+
+    private func persist() {
+        cache.save(CachedState(shipments: shipments, snapshot: snapshot, updatedAt: updatedAt))
     }
 
     public var rows: [TrackedRow] {
@@ -99,6 +116,7 @@ public final class TrackedShipments {
         missing.remove(ref)
         refs.insert(ref, at: 0)
         storage.save(refs)
+        persist()
         return ref
     }
 
@@ -107,6 +125,7 @@ public final class TrackedShipments {
         shipments[ref] = nil
         missing.remove(ref)
         storage.save(refs)
+        persist()
     }
 
     /// Снимок коридора и все грузы — параллельно. Ошибка не стирает старые данные — уходит
@@ -151,6 +170,7 @@ public final class TrackedShipments {
 
         lastError = failure
         if failure == nil { updatedAt = now() }
+        persist()
     }
 
     private nonisolated static func load<T: Sendable>(

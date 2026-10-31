@@ -42,13 +42,13 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Нет связи с сервером — показаны последние данные"
+            "value": "Нет связи с сервером"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No connection to the server — showing the last known data"
+            "value": "No connection to the server"
           }
         }
       }
@@ -59,13 +59,13 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Нет связи с сервером. Данные от {value}"
+            "value": "Нет связи с сервером — данные от {value}"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No connection to the server. Data from {value}"
+            "value": "No connection to the server — data from {value}"
           }
         }
       }

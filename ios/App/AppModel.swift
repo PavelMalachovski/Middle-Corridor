@@ -21,6 +21,7 @@ final class AppModel {
     /// UI-тесты и демо без бэкенда: `-mc-fake-api` (только Debug).
     let isFake: Bool
     private let storage: any RefStorage
+    private let cache: any ShipmentCache
     private let defaults: UserDefaults
 
     init(arguments: [String] = ProcessInfo.processInfo.arguments, defaults: UserDefaults = .standard) {
@@ -30,7 +31,9 @@ final class AppModel {
         let server = defaults.string(forKey: Self.serverKey) ?? Self.defaultServer
         serverURL = server
         storage = isFake ? MemoryRefStorage() : UserDefaultsRefStorage()
-        store = TrackedShipments(api: Self.makeAPI(fake: isFake, server: server), storage: storage)
+        cache = isFake ? MemoryShipmentCache() : FileShipmentCache(directory: Self.cacheDirectory)
+        store = TrackedShipments(
+            api: Self.makeAPI(fake: isFake, server: server), storage: storage, cache: cache)
     }
 
     /// Меняет сервер: список номеров сохраняется, данные перезагрузятся с нового адреса.
@@ -39,7 +42,8 @@ final class AppModel {
         guard normalized != serverURL, URL(string: normalized) != nil else { return }
         serverURL = normalized
         defaults.set(normalized, forKey: Self.serverKey)
-        store = TrackedShipments(api: Self.makeAPI(fake: isFake, server: normalized), storage: storage)
+        store = TrackedShipments(
+            api: Self.makeAPI(fake: isFake, server: normalized), storage: storage, cache: cache)
     }
 
     /// Проверка адреса из настроек: число узлов коридора или ошибка.
@@ -63,6 +67,11 @@ final class AppModel {
         } catch {
             linkError = error  // add — typed throws(AddError)
         }
+    }
+
+    /// Офлайн-кэш: Application Support/cache (неделя 3 — контейнер App Group для виджета).
+    static var cacheDirectory: URL {
+        URL.applicationSupportDirectory.appending(path: "cache", directoryHint: .isDirectory)
     }
 
     static func normalize(_ input: String) -> String {
