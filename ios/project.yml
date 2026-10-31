@@ -24,6 +24,10 @@ targets:
     platform: iOS
     sources:
       - path: App
+      # данные мок-бэкенда для -mc-fake-api (UI-тесты, показ без Мака)
+      - path: MCCore/Tests/MCCoreTests/Fixtures
+        buildPhase: resources
+        group: DemoData
     dependencies:
       - package: MCCore
     info:
@@ -53,10 +57,27 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         LOCALIZATION_PREFERS_STRING_CATALOGS: YES
         SWIFT_EMIT_LOC_STRINGS: YES
+  MiddleCorridorUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: MiddleCorridor
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.malakhouski.mcstatus.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1"
 schemes:
   MiddleCorridor:
     build:
       targets:
         MiddleCorridor: all
+        MiddleCorridorUITests: [test]
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - MiddleCorridorUITests

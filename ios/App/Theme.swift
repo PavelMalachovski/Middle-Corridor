@@ -1,0 +1,51 @@
+import MCCore
+import SwiftUI
+import UIKit
+
+/// Цвета статусов — как на сайте (web/src/styles.css): тёмная тема берёт основные
+/// оттенки, светлая — тёмные `*-text`, чтобы текст на белом проходил контраст AA.
+enum Theme {
+    static let accent = Color(light: 0x0B7A55, dark: 0x2FD39A)
+    static let ok = Color(light: 0x0F7A33, dark: 0x3DDC5F)
+    static let watch = Color(light: 0x8A5A00, dark: 0xFAB219)
+    static let warning = Color(light: 0xB24A1C, dark: 0xEC835A)
+    static let critical = Color(light: 0xB42318, dark: 0xF07070)
+
+    static func tone(_ tone: StatusTone) -> Color {
+        switch tone {
+        case .inTransit: accent
+        case .waiting: watch
+        case .delayed: warning
+        case .planned, .delivered, .unknown: .secondary
+        }
+    }
+
+    static func level(_ level: AlertLevel?) -> Color {
+        switch level {
+        case .critical: critical
+        case .warning: warning
+        case .watch: watch
+        case nil: .secondary
+        }
+    }
+}
+
+extension Color {
+    init(light: UInt32, dark: UInt32) {
+        self.init(
+            uiColor: UIColor { traits in
+                UIColor(rgb: traits.userInterfaceStyle == .dark ? dark : light)
+            })
+    }
+}
+
+extension UIColor {
+    convenience init(rgb: UInt32) {
+        self.init(
+            red: CGFloat((rgb >> 16) & 0xFF) / 255,
+            green: CGFloat((rgb >> 8) & 0xFF) / 255,
+            blue: CGFloat(rgb & 0xFF) / 255,
+            alpha: 1
+        )
+    }
+}
