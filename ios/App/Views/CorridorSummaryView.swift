@@ -24,12 +24,14 @@ struct CorridorSummaryView: View {
                 .padding(.vertical, 8)
             }
 
+            if store.lastError != nil {
+                // риск по погоде — суть продукта: устаревшие данные без пометки показывать нельзя
+                Section { OfflineBanner(updatedAt: store.updatedAt) }
+            }
             if let snapshot = store.snapshot {
                 ports(snapshot)
                 week(snapshot)
-            } else if store.lastError != nil {
-                Section { OfflineBanner(updatedAt: nil) }
-            } else {
+            } else if store.lastError == nil {
                 Section { ProgressView().frame(maxWidth: .infinity) }
             }
         }
@@ -41,7 +43,7 @@ struct CorridorSummaryView: View {
         let risky = snapshot.nodes
             .filter { ($0.alertLevel?.known).map { $0 >= .warning } ?? false }
             .sorted { ($0.alertLevel?.known ?? .watch) > ($1.alertLevel?.known ?? .watch) }
-        Section(l("corridor.title")) {
+        Section {
             if risky.isEmpty {
                 Label(l("corridor.calm"), systemImage: "checkmark.circle")
                     .foregroundStyle(Theme.ok)
@@ -67,6 +69,8 @@ struct CorridorSummaryView: View {
                     }
                 }
             }
+        } header: {
+            Text(l("corridor.title")).accessibilityIdentifier("corridor.title")
         }
     }
 

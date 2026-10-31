@@ -24,6 +24,11 @@ final class SmokeTests: XCTestCase {
     }
 
     @MainActor
+    private func element(_ app: XCUIApplication, _ id: String) -> XCUIElement {
+        app.descendants(matching: .any)[id].firstMatch
+    }
+
+    @MainActor
     private func add(_ app: XCUIApplication, _ text: String) {
         app.buttons["empty.add"].tap()
         let field = app.textFields["add.field"]
@@ -37,7 +42,7 @@ final class SmokeTests: XCTestCase {
     func test_emptyState_showsCorridorAndAdd() {
         let app = launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Коридор сейчас"].waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "corridor.title").waitForExistence(timeout: 5))
         shot(app, "01-empty-ru")
     }
 
@@ -47,12 +52,13 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
         add(app, "mc-26-0412")
         XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
-        let ferry = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Barda'")).firstMatch
-        XCTAssertTrue(ferry.waitForExistence(timeout: 5))
+        let position = element(app, "card.position")
+        XCTAssertTrue(position.waitForExistence(timeout: 5))
+        XCTAssertTrue(position.label.contains("Barda"), position.label)
         shot(app, "02-card-ru")
 
         app.navigationBars["MC-26-0412"].buttons.firstMatch.tap()
-        XCTAssertTrue(app.buttons["row.MC-26-0412"].waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "row.MC-26-0412").waitForExistence(timeout: 5))
         shot(app, "03-list-ru")
     }
 
@@ -61,7 +67,7 @@ final class SmokeTests: XCTestCase {
         let app = launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
         add(app, "MC-00-0000")
-        let error = app.staticTexts["add.error"]
+        let error = element(app, "add.error")
         XCTAssertTrue(error.waitForExistence(timeout: 5))
         XCTAssertEqual(error.label, "Груз не найден")
         XCTAssertEqual(app.textFields["add.field"].value as? String, "MC-00-0000")
@@ -74,8 +80,9 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
         app.open(try XCTUnwrap(URL(string: "mcstatus://s/MC-26-0398")))
         XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 10))
-        let hold = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Погодный запрет'")).firstMatch
+        let hold = element(app, "hold")
         XCTAssertTrue(hold.waitForExistence(timeout: 5))
+        XCTAssertTrue(hold.label.contains("Погодный запрет"), hold.label)
         shot(app, "05-deeplink-hold-ru")
     }
 
@@ -85,8 +92,9 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(app.navigationBars["My shipments"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.buttons["empty.add"].label, "Add shipment")
         add(app, "MC-26-0412")
-        let event = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'loaded onto ferry'")).firstMatch
+        let event = element(app, "card.event")
         XCTAssertTrue(event.waitForExistence(timeout: 5))
+        XCTAssertTrue(event.label.contains("loaded onto ferry"), event.label)
         shot(app, "06-card-en")
     }
 }

@@ -26,9 +26,11 @@ final class AppModel {
     init(arguments: [String] = ProcessInfo.processInfo.arguments, defaults: UserDefaults = .standard) {
         self.defaults = defaults
         isFake = arguments.contains("-mc-fake-api")
-        serverURL = defaults.string(forKey: Self.serverKey) ?? Self.defaultServer
+        // serverURL под @Observable — вычисляемое свойство: читать его до инициализации store нельзя
+        let server = defaults.string(forKey: Self.serverKey) ?? Self.defaultServer
+        serverURL = server
         storage = isFake ? MemoryRefStorage() : UserDefaultsRefStorage()
-        store = TrackedShipments(api: Self.makeAPI(fake: isFake, server: serverURL), storage: storage)
+        store = TrackedShipments(api: Self.makeAPI(fake: isFake, server: server), storage: storage)
     }
 
     /// Меняет сервер: список номеров сохраняется, данные перезагрузятся с нового адреса.
@@ -56,6 +58,8 @@ final class AppModel {
         do {
             let added = try await store.add(ref)
             path = [added]
+            // номер уже был в списке, но данных нет (старт без сети) — дозапросить
+            if store.shipments[added] == nil { await store.refresh() }
         } catch {
             linkError = (error as? AddError) ?? .server
         }

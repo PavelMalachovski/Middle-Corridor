@@ -60,6 +60,8 @@ public final class TrackedShipments {
     /// Когда данные в последний раз пришли целиком.
     public private(set) var updatedAt: Date?
     public private(set) var isRefreshing = false
+    /// Номера, которых сервер не знает (404 при последнем обновлении): «не найден», а не вечное «загружается».
+    public private(set) var missing: Set<String> = []
 
     private let api: any CorridorAPI
     private let storage: any RefStorage
@@ -94,6 +96,7 @@ public final class TrackedShipments {
         }
         guard !refs.contains(ref) else { return ref }  // пока ждали ответа, добавили ещё раз
         shipments[ref] = shipment
+        missing.remove(ref)
         refs.insert(ref, at: 0)
         storage.save(refs)
         return ref
@@ -102,44 +105,45 @@ public final class TrackedShipments {
     public func remove(_ ref: String) {
         refs.removeAll { $0 == ref }
         shipments[ref] = nil
+        missing.remove(ref)
         storage.save(refs)
     }
 
-    /// Снимок коридора и все грузы. Ошибка не стирает старые данные — уходит в lastError.
+    /// Снимок коридора и все грузы — параллельно. Ошибка не стирает старые данные — уходит
+    /// в lastError. Отменённое обновление (SwiftUI снимает .task при переходе) ничего не пишет:
+    /// отмена — не «нет связи».
     public func refresh() async {
         isRefreshing = true
         defer { isRefreshing = false }
         let api = self.api
         let refs = self.refs
-        var failure: APIError?
 
-        do {
-            snapshot = try await api.snapshot()
-        } catch {
-            failure = APIError.from(error)
-        }
-
+        async let snapshotResult = Self.load { try await api.snapshot() }
         let results = await withTaskGroup(of: (String, Result<Shipment, APIError>).self) { group in
             for ref in refs {
-                group.addTask {
-                    do {
-                        return (ref, .success(try await api.shipment(ref: ref)))
-                    } catch {
-                        return (ref, .failure(APIError.from(error)))
-                    }
-                }
+                group.addTask { (ref, await Self.load { try await api.shipment(ref: ref) }) }
             }
             var out: [(String, Result<Shipment, APIError>)] = []
             for await result in group { out.append(result) }
             return out
         }
+        let snapshotLoaded = await snapshotResult
 
-        for (ref, result) in results {
+        guard !Task.isCancelled else { return }
+
+        var failure: APIError?
+        switch snapshotLoaded {
+        case .success(let snap): snapshot = snap
+        case .failure(let error): failure = error
+        }
+
+        for (ref, result) in results where self.refs.contains(ref) {  // пока грузили, могли удалить
             switch result {
             case .success(let shipment):
-                if self.refs.contains(ref) { shipments[ref] = shipment }  // пока грузили, могли удалить
+                shipments[ref] = shipment
+                missing.remove(ref)
             case .failure(.notFound):
-                break  // груз пропал с сервера — показываем последнее, что знали
+                missing.insert(ref)  // последнее, что знали, остаётся на экране
             case .failure(let error):
                 failure = failure ?? error
             }
@@ -147,5 +151,15 @@ public final class TrackedShipments {
 
         lastError = failure
         if failure == nil { updatedAt = now() }
+    }
+
+    private nonisolated static func load<T: Sendable>(
+        _ body: @Sendable () async throws -> T
+    ) async -> Result<T, APIError> {
+        do {
+            return .success(try await body())
+        } catch {
+            return .failure(APIError.from(error))
+        }
     }
 }

@@ -11,6 +11,10 @@ struct ShipmentDetailView: View {
         Group {
             if let shipment = store.shipments[ref] {
                 content(shipment, labels: Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? []))
+            } else if store.missing.contains(ref) {
+                ContentUnavailableView(l("add.error.notFound"), systemImage: "shippingbox")
+            } else if store.lastError != nil {
+                ContentUnavailableView(l("list.noData"), systemImage: "wifi.slash")
             } else if store.refs.contains(ref) {
                 ProgressView()
             } else {
@@ -47,24 +51,22 @@ struct ShipmentDetailView: View {
                     Text(position.title)
                         .italic(!position.confirmed)
                         .foregroundStyle(position.confirmed ? .primary : .secondary)
+                        .accessibilityIdentifier("card.position")
                     Text(position.detail)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                .accessibilityElement(children: .combine)
                 if let hold = labels.hold(s) {
                     Label(hold, systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(Theme.warning)
                         .accessibilityIdentifier("hold")
                 }
-                LabeledContent(l("card.lastEvent")) {
-                    VStack(alignment: .trailing) {
-                        Text(labels.event(s))
-                        if let at = s.lastEventAt {
-                            Text(l.dateTime(at)).font(.caption).foregroundStyle(.secondary)
-                        }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(l("card.lastEvent")).font(.caption).foregroundStyle(.secondary)
+                    Text(labels.event(s)).accessibilityIdentifier("card.event")
+                    if let at = s.lastEventAt {
+                        Text(l.dateTime(at)).font(.caption).foregroundStyle(.secondary)
                     }
-                    .multilineTextAlignment(.trailing)
                 }
             }
 

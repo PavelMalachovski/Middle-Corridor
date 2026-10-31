@@ -68,7 +68,9 @@ struct MyShipmentsView: View {
             Section {
                 ForEach(store.rows) { row in
                     NavigationLink(value: row.ref) {
-                        ShipmentRow(row: row, labels: labels, isOffline: offline)
+                        ShipmentRow(
+                            row: row, labels: labels, isOffline: offline,
+                            isMissing: store.missing.contains(row.ref))
                     }
                     .accessibilityIdentifier("row.\(row.ref)")
                 }

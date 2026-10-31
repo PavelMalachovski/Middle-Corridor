@@ -6,6 +6,7 @@ struct ShipmentRow: View {
     let row: TrackedRow
     let labels: Labels
     let isOffline: Bool
+    let isMissing: Bool
     @Environment(\.l10n) private var l
 
     var body: some View {
@@ -25,7 +26,7 @@ struct ShipmentRow: View {
                 ProgressView(value: min(max(shipment.progress, 0), 1))
                     .tint(Theme.tone(shipment.tone))
             } else {
-                Text(isOffline ? l("list.noData") : l("list.loading"))
+                Text(isMissing ? l("add.error.notFound") : isOffline ? l("list.noData") : l("list.loading"))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

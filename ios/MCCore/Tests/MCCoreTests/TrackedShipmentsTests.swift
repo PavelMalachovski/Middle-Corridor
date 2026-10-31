@@ -16,15 +16,22 @@ actor FakeAPI: CorridorAPI {
         self.known = known
     }
 
+    private var delay: Duration = .zero
+
     func setOffline(_ value: Bool) { offline = value }
+    func setDelay(_ value: Duration) { delay = value }
 
     func snapshot() async throws -> MapSnapshot {
+        if delay > .zero { try await Task.sleep(for: delay) }
+        try Task.checkCancellation()
         if offline { throw APIError.offline }
         return snap
     }
 
     func shipment(ref: String) async throws -> Shipment {
         shipmentCalls += 1
+        if delay > .zero { try await Task.sleep(for: delay) }
+        try Task.checkCancellation()
         if offline { throw APIError.offline }
         guard let s = known[ref] else { throw APIError.notFound }
         return s
@@ -126,5 +133,33 @@ final class TrackedShipmentsTests: XCTestCase {
         let (store, _, _) = try make(MemoryRefStorage(["MC-26-0398", "MC-26-0412"]))
         XCTAssertEqual(store.refs, ["MC-26-0398", "MC-26-0412"])
         XCTAssertNil(store.rows.first?.shipment)  // данные ещё не загружены
+    }
+
+    func test_cancelledRefresh_isNotOffline() async throws {
+        // SwiftUI отменяет .task/.refreshable (переход в карточку) — это не «нет связи»
+        let (store, api, _) = try make(MemoryRefStorage(["MC-26-0412"]))
+        await api.setDelay(.seconds(5))
+        let task = Task { await store.refresh() }
+        try await Task.sleep(for: .milliseconds(50))
+        task.cancel()
+        await task.value
+        XCTAssertNil(store.lastError)
+        XCTAssertNil(store.updatedAt)
+        XCTAssertFalse(store.isRefreshing)
+    }
+
+    func test_refreshUnknownRef_isMissing_notLoadingForever() async throws {
+        let (store, _, _) = try make(MemoryRefStorage(["MC-00-0000", "MC-26-0412"]))
+        await store.refresh()
+        XCTAssertEqual(store.missing, ["MC-00-0000"])
+        XCTAssertNil(store.lastError)
+        XCTAssertEqual(store.rows.map(\.ref), ["MC-00-0000", "MC-26-0412"])
+    }
+
+    func test_removeClearsMissing() async throws {
+        let (store, _, _) = try make(MemoryRefStorage(["MC-00-0000"]))
+        await store.refresh()
+        store.remove("MC-00-0000")
+        XCTAssertEqual(store.missing, [])
     }
 }
