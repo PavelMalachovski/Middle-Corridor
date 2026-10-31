@@ -18,12 +18,18 @@ ios/
 brew install xcodegen python@3.11
 ```
 
+Если `xcode-select -p` показывает `/Library/Developer/CommandLineTools`, то
+`xcodebuild`/`simctl` не найдутся. Нужно либо `sudo xcode-select -s /Applications/Xcode.app`,
+либо `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` в сессии.
+
 ## Каждый день
 
 ```bash
 cd ios && xcodegen generate                 # после pull и правок project.yml
 cd ios/MCCore && swift test                 # логика, ~секунды
 cd ios && xcodebuild -scheme MiddleCorridor -destination 'platform=iOS Simulator,name=iPhone 17' build
+cd ios && xcodebuild test -scheme MiddleCorridor -destination 'platform=iOS Simulator,name=iPhone 17' -resultBundlePath build/ui.xcresult
+xcrun xcresulttool export attachments --path build/ui.xcresult --output-path build/shots   # скриншоты смоука
 open ios/MiddleCorridor.xcodeproj           # или Xcode → Run
 ```
 
@@ -40,7 +46,14 @@ MOCK_DATA=true .venv/bin/python -m app.main     # слушает 0.0.0.0:8000
 в той же Wi‑Fi: `ipconfig getifaddr en0`, адрес вводится в «Настройках» приложения,
 на запрос «Локальная сеть» ответить «Разрешить».
 
+## Запуск на iPhone
+
+iPhone по кабелю → Xcode → таргет MiddleCorridor → Signing & Capabilities →
+Team: Personal Team (бесплатный Apple ID) → Run. На телефоне: Настройки → Основные →
+VPN и управление устройством → доверять разработчику. Сборка с Personal Team живёт 7 дней.
+
 ## Ссылки
 
-- `mcstatus://s/MC-26-0412` — открыть груз (проверка: `xcrun simctl openurl booted "mcstatus://s/MC-26-0412"`).
+- `mcstatus://s/MC-26-0412` — открыть груз (проверка: `xcrun simctl openurl booted "mcstatus://s/MC-26-0412"`;
+  система спросит «Open in…?», в UI-тестах вместо этого `app.open(url)`).
 - `https://<домен>/?s=MC-26-0412` — Universal Link; нужен платный Apple Developer (Associated Domains).
