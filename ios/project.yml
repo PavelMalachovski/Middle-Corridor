@@ -27,7 +27,8 @@ targets:
       # данные мок-бэкенда для -mc-fake-api (UI-тесты, показ без Мака)
       - path: MCCore/Tests/MCCoreTests/Fixtures
         buildPhase: resources
-        group: DemoData
+        # без `group:` — при createIntermediateGroups папка попала бы в две группы
+        # и Xcode не открыл бы проект («member of more than one group»)
     dependencies:
       - package: MCCore
     info:
