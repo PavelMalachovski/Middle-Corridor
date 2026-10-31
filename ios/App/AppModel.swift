@@ -61,7 +61,7 @@ final class AppModel {
             // номер уже был в списке, но данных нет (старт без сети) — дозапросить
             if store.shipments[added] == nil { await store.refresh() }
         } catch {
-            linkError = (error as? AddError) ?? .server
+            linkError = error  // add — typed throws(AddError)
         }
     }
 
