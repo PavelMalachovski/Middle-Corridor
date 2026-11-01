@@ -162,6 +162,13 @@ public struct DemoClockState: Codable, Sendable, Hashable {
     public var offsetHours: Double
     public var storyStart: Date
     public var storyRef: String
+
+    public init(now: Date, offsetHours: Double, storyStart: Date, storyRef: String) {
+        self.now = now
+        self.offsetHours = offsetHours
+        self.storyStart = storyStart
+        self.storyRef = storyRef
+    }
 }
 
 public struct NewsSummary: Codable, Sendable, Hashable, Identifiable {

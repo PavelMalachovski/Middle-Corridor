@@ -8,6 +8,30 @@ import Foundation
 public protocol CorridorAPI: Sendable {
     func snapshot() async throws -> MapSnapshot
     func shipment(ref: String) async throws -> Shipment
+    /// Часы демо; сервер без пульта (не мок или без DEMO_CONTROL) — `APIError.notFound`.
+    func demoClock() async throws -> DemoClockState
+    func demo(_ action: DemoAction) async throws -> DemoClockState
+}
+
+extension CorridorAPI {
+    // по умолчанию пульта нет — как у боевого сервера
+    public func demoClock() async throws -> DemoClockState { throw APIError.notFound }
+    public func demo(_ action: DemoAction) async throws -> DemoClockState { throw APIError.notFound }
+}
+
+/// Действие пульта ведущего: перевести часы, следующий шаг истории, сброс.
+public enum DemoAction: Sendable, Equatable {
+    case advance(hours: Double)
+    case nextBeat
+    case reset
+
+    var body: [String: any Sendable] {
+        switch self {
+        case .advance(let hours): ["action": "advance", "hours": hours]
+        case .nextBeat: ["action": "next_beat"]
+        case .reset: ["action": "reset"]
+        }
+    }
 }
 
 public enum APIError: Error, Equatable, Sendable {
@@ -47,8 +71,24 @@ public struct HTTPCorridorAPI: CorridorAPI {
         try await get(baseURL.appending(path: "api/v1/shipments").appending(component: ref))
     }
 
+    public func demoClock() async throws -> DemoClockState {
+        try await get(baseURL.appending(path: "api/v1/demo/clock"))
+    }
+
+    public func demo(_ action: DemoAction) async throws -> DemoClockState {
+        var request = URLRequest(url: baseURL.appending(path: "api/v1/demo/clock"), timeoutInterval: timeout)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: action.body)
+        return try await send(request)
+    }
+
     private func get<T: Decodable>(_ url: URL) async throws -> T {
-        var request = URLRequest(url: url, timeoutInterval: timeout)
+        try await send(URLRequest(url: url, timeoutInterval: timeout))
+    }
+
+    private func send<T: Decodable>(_ base: URLRequest) async throws -> T {
+        var request = base
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         let result: (Data, URLResponse)
         do {
