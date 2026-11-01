@@ -1,7 +1,7 @@
 import MCCore
 import SwiftUI
 
-/// Карточка груза: где сейчас, ETA, причина стоянки, точки маршрута. Карта — неделя 2.
+/// Карточка груза: карта маршрута, где сейчас, очередь, погода в порту, ETA, точки маршрута.
 struct ShipmentDetailView: View {
     let ref: String
     let store: TrackedShipments
@@ -29,6 +29,10 @@ struct ShipmentDetailView: View {
     private func content(_ s: Shipment, labels: Labels) -> some View {
         let position = labels.position(s)
         return List {
+            Section {
+                RouteMapView(shipment: s)
+                    .listRowInsets(EdgeInsets())
+            }
             Section {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(labels.cargo(s)).font(.headline)
@@ -59,6 +63,7 @@ struct ShipmentDetailView: View {
                 if let hold = labels.hold(s) {
                     Label(hold, systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(Theme.warning)
+                        .accessibilityElement(children: .combine)
                         .accessibilityIdentifier("hold")
                 }
                 VStack(alignment: .leading, spacing: 2) {
@@ -68,6 +73,15 @@ struct ShipmentDetailView: View {
                         Text(l.dateTime(at)).font(.caption).foregroundStyle(.secondary)
                     }
                 }
+            }
+
+            if let queue = s.queue {
+                QueueSection(queue: queue, labels: labels)
+            }
+            if let snapshot = store.snapshot,
+                let port = RouteGeometry.weatherPort(for: s, nodes: snapshot.nodes)
+            {
+                PortWeatherSection(port: port, snapshot: snapshot, labels: labels)
             }
 
             Section {
