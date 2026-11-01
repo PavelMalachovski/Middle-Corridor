@@ -146,11 +146,11 @@ def test_story_delivered_then_cycles() -> None:
     assert again.hold_code == "ferry_loading_wait"
 
 
-def test_story_beats_order() -> None:
+def test_story_beats_are_coarse() -> None:
+    """Пять шагов на всю историю: ведущему не нужно 12 жестов и 12 баннеров до доставки."""
     beats = _story().beats(T0)
-    assert beats[0] == T0 + 6 * H
-    assert all(a < b for a, b in zip(beats, beats[1:], strict=False))
-    assert beats[-1] == T0 + 220 * H
+    # шторм, паром из Актау, Алят, отход из Поти, доставлен
+    assert beats == [T0 + h * H for h in (6, 70, 92, 172, 220)]
 
 
 def test_story_before_start_is_first_cycle() -> None:

@@ -112,10 +112,18 @@ class DemoStory:
         return None
 
     def beats(self, now: datetime) -> list[datetime]:
-        """Такты текущего цикла для «следующего шага»: начало шторма и события."""
+        """Такты «следующего шага»: шторм, отход парома, Алят, отход из Поти, доставлен.
+
+        Не каждое событие маршрута — иначе до доставки 12 жестов и столько же баннеров.
+        """
         t0 = self.cycle_start(now)
-        events = [e.ts for e in self.plan(now).events if e.ts >= t0]
-        return sorted({t0 + STORM_START_H * H, *events})
+        return [
+            t0 + STORM_START_H * H,
+            t0 + _ACTUAL_DEPART[PORT] * H,
+            t0 + _ACTUAL_ARRIVE["BAKU_ALAT"] * H,
+            t0 + _ACTUAL_DEPART["POTI"] * H,
+            t0 + _ACTUAL_ARRIVE[ROUTE_AKTAU[-1]] * H,
+        ]
 
     def plan(self, now: datetime) -> ShipmentPlan:
         t0 = self.cycle_start(now)
