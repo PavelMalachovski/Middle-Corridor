@@ -1,8 +1,10 @@
 import MCCore
 import SwiftUI
-import UIKit
 
 /// Добавление груза: номер руками, из буфера или ссылкой.
+///
+/// Вставка — системной `PasteButton`: она не вызывает запрос «Разрешить вставку?» (его показывает
+/// чтение `UIPasteboard` в коде). Номер проверяется при вводе: «Добавить» активна, когда он распознан.
 struct AddShipmentView: View {
     let store: TrackedShipments
     let onAdded: (String) -> Void
@@ -13,31 +15,35 @@ struct AddShipmentView: View {
     @State private var busy = false
     @FocusState private var focused: Bool
 
+    /// Номер, найденный в строке (в ссылке оператора тоже — `parse` ищет его в любом месте).
+    private var recognized: String? { ShipmentRef.parse(input) }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField(l("add.placeholder"), text: $input)
-                        .textInputAutocapitalization(.characters)
-                        .autocorrectionDisabled()
-                        .keyboardType(.asciiCapable)
-                        .submitLabel(.done)
-                        .focused($focused)
-                        .onSubmit(add)
-                        .accessibilityIdentifier("add.field")
-                    Button {
-                        if let text = UIPasteboard.general.string { input = text }
-                    } label: {
-                        Label(l("add.paste"), systemImage: "doc.on.clipboard")
+                    HStack {
+                        TextField(l("add.placeholder"), text: $input)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                            .keyboardType(.asciiCapable)
+                            .submitLabel(.done)
+                            .focused($focused)
+                            .onSubmit(add)
+                            .accessibilityIdentifier("add.field")
+                        if recognized != nil {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Theme.ok)
+                                .accessibilityHidden(true)
+                        }
                     }
+                    PasteButton(payloadType: String.self) { strings in
+                        input = strings.first ?? ""
+                    }
+                    .labelStyle(.titleAndIcon)
+                    .accessibilityIdentifier("add.paste")
                 } footer: {
-                    if let error {
-                        Text(Self.message(for: error, l))
-                            .foregroundStyle(Theme.critical)
-                            .accessibilityIdentifier("add.error")
-                    } else {
-                        Text(l("add.hint"))
-                    }
+                    footer
                 }
             }
             .navigationTitle(l("add.title"))
@@ -51,18 +57,34 @@ struct AddShipmentView: View {
                         ProgressView()
                     } else {
                         Button(l("add.submit"), action: add)
-                            .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .disabled(recognized == nil)
                             .accessibilityIdentifier("add.submit")
                     }
                 }
             }
             .onChange(of: input) { error = nil }
             .onAppear { focused = true }
+            .sensoryFeedback(.error, trigger: error) { _, new in new != nil }
+        }
+    }
+
+    @ViewBuilder
+    private var footer: some View {
+        if let error {
+            Text(Self.message(for: error, l))
+                .foregroundStyle(Theme.critical)
+                .accessibilityIdentifier("add.error")
+        } else if let ref = recognized {
+            Text(l("add.recognized", ["ref": ref]))
+                .foregroundStyle(Theme.ok)
+                .accessibilityIdentifier("add.recognized")
+        } else {
+            Text(l("add.hint"))
         }
     }
 
     private func add() {
-        guard !busy else { return }
+        guard !busy, recognized != nil else { return }
         busy = true
         Task {
             defer { busy = false }

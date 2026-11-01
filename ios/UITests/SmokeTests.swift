@@ -121,11 +121,64 @@ final class SmokeTests: XCTestCase {
         tab.tap()
         let aktau = element(app, "port.AKTAU")
         XCTAssertTrue(aktau.waitForExistence(timeout: 5))
-        XCTAssertTrue(element(app, "corridor.news").exists)
+        XCTAssertTrue(element(app, "corridor.map").exists)
         shot(app, "07-corridor-ru")
         aktau.tap()
         XCTAssertTrue(element(app, "wind.chart").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "wind.outlook").exists)
         shot(app, "08-port-ru")
+
+        // новости — под картой, портами и неделей
+        app.navigationBars.buttons.firstMatch.tap()
+        let news = element(app, "corridor.news")
+        for _ in 0..<4 where !news.exists { app.swipeUp() }
+        XCTAssertTrue(news.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func test_listSectionsByUrgency() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0412")
+        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
+        app.navigationBars["MC-26-0412"].buttons.firstMatch.tap()
+        app.buttons["add"].tap()
+        let field = app.textFields["add.field"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("MC-26-0398")
+        app.buttons["add.submit"].tap()
+        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
+        app.navigationBars["MC-26-0398"].buttons.firstMatch.tap()
+
+        // 0398 стоит под штормом с задержкой — секция «Требуют внимания» над «В пути»
+        let attention = element(app, "section.0")
+        let active = element(app, "section.1")
+        XCTAssertTrue(attention.waitForExistence(timeout: 5))
+        XCTAssertTrue(active.exists)
+        XCTAssertLessThan(attention.frame.minY, active.frame.minY)
+        let urgent = element(app, "row.MC-26-0398")
+        let moving = element(app, "row.MC-26-0412")
+        XCTAssertLessThan(urgent.frame.minY, moving.frame.minY)
+        shot(app, "19-list-sections-ru")
+    }
+
+    @MainActor
+    func test_removeAndUndo() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0412")
+        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
+        app.navigationBars["MC-26-0412"].buttons.firstMatch.tap()
+        let row = element(app, "row.MC-26-0412")
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.swipeLeft()
+        app.buttons["Delete"].exists ? app.buttons["Delete"].tap() : app.buttons["Удалить"].tap()
+        let undo = app.buttons["undo"]
+        XCTAssertTrue(undo.waitForExistence(timeout: 3))
+        shot(app, "20-undo-ru")
+        undo.tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
     }
 
     @MainActor

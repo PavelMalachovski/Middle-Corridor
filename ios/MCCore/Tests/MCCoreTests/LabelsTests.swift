@@ -117,3 +117,18 @@ final class LabelsTests: XCTestCase {
         XCTAssertEqual(try labels(.en).relative(ago, to: now), "3 hours ago")
     }
 }
+
+final class CompassTests: XCTestCase {
+    func test_compass_ruAndEn() {
+        let ru = Labels(lang: .ru, nodes: [])
+        let en = Labels(lang: .en, nodes: [])
+        XCTAssertEqual(ru.compass(236), "ЮЗ")  // Актау в фикстуре: ветер с юго-запада
+        XCTAssertEqual(en.compass(236), "SW")
+        XCTAssertEqual(ru.compass(0), "С")
+        XCTAssertEqual(ru.compass(359), "С")
+        XCTAssertEqual(ru.compass(22.4), "С")
+        XCTAssertEqual(ru.compass(22.5), "СВ")
+        XCTAssertEqual(en.compass(-90), "W")
+        XCTAssertEqual(en.compass(450), "E")
+    }
+}

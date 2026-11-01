@@ -21,6 +21,12 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
     }
 
+    /// Пользователь запретил уведомления в iOS: тумблеры в настройках ничего не решают.
+    func isDenied() async -> Bool {
+        let settings = await center.notificationSettings()
+        return settings.authorizationStatus == .denied
+    }
+
     /// `delay` > 0 — ведущий успевает заблокировать телефон, и уведомление приходит на экран блокировки.
     func deliver(_ notices: [AppNotice], after delay: TimeInterval) {
         for notice in notices {

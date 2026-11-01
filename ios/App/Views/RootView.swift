@@ -20,7 +20,7 @@ struct RootView: View {
                 .tag(AppTab.shipments)
             CorridorView(store: model.store)
                 .tabItem {
-                    Label(l("tab.corridor"), systemImage: "wind").accessibilityIdentifier("tab.corridor")
+                    Label(l("tab.corridor"), systemImage: "map").accessibilityIdentifier("tab.corridor")
                 }
                 .tag(AppTab.corridor)
         }

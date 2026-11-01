@@ -1,11 +1,15 @@
 import MCCore
 import SwiftUI
 
-/// Карточка груза: карта маршрута, где сейчас, очередь, погода в порту, ETA, точки маршрута.
+/// Карточка груза — от ответа к подробностям: статус и ETA, где сейчас и почему стоит, очередь;
+/// Live Activity; карта (нажатие — на весь экран); погода в порту; лента маршрута; груз и клиент.
 struct ShipmentDetailView: View {
     let ref: String
     let store: TrackedShipments
+    /// «Удалить из списка» из меню «…»: удаляет и закрывает карточку.
+    let onRemove: (String) -> Void
     @Environment(\.l10n) private var l
+    @State private var showMap = false
 
     var body: some View {
         Group {
@@ -27,72 +31,9 @@ struct ShipmentDetailView: View {
     }
 
     private func content(_ s: Shipment, labels: Labels) -> some View {
-        let position = labels.position(s)
+        let nodes = store.snapshot?.nodes ?? []
         return List {
-            Section {
-                RouteMapView(shipment: s)
-                    .listRowInsets(EdgeInsets())
-            }
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(labels.cargo(s)).font(.headline)
-                    Text(labels.route(s)).foregroundStyle(.secondary)
-                    HStack {
-                        StatusPill(shipment: s, labels: labels)
-                        Spacer()
-                        Text(l("card.progress", ["pct": String(Int((s.progress * 100).rounded()))]))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    ProgressView(value: min(max(s.progress, 0), 1))
-                        .tint(Theme.tone(s.tone))
-                }
-                .padding(.vertical, 4)
-            }
-
-            Section(l("card.now")) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(position.title)
-                        .italic(!position.confirmed)
-                        .foregroundStyle(position.confirmed ? .primary : .secondary)
-                        .accessibilityIdentifier("card.position")
-                    Text(position.detail)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                if let hold = labels.hold(s) {
-                    Label(hold, systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(Theme.warning)
-                        .accessibilityElement(children: .combine)
-                        .accessibilityIdentifier("hold")
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(l("card.lastEvent")).font(.caption).foregroundStyle(.secondary)
-                    Text(labels.event(s)).accessibilityIdentifier("card.event")
-                    if let at = s.lastEventAt {
-                        Text(l.dateTime(at)).font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-            }
-
-            if let queue = s.queue {
-                QueueSection(queue: queue, labels: labels)
-            }
-            if let snapshot = store.snapshot,
-                let port = RouteGeometry.weatherPort(for: s, nodes: snapshot.nodes)
-            {
-                PortWeatherSection(port: port, snapshot: snapshot, labels: labels)
-            }
-
-            Section {
-                LabeledContent(l("card.eta"), value: s.eta.map(l.dateTime) ?? "—")
-                if s.isDelayed {
-                    LabeledContent(l("card.delay")) {
-                        Text("+\(l.hours(s.delayHours))").foregroundStyle(Theme.warning)
-                    }
-                }
-                LabeledContent(l("card.client"), value: s.client)
-            }
+            ShipmentHeroSection(shipment: s, labels: labels)
 
             if LiveActivities.enabled {
                 Section {
@@ -100,71 +41,75 @@ struct ShipmentDetailView: View {
                 }
             }
 
-            Section(l("card.route")) {
-                ForEach(Array(s.checkpoints.enumerated()), id: \.offset) { _, checkpoint in
-                    CheckpointRow(checkpoint: checkpoint, name: labels.checkpoint(checkpoint))
-                }
+            Section {
+                // карта в списке не двигается (жесты спорят с прокруткой) — нажатие открывает её целиком
+                RouteMapView(shipment: s, nodes: nodes)
+                    .accessibilityLabel(mapLabel(s, labels: labels))
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityHint(l("card.openMap"))
+                    .accessibilityAction { showMap = true }
+                    .overlay {
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { showMap = true }
+                    }
+                    .overlay(alignment: .bottomTrailing) {
+                        Label(l("card.openMap"), systemImage: "arrow.up.left.and.arrow.down.right")
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(.regularMaterial, in: Capsule())
+                            .padding(10)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                    .listRowInsets(EdgeInsets())
             }
+
+            if let snapshot = store.snapshot,
+                let port = RouteGeometry.weatherPort(for: s, nodes: snapshot.nodes)
+            {
+                PortWeatherSection(port: port, snapshot: snapshot, labels: labels)
+            }
+
+            CheckpointTimelineSection(shipment: s, labels: labels)
+
+            Section(l("card.details")) {
+                LabeledContent(l("card.cargo"), value: labels.cargo(s))
+                LabeledContent(l("card.client"), value: s.client)
+            }
+        }
+        .fullScreenCover(isPresented: $showMap) {
+            RouteMapScreen(shipment: s, nodes: nodes)
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                ShareLink(
-                    item: URL(string: "mcstatus://s/\(s.ref)")!,
-                    subject: Text(s.ref),
-                    message: Text("\(s.ref) · \(labels.route(s)) · \(labels.state(s))")
-                ) {
-                    Image(systemName: "square.and.arrow.up")
+                Menu {
+                    ShareLink(
+                        item: AppLinks.share(s.ref),
+                        subject: Text(s.ref),
+                        message: Text(AppLinks.message(s, labels: labels, l: l))
+                    ) {
+                        Label(l("card.share"), systemImage: "square.and.arrow.up")
+                    }
+                    Button(role: .destructive) { onRemove(s.ref) } label: {
+                        Label(l("card.remove"), systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
-                .accessibilityLabel(l("card.share"))
+                .accessibilityLabel(l("card.actions"))
+                .accessibilityIdentifier("card.menu")
             }
         }
     }
-}
 
-/// Точка маршрута: ✓ пройдена, ● сейчас, ○ впереди; факт или план.
-private struct CheckpointRow: View {
-    let checkpoint: Checkpoint
-    let name: String
-    @Environment(\.l10n) private var l
-
-    var body: some View {
-        HStack(spacing: 12) {
-            icon.frame(width: 20)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(name)
-                    .fontWeight(checkpoint.state.known == .current ? .semibold : .regular)
-                Text(time)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            if let late = lateHours, late >= 1 {
-                Text("+\(l.hours(late))")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.warning)
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    @ViewBuilder
-    private var icon: some View {
-        switch checkpoint.state.known {
-        case .done: Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.ok)
-        case .current: Image(systemName: "circle.inset.filled").foregroundStyle(Theme.accent)
-        case .planned, nil: Image(systemName: "circle").foregroundStyle(.secondary)
-        }
-    }
-
-    private var time: String {
-        if let actual = checkpoint.actualAt {
-            return l("card.fact", ["ts": l.dateTime(actual)])
-        }
-        return l("card.plan", ["ts": l.dateTime(checkpoint.plannedAt)])
-    }
-
-    private var lateHours: Double? {
-        checkpoint.actualAt.map { $0.timeIntervalSince(checkpoint.plannedAt) / 3600 }
+    /// Карта для VoiceOver — смыслом, а не «карта маршрута».
+    private func mapLabel(_ s: Shipment, labels: Labels) -> String {
+        l("card.mapLabel.value", [
+            "where": labels.position(s).title,
+            "pct": String(Int((s.progress * 100).rounded())),
+        ])
     }
 }
 
@@ -191,6 +136,7 @@ private struct LiveActivityButton: View {
                 l(isActive ? "card.liveActivity.stop" : "card.liveActivity.start"),
                 systemImage: isActive ? "lock.slash" : "lock.iphone")
         }
+        .sensoryFeedback(.success, trigger: isActive) { _, new in new }
         .accessibilityIdentifier("card.liveActivity")
         .onAppear { isActive = LiveActivities.isActive(shipment.ref) }
     }

@@ -188,12 +188,22 @@ public struct WeekSummary: Codable, Sendable, Hashable {
     public var portsStopped: Int
 }
 
+/// Сегмент коридора между узлами: рельсы или паромная/морская линия (`coordinates` — [lon, lat]).
+public struct CorridorSegment: Codable, Sendable, Hashable {
+    public var fromCode: String
+    public var toCode: String
+    public var mode: Coded<TransportMode>
+    public var coordinates: [[Double]]
+}
+
 public struct MapSnapshot: Codable, Sendable, Hashable {
     public var generatedAt: Date
     public var serverTime: Date
     public var replay: Bool
     public var mock: Bool
     public var nodes: [NodeStatus]
+    /// Линии коридора для обзорной карты; старый кэш без них — nil.
+    public var segments: [CorridorSegment]?
     public var shipments: [Shipment]
     public var news: [NewsSummary]
     public var thresholds: Thresholds?
