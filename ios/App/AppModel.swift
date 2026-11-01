@@ -19,6 +19,8 @@ final class AppModel {
     private(set) var serverURL: String
     var path: [String] = []
     var tab: AppTab = .shipments
+    /// Точность прогноза за 90 дней (вкладка «Коридор»); нет ответа — блок скрыт.
+    private(set) var accuracy: AccuracyReport?
     var linkError: AddError?
     var showLinkError: Bool {
         get { linkError != nil }
@@ -53,6 +55,7 @@ final class AppModel {
         guard normalized != serverURL, URL(string: normalized) != nil else { return }
         serverURL = normalized
         defaults.set(normalized, forKey: Self.serverKey)
+        accuracy = nil  // точность прежнего сервера (например, демо-синтетика) не показываем
         AppGroup.defaults?.set(normalized, forKey: AppGroup.serverKey)
         api = Self.makeAPI(fake: isFake, server: normalized)
         store = TrackedShipments(api: api, storage: storage, cache: cache, server: normalized)
@@ -83,6 +86,10 @@ final class AppModel {
         } catch {
             linkError = error  // add — typed throws(AddError)
         }
+    }
+
+    func loadAccuracy() async {
+        if let report = try? await api.accuracy(days: 90) { accuracy = report }
     }
 
     /// Удалить груз из списка — и его Live Activity, и «груз виджета», если это он.

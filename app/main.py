@@ -29,6 +29,7 @@ from app.db.base import create_engine, create_session_factory
 from app.integrations.ais.aisstream import AISStreamClient
 from app.integrations.ais.base import BoundingBox
 from app.integrations.llm.claude import ClaudeNewsTranslator
+from app.integrations.mock.accuracy import MockAccuracySource
 from app.integrations.mock.clock import MockClock
 from app.integrations.mock.corridor import MockNewsSource, MockNodeSource, MockReportSource
 from app.integrations.mock.fleet import MockFleetSource, MockShipmentSource
@@ -215,7 +216,8 @@ async def run() -> None:  # noqa: PLR0915 — точка сборки всего
         dispatcher=dp,
         telegram_webhook_secret=_webhook_secret(settings) if webhook_mode else "",
         map_service=map_service,
-        accuracy_service=None if settings.mock_data else accuracy_service,
+        # в моке точность — синтетика с пометкой demo (журнала остановок нет)
+        accuracy_service=MockAccuracySource() if settings.mock_data else accuracy_service,
     )
     server = uvicorn.Server(
         uvicorn.Config(api_app, host="0.0.0.0", port=settings.port, log_config=None)

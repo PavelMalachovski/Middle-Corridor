@@ -115,6 +115,18 @@ final class WindOutlookTests: XCTestCase {
         XCTAssertNil(outlook.until)
     }
 
+    func test_dipInTheMiddle_isNotWhole() {
+        // худший уровень в начале и в конце, посередине провал: «до …» не скажешь, но и не «весь прогноз»
+        let hours = [hour(0, 20, .critical), hour(1, 15, .warning), hour(2, 21, .critical)]
+        let outlook = WindOutlook(hours: hours, now: t0)
+        XCTAssertEqual(outlook.level, .critical)
+        XCTAssertNil(outlook.until)
+        XCTAssertFalse(outlook.isWhole)
+        XCTAssertEqual(outlook.hoursAtLevel, 2)
+        XCTAssertEqual(outlook.totalHours, 3)
+        XCTAssertEqual(outlook.peakGust, 21 * 1.4, accuracy: 0.001)
+    }
+
     func test_calm() {
         let outlook = WindOutlook(hours: [hour(0, 5, nil), hour(1, 7, nil)], now: t0)
         XCTAssertNil(outlook.level)
@@ -127,5 +139,7 @@ final class WindOutlookTests: XCTestCase {
         let outlook = WindOutlook(hours: try XCTUnwrap(aktau.forecast), now: snapshot.generatedAt)
         XCTAssertEqual(outlook.level, .critical)
         XCTAssertNil(outlook.until)
+        XCTAssertTrue(outlook.isWhole)  // все 48 ч — critical (держат порывы, а не средний ветер)
+        XCTAssertGreaterThan(outlook.peakGust, outlook.peak)
     }
 }

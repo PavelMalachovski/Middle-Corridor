@@ -62,13 +62,13 @@ struct WindChart: View {
                     .foregroundStyle(Theme.warning)
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 2]))
                     .annotation(position: .bottom, alignment: .trailing) {
-                        Text(l("chart.risk")).font(.caption2.weight(.semibold)).foregroundStyle(Theme.warning)
+                        thresholdLabel(l("chart.risk"), Theme.warning)
                     }
                 RuleMark(y: .value(l("level.critical"), thresholds.criticalWind))
                     .foregroundStyle(Theme.critical)
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [6, 3]))
                     .annotation(position: .top, alignment: .trailing) {
-                        Text(l("chart.stop")).font(.caption2.weight(.semibold)).foregroundStyle(Theme.critical)
+                        thresholdLabel(l("chart.stop"), Theme.critical)
                     }
             }
             ForEach(hours, id: \.ts) { hour in
@@ -92,8 +92,7 @@ struct WindChart: View {
                     .foregroundStyle(Theme.accent)
             }
         }
-        .chartYScale(domain: 0...yMax)
-        .chartYAxisLabel(l("chart.unit"))
+        .chartYScale(domain: 0...yMax)  // единица «м/с» — в легенде над графиком, второй раз не подписываем
         .chartXSelection(value: $selected)
         .chartXAxis {
             // на крупном шрифте подписи по 12 часов налезают друг на друга
@@ -111,6 +110,16 @@ struct WindChart: View {
         }
         .frame(height: height)
         .accessibilityIdentifier("wind.chart")
+    }
+
+    /// Подпись порога на подложке: линия ветра часто идёт прямо по ней и делала текст нечитаемым.
+    private func thresholdLabel(_ text: String, _ color: Color) -> some View {
+        Text(text)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1)
+            .background(.background.opacity(0.85), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
     }
 
     /// Ближайший к пальцу час прогноза.
@@ -142,12 +151,18 @@ struct WindChart: View {
         switch outlook.level {
         case .critical?, .warning?:
             let level = outlook.level ?? .warning
-            let key = outlook.until == nil ? "chart.outlook.whole" : "chart.outlook.until"
+            // «до …» — уровень кончается раньше прогноза; «все N ч» — только без провалов; иначе «N из M ч»
+            let key =
+                outlook.until != nil ? "chart.outlook.until"
+                : outlook.isWhole ? "chart.outlook.whole" : "chart.outlook.share"
             Label(
                 l(key, [
                     "level": l("level.\(level.rawValue)"),
                     "until": outlook.until.map(l.dateTime) ?? "",
                     "max": peak,
+                    "gust": String(Int(outlook.peakGust.rounded())),
+                    "n": String(outlook.hoursAtLevel),
+                    "hours": String(outlook.totalHours),
                 ]),
                 systemImage: "exclamationmark.triangle.fill"
             )

@@ -25,6 +25,7 @@ from datetime import datetime, timedelta
 from app.integrations.mock.clock import MockClock
 from app.integrations.mock.fleet import _DWELL_H, CARGO_EN, ROUTE_AKTAU
 from app.services.corridor import NODES, segment
+from app.services.delay_breakdown import DelayCause
 from app.services.demo_clock import DemoClockAction, DemoClockState
 from app.services.queue_forecast import QueueInput
 from app.services.tracking import EventKind, PlannedLeg, ShipmentPlan, TrackingEvent
@@ -46,6 +47,7 @@ STORM_END_H = 66.0
 CALM_END_H = 90.0
 WARNING_FROM_H = -36.0
 DEPART_PORT_H = 70.0
+STORM_BEAT_LAG_H = 6.0
 
 WIND_WARNING = (15.0, 18.0)
 WIND_CRITICAL = (21.0, 29.0)
@@ -112,13 +114,14 @@ class DemoStory:
         return None
 
     def beats(self, now: datetime) -> list[datetime]:
-        """Такты «следующего шага»: шторм, отход парома, Алят, отход из Поти, доставлен.
+        """Такты «следующего шага»: шторм (+6 ч), отход парома, Алят, отход из Поти, доставлен.
 
         Не каждое событие маршрута — иначе до доставки 12 жестов и столько же баннеров.
         """
         t0 = self.cycle_start(now)
         return [
-            t0 + STORM_START_H * H,
+            # через 6 ч после начала шторма: уведомления те же, а в «почему задержка» уже погода
+            t0 + (STORM_START_H + STORM_BEAT_LAG_H) * H,
             t0 + _ACTUAL_DEPART[PORT] * H,
             t0 + _ACTUAL_ARRIVE["BAKU_ALAT"] * H,
             t0 + _ACTUAL_DEPART["POTI"] * H,
@@ -199,6 +202,11 @@ class DemoStory:
             legs=legs,
             events=tuple(sorted(events, key=lambda e: e.ts)),
             queue=queue,
+            delay_causes=(  # почему опаздывает: паром, шторм, снова паром
+                DelayCause("ferry_wait", PORT, at(_PLAN_DEPART[PORT]), at(STORM_START_H)),
+                DelayCause("weather_ban", PORT, at(STORM_START_H), at(STORM_END_H)),
+                DelayCause("ferry_wait", PORT, at(STORM_END_H), at(DEPART_PORT_H)),
+            ),
             **hold,
         )
 

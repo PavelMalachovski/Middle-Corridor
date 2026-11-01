@@ -31,7 +31,8 @@ struct AddShipmentView: View {
                             .focused($focused)
                             .onSubmit(add)
                             .accessibilityIdentifier("add.field")
-                        if recognized != nil {
+                        // «формат верный» не спорит с ошибкой: после ответа «не найден» галочку прячем
+                        if recognized != nil, error == nil {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(Theme.ok)
                                 .accessibilityHidden(true)

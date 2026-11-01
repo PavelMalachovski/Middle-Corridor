@@ -23,23 +23,33 @@ struct ShipmentHeroSection: View {
         let delivered = s.state.known == .delivered
         let pct = String(Int((s.progress * 100).rounded()))
         return VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
-                StatusPill(shipment: s, labels: labels)
-                Spacer()
-                Text(labels.route(s))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+            // не влезает в строку (крупный шрифт) — маршрут под статусом, а не «Сиань → Ко…»
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline) {
+                    StatusPill(shipment: s, labels: labels)
+                    Spacer()
+                    routeText(s).lineLimit(1)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    StatusPill(shipment: s, labels: labels)
+                    routeText(s)
+                }
             }
             Text(l(delivered ? "hero.arrived" : "hero.eta"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .padding(.top, 4)
-            Text(s.eta.map(l.dateTime) ?? "—")
+            // вилка «6–9 нояб.», если плохой сценарий заметно позже; иначе одна дата со временем
+            let range = delivered ? nil : s.eta.flatMap { labels.etaRange($0, s.etaLatest) }
+            Text(range ?? s.eta.map(l.dateTime) ?? "—")
                 .font(.title.bold())
                 .monospacedDigit()
                 .contentTransition(.numericText())
-                .accessibilityIdentifier("hero.eta")
+            if range != nil, let eta = s.eta, let latest = s.etaLatest {
+                Text(l("card.etaRange", ["usual": l.dateTime(eta), "worst": l.dateTime(latest)]))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             if s.isDelayed {
                 Text(l("hero.late", ["value": l.hours(s.delayHours)]))
                     .font(.subheadline)
@@ -49,21 +59,32 @@ struct ShipmentHeroSection: View {
             ProgressView(value: min(max(s.progress, 0), 1))
                 .tint(Theme.tone(s.tone))
                 .padding(.top, 4)
-            HStack {
-                Text(labels.node(s.originCode) ?? s.origin)
-                Spacer()
+            // «Сиань · 70% · Констанца»; на крупном шрифте — только процент (концы маршрута уже выше)
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    Text(labels.node(s.originCode) ?? s.origin)
+                    Spacer()
+                    Text(l("card.progress", ["pct": pct])).monospacedDigit()
+                    Spacer()
+                    Text(labels.node(s.destinationCode) ?? s.destination)
+                }
+                .lineLimit(1)
                 Text(l("card.progress", ["pct": pct])).monospacedDigit()
-                Spacer()
-                Text(labels.node(s.destinationCode) ?? s.destination)
             }
             .font(.caption)
             .foregroundStyle(.secondary)
-            .lineLimit(1)
         }
         .padding(.vertical, 4)
         .animation(.default, value: s.eta)
         .animation(.default, value: s.delayHours)
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("card.eta")
+    }
+
+    private func routeText(_ s: Shipment) -> some View {
+        Text(labels.route(s))
+            .font(.caption)
+            .foregroundStyle(.secondary)
     }
 
     /// Где груз сейчас. Оценка по расписанию — курсивом и с меткой «≈ оценка»: это не факт.

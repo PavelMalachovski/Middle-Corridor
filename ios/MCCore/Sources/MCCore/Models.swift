@@ -100,6 +100,10 @@ public struct Shipment: Codable, Sendable, Hashable, Identifiable {
     public var position: ShipmentPosition
     /// Прогноз выхода из очереди — только пока груз ждёт отправки из порта.
     public var queue: QueueForecast?
+    /// Поздняя граница вилки прибытия («в плохом случае»); `eta` — ожидаемое.
+    public var etaLatest: Date?
+    /// Разбор задержки по причинам; сумма = `delayHours`. Старый бэкенд — nil.
+    public var delayBreakdown: [DelayPart]?
     public var progress: Double
     public var checkpoints: [Checkpoint]
     public var track: [[Double]]  // [lon, lat] — порядок GeoJSON
@@ -188,24 +192,96 @@ public struct WeekSummary: Codable, Sendable, Hashable {
     public var portsStopped: Int
 }
 
-/// Сегмент коридора между узлами: рельсы или паромная/морская линия (`coordinates` — [lon, lat]).
-public struct CorridorSegment: Codable, Sendable, Hashable {
-    public var fromCode: String
-    public var toCode: String
-    public var mode: Coded<TransportMode>
-    public var coordinates: [[Double]]
-}
-
 public struct MapSnapshot: Codable, Sendable, Hashable {
     public var generatedAt: Date
     public var serverTime: Date
     public var replay: Bool
     public var mock: Bool
     public var nodes: [NodeStatus]
-    /// Линии коридора для обзорной карты; старый кэш без них — nil.
-    public var segments: [CorridorSegment]?
     public var shipments: [Shipment]
     public var news: [NewsSummary]
     public var thresholds: Thresholds?
+    /// Паромы (позиция только у тех, кто в эфире AIS) и геометрия коридора — для карты.
+    public var vessels: [VesselStatus]?
+    public var segments: [RouteSegment]?
     public var summary: WeekSummary?
 }
+
+/// Часть задержки: причина (код), узел и часы.
+public struct DelayPart: Codable, Sendable, Hashable {
+    public var code: String
+    public var nodeCode: String?
+    public var hours: Double
+
+    public init(code: String, nodeCode: String?, hours: Double) {
+        self.code = code
+        self.nodeCode = nodeCode
+        self.hours = hours
+    }
+}
+
+/// Паром: позиция есть, только если судно в эфире AIS (`hasRecentData`); иначе — «нет данных».
+public struct VesselStatus: Codable, Sendable, Hashable {
+    public var name: String
+    public var lat: Double?
+    public var lon: Double?
+    public var cog: Double?
+    public var sog: Double?
+    public var hasRecentData: Bool
+    public var route: String?
+    public var phaseCode: String?
+
+    public init(
+        name: String, lat: Double?, lon: Double?, cog: Double?, sog: Double?, hasRecentData: Bool,
+        route: String?, phaseCode: String?
+    ) {
+        self.name = name
+        self.lat = lat
+        self.lon = lon
+        self.cog = cog
+        self.sog = sog
+        self.hasRecentData = hasRecentData
+        self.route = route
+        self.phaseCode = phaseCode
+    }
+}
+
+/// Сегмент коридора: ж/д или море, точки `[lon, lat]`.
+public struct RouteSegment: Codable, Sendable, Hashable {
+    public var fromCode: String
+    public var toCode: String
+    public var mode: Coded<TransportMode>
+    public var coordinates: [[Double]]
+}
+
+/// Точность предиктора по порту за период (`/api/v1/accuracy`).
+public struct PortAccuracy: Codable, Sendable, Hashable {
+    public var code: String
+    public var name: String
+    public var closures: Int
+    public var hits: Int
+    public var alerts: Int
+    public var falseAlarms: Int
+    public var pod: Double?
+    public var far: Double?
+    public var csi: Double?
+    public var medianLeadH: Double?
+}
+
+public struct AccuracyReport: Codable, Sendable, Hashable {
+    public var since: Date
+    public var until: Date
+    public var days: Int
+    public var ports: [PortAccuracy]
+    /// Синтетика демо-режима, а не сверка с журналом остановок.
+    public var demo: Bool?
+
+    public init(since: Date, until: Date, days: Int, ports: [PortAccuracy], demo: Bool?) {
+        self.since = since
+        self.until = until
+        self.days = days
+        self.ports = ports
+        self.demo = demo
+    }
+}
+

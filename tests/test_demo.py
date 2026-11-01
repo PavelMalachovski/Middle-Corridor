@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 
 import httpx
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.main import create_app
@@ -149,8 +150,9 @@ def test_story_delivered_then_cycles() -> None:
 def test_story_beats_are_coarse() -> None:
     """Пять шагов на всю историю: ведущему не нужно 12 жестов и 12 баннеров до доставки."""
     beats = _story().beats(T0)
-    # шторм, паром из Актау, Алят, отход из Поти, доставлен
-    assert beats == [T0 + h * H for h in (6, 70, 92, 172, 220)]
+    # шторм (через 6 ч после начала — в «почему задержка» уже видна погода), паром, Алят, Поти,
+    # доставлен
+    assert beats == [T0 + h * H for h in (12, 70, 92, 172, 220)]
 
 
 def test_story_before_start_is_first_cycle() -> None:
@@ -280,3 +282,27 @@ def test_story_ferry_not_in_fleet() -> None:
     from app.integrations.mock.story import FERRY
 
     assert FERRY not in {f.name for f in FERRIES}
+
+
+def test_story_breakdown_sums_to_delay() -> None:
+    for hours in (0, 6, 30, 71, 93):
+        s = _at(hours)
+        total = sum(p.hours for p in s.delay_breakdown)
+        assert total == pytest.approx(s.delay_hours, abs=0.15), hours
+    mid = {p.code: p.hours for p in _at(30).delay_breakdown}
+    assert mid == {"ferry_wait": 24.0, "weather_ban": 24.0}
+
+
+def test_story_storm_eta_range_covers_actual() -> None:
+    s = _at(6)
+    assert s.eta is not None and s.eta_latest is not None
+    assert s.eta < s.eta_latest
+    assert s.eta_latest >= T0 + 220 * H  # фактическое прибытие в Констанцу
+
+
+def test_story_storm_beat_shows_weather_in_breakdown() -> None:
+    beat = _story().beats(T0)[0]
+    s = project_shipment(_story().plan(beat + timedelta(minutes=1)), beat + timedelta(minutes=1))
+    parts = {p.code: p.hours for p in s.delay_breakdown}
+    assert parts["ferry_wait"] == 24.0
+    assert parts["weather_ban"] == pytest.approx(6.0, abs=0.1)

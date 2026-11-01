@@ -18,6 +18,7 @@ from typing import Protocol
 from pydantic import BaseModel
 
 from app.services.corridor import NODES, TransportMode, route_points, segment
+from app.services.delay_breakdown import HOLD_TO_CAUSE, DelayCause, DelayPart, breakdown
 from app.services.geo import LatLon, point_along, polyline_length_km
 from app.services.queue_forecast import QueueForecast, QueueInput, forecast_queue
 
@@ -78,6 +79,8 @@ class ShipmentPlan:
     hold_vessel: str | None = None  # судно причины
     cargo_en: str | None = None  # описание груза по-английски (для карты в EN)
     queue: QueueInput | None = None  # очередь в порту (только пока ждём отправки)
+    # интервалы причин задержки (шторм, паром, таможня) — для разбора «почему опаздывает»
+    delay_causes: tuple[DelayCause, ...] = ()
 
     @property
     def route(self) -> list[str]:
@@ -129,6 +132,10 @@ class Shipment(BaseModel):
     last_event_note_vessel: str | None = None
     last_event_at: datetime | None = None
     eta: datetime | None = None
+    # поздняя граница вилки прибытия («в плохом случае»); eta — ожидаемая
+    eta_latest: datetime | None = None
+    # разбор задержки по причинам; сумма = delay_hours
+    delay_breakdown: list[DelayPart] = []
     position: ShipmentPosition
     queue: QueueForecast | None = None  # прогноз выхода из очереди (state == waiting)
     progress: float  # 0..1 по длине маршрута
@@ -237,10 +244,20 @@ def project_shipment(  # noqa: PLR0912, PLR0915 — линейный разбо�
     progress = 1.0 if state == ShipmentState.delivered else min(done_km / total_km, 1.0)
 
     checkpoints = _checkpoints(plan, past, current_code, state)
-    if state == ShipmentState.delivered:
-        eta = last.ts if last else None
-    else:
-        eta = plan.legs[-1].arrive_at + timedelta(hours=delay_hours)
+    queue = (  # очередь — только пока ждём в её порту
+        forecast_queue(plan.queue)
+        if plan.queue is not None
+        and state == ShipmentState.waiting
+        and current_code == plan.queue.port_code
+        else None
+    )
+    eta, eta_latest = _eta_range(plan, state, last, now, delay_hours, queue)
+    fallback = DelayPart(
+        code=HOLD_TO_CAUSE.get(plan.hold_code or "", "schedule"),
+        node_code=plan.hold_node or (current_code if state == ShipmentState.waiting else None),
+        hours=0.0,
+    )
+    parts = breakdown(plan.delay_causes, plan.legs[0].depart_at, now, delay_hours, fallback)
 
     return Shipment(
         ref=plan.ref,
@@ -264,18 +281,50 @@ def project_shipment(  # noqa: PLR0912, PLR0915 — линейный разбо�
         last_event_note_vessel=last.note_vessel if last else None,
         last_event_at=last.ts if last else None,
         eta=eta,
+        eta_latest=eta_latest,
+        delay_breakdown=parts,
         position=position,
-        queue=(  # очередь — только пока ждём в её порту
-            forecast_queue(plan.queue)
-            if plan.queue is not None
-            and state == ShipmentState.waiting
-            and current_code == plan.queue.port_code
-            else None
-        ),
+        queue=queue,
         progress=round(progress, 4),
         checkpoints=checkpoints,
         track=[[lon, lat] for lat, lon in route_points(route)],
     )
+
+
+SPREAD_SHARE = 0.10  # вилка без очереди — 10 % оставшегося пути
+SPREAD_MIN_H = 6.0
+SPREAD_MAX_H = 72.0
+
+
+def _eta_range(
+    plan: ShipmentPlan,
+    state: ShipmentState,
+    last: TrackingEvent | None,
+    now: datetime,
+    delay_hours: float,
+    queue: QueueForecast | None,
+) -> tuple[datetime | None, datetime | None]:
+    """Ожидаемое прибытие и поздняя граница вилки.
+
+    В очереди — от её прогноза: сейчас + ожидание (P50 / P90) + плановый путь от
+    отхода из порта очереди; иначе — план + задержка и вилка по оставшемуся пути.
+    """
+    if state == ShipmentState.delivered:
+        eta = last.ts if last else None
+        return eta, eta
+    end = plan.legs[-1].arrive_at
+    if queue is not None:
+        leg = next((leg for leg in plan.legs if leg.from_code == queue.port_code), None)
+        if leg is not None:
+            path = end - leg.depart_at
+            return (
+                now + timedelta(hours=queue.p50_hours) + path,
+                now + timedelta(hours=queue.p90_hours) + path,
+            )
+    eta = end + timedelta(hours=delay_hours)
+    remaining_h = _hours(eta - now)
+    spread = min(max(remaining_h * SPREAD_SHARE, SPREAD_MIN_H), SPREAD_MAX_H)
+    return eta, eta + timedelta(hours=spread)
 
 
 def _km_before(route: list[str], code: str) -> float:

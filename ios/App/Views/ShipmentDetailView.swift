@@ -2,14 +2,13 @@ import MCCore
 import SwiftUI
 
 /// Карточка груза — от ответа к подробностям: статус и ETA, где сейчас и почему стоит, очередь;
-/// Live Activity; карта (нажатие — на весь экран); погода в порту; лента маршрута; груз и клиент.
+/// почему задержка; Live Activity; карта (нажатие — на весь экран); погода в порту; лента маршрута; груз и клиент.
 struct ShipmentDetailView: View {
     let ref: String
     let store: TrackedShipments
     /// «Удалить из списка» из меню «…»: удаляет и закрывает карточку.
     let onRemove: (String) -> Void
     @Environment(\.l10n) private var l
-    @State private var showMap = false
 
     var body: some View {
         Group {
@@ -35,6 +34,10 @@ struct ShipmentDetailView: View {
         return List {
             ShipmentHeroSection(shipment: s, labels: labels)
 
+            if s.isDelayed, let parts = s.delayBreakdown, !parts.isEmpty {
+                DelaySection(parts: parts, labels: labels)
+            }
+
             if LiveActivities.enabled {
                 Section {
                     LiveActivityButton(shipment: s, labels: labels)
@@ -42,27 +45,8 @@ struct ShipmentDetailView: View {
             }
 
             Section {
-                // карта в списке не двигается (жесты спорят с прокруткой) — нажатие открывает её целиком
+                // превью неподвижно (жесты спорят с прокруткой); нажатие — полноэкранная карта
                 RouteMapView(shipment: s, nodes: nodes)
-                    .accessibilityLabel(mapLabel(s, labels: labels))
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityHint(l("card.openMap"))
-                    .accessibilityAction { showMap = true }
-                    .overlay {
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .onTapGesture { showMap = true }
-                    }
-                    .overlay(alignment: .bottomTrailing) {
-                        Label(l("card.openMap"), systemImage: "arrow.up.left.and.arrow.down.right")
-                            .font(.caption.weight(.semibold))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(.regularMaterial, in: Capsule())
-                            .padding(10)
-                            .allowsHitTesting(false)
-                            .accessibilityHidden(true)
-                    }
                     .listRowInsets(EdgeInsets())
             }
 
@@ -78,9 +62,6 @@ struct ShipmentDetailView: View {
                 LabeledContent(l("card.cargo"), value: labels.cargo(s))
                 LabeledContent(l("card.client"), value: s.client)
             }
-        }
-        .fullScreenCover(isPresented: $showMap) {
-            RouteMapScreen(shipment: s, nodes: nodes)
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -102,14 +83,6 @@ struct ShipmentDetailView: View {
                 .accessibilityIdentifier("card.menu")
             }
         }
-    }
-
-    /// Карта для VoiceOver — смыслом, а не «карта маршрута».
-    private func mapLabel(_ s: Shipment, labels: Labels) -> String {
-        l("card.mapLabel.value", [
-            "where": labels.position(s).title,
-            "pct": String(Int((s.progress * 100).rounded())),
-        ])
     }
 }
 

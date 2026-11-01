@@ -162,6 +162,7 @@ class AccuracyOut(BaseModel):
     until: datetime
     days: int
     ports: list[PortAccuracyOut]
+    demo: bool = False  # синтетика мока (MOCK_DATA), а не сверка с журналом остановок
 
 
 @router.get("/accuracy", response_model=AccuracyOut)
@@ -171,6 +172,7 @@ async def accuracy(
     days: int = Query(default=90, ge=1, le=3650, description="Период, дней"),
 ) -> AccuracyOut:
     """Публичная точность предиктора: доверие — это опубликованный hit rate."""
+    # боевой сервис (БД) или мок-синтетика (MOCK_DATA, demo=True) — тот же интерфейс accuracy(days)
     service: PredictorAccuracyService | None = getattr(request.app.state, "accuracy_service", None)
     if service is None:
         raise HTTPException(
@@ -200,6 +202,7 @@ async def accuracy(
             )
             for p in ports
         ],
+        demo=bool(getattr(service, "demo", False)),
     )
 
 

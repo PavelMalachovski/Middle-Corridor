@@ -129,12 +129,15 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(element(app, "wind.chart").waitForExistence(timeout: 5))
         XCTAssertTrue(element(app, "wind.outlook").exists)
         shot(app, "08-port-ru")
-
-        // новости — под картой, портами и неделей
         app.navigationBars.buttons.firstMatch.tap()
+
+        // новости — ниже карты и точности: листаем список под закреплённой картой
         let news = element(app, "corridor.news")
-        for _ in 0..<4 where !news.exists { app.swipeUp() }
-        XCTAssertTrue(news.waitForExistence(timeout: 5))
+        let listArea = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+        for _ in 0..<6 where !news.exists {
+            listArea.press(forDuration: 0.05, thenDragTo: listArea.withOffset(CGVector(dx: 0, dy: -250)))
+        }
+        XCTAssertTrue(news.exists)
     }
 
     @MainActor
@@ -162,7 +165,7 @@ final class SmokeTests: XCTestCase {
         let urgent = element(app, "row.MC-26-0398")
         let moving = element(app, "row.MC-26-0412")
         XCTAssertLessThan(urgent.frame.minY, moving.frame.minY)
-        shot(app, "19-list-sections-ru")
+        shot(app, "23-list-sections-ru")
     }
 
     @MainActor
@@ -178,7 +181,7 @@ final class SmokeTests: XCTestCase {
         app.buttons["Delete"].exists ? app.buttons["Delete"].tap() : app.buttons["Удалить"].tap()
         let undo = app.buttons["undo"]
         XCTAssertTrue(undo.waitForExistence(timeout: 3))
-        shot(app, "20-undo-ru")
+        shot(app, "24-undo-ru")
         undo.tap()
         XCTAssertTrue(row.waitForExistence(timeout: 5))
     }
@@ -304,8 +307,10 @@ final class SmokeTests: XCTestCase {
         let app = launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
         add(app, "MC-26-0412")
+        // ждём карточку: свайпы во время закрытия шторки и перехода уходят в пустоту
+        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
         let button = element(app, "card.liveActivity")
-        for _ in 0..<4 where !button.exists { app.swipeUp() }
+        for _ in 0..<6 where !button.exists { app.swipeUp() }
         XCTAssertTrue(button.waitForExistence(timeout: 5))
         if button.label.contains("На экран") { button.tap() }
         let started = NSPredicate(format: "label CONTAINS %@", "Убрать")
@@ -322,8 +327,72 @@ final class SmokeTests: XCTestCase {
         sleep(1)
 
         add(app, "MC-26-0412")
-        for _ in 0..<4 where !button.exists { app.swipeUp() }
+        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
+        for _ in 0..<6 where !button.exists { app.swipeUp() }
         XCTAssertTrue(button.waitForExistence(timeout: 5))
         XCTAssertTrue(button.label.contains("На экран блокировки"), button.label)
+    }
+
+    @MainActor
+    func test_cardEtaRangeDelayAndFullMap() throws {
+        let app = launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        app.open(try XCTUnwrap(URL(string: "mcstatus://s/MC-26-0398")))
+        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 10))
+
+        let eta = element(app, "card.eta")
+        for _ in 0..<4 where !eta.exists { app.swipeUp() }
+        XCTAssertTrue(eta.waitForExistence(timeout: 5))
+        XCTAssertTrue(eta.label.contains("–"), eta.label)
+        let why = element(app, "card.delayBreakdown")
+        for _ in 0..<2 where !why.exists { app.swipeUp() }
+        XCTAssertTrue(why.waitForExistence(timeout: 5))
+        XCTAssertTrue(why.label.contains("Погодный запрет"), why.label)
+        shot(app, "19-card-eta-delay")
+
+        for _ in 0..<6 { app.swipeDown() }
+        let map = element(app, "card.map")
+        XCTAssertTrue(map.waitForExistence(timeout: 5))
+        map.tap()
+        XCTAssertTrue(element(app, "map.full").waitForExistence(timeout: 5))
+        element(app, "map.whereNow").tap()
+        sleep(1)
+        shot(app, "20-full-map")
+        element(app, "map.fitRoute").tap()
+        element(app, "map.close").tap()
+        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func test_corridorMapAndAccuracy() {
+        let app = launch()
+        let tab = app.tabBars.buttons["tab.corridor"]
+        XCTAssertTrue(tab.waitForExistence(timeout: 5))
+        tab.tap()
+        let map = element(app, "corridor.map")
+        XCTAssertTrue(map.waitForExistence(timeout: 5))
+        let summary = element(app, "accuracy.summary")
+        XCTAssertTrue(summary.waitForExistence(timeout: 5))
+        XCTAssertTrue(summary.label.contains(" из "), summary.label)
+        XCTAssertTrue(element(app, "accuracy.demo").exists)
+        shot(app, "21-corridor-map")
+
+        element(app, "corridor.expand").tap()
+        XCTAssertTrue(element(app, "corridor.mapFull").waitForExistence(timeout: 5))
+        element(app, "corridor.close").tap()
+
+        let aktau = element(app, "port.AKTAU")
+        XCTAssertTrue(aktau.waitForExistence(timeout: 5))
+        aktau.tap()
+        let portAccuracy = element(app, "port.accuracy")
+        for _ in 0..<3 where !portAccuracy.exists { app.swipeUp() }
+        XCTAssertTrue(portAccuracy.waitForExistence(timeout: 5))
+        shot(app, "22-port-accuracy")
+        app.navigationBars.buttons.firstMatch.tap()
+
+        // карта закреплена: прокрутка списка её не уводит
+        XCTAssertTrue(summary.waitForExistence(timeout: 5))
+        summary.swipeUp()
+        XCTAssertTrue(map.isHittable)
     }
 }

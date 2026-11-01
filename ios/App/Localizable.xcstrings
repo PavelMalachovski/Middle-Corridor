@@ -1929,13 +1929,13 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Прогноз: {level} все 48 часов, ветер до {max} м/с"
+            "value": "Прогноз: {level} все {hours} ч, ветер до {max}, порывы до {gust} м/с"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Forecast: {level} for all 48 hours, wind up to {max} m/s"
+            "value": "Forecast: {level} for all {hours} h, wind up to {max}, gusts up to {gust} m/s"
           }
         }
       }
@@ -1946,13 +1946,13 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Прогноз: {level} до {until}, ветер до {max} м/с"
+            "value": "Прогноз: {level} до {until}, ветер до {max}, порывы до {gust} м/с"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Forecast: {level} until {until}, wind up to {max} m/s"
+            "value": "Forecast: {level} until {until}, wind up to {max}, gusts up to {gust} m/s"
           }
         }
       }
@@ -2208,6 +2208,210 @@
           "stringUnit": {
             "state": "translated",
             "value": "Shipment number found: {ref}"
+          }
+        }
+      }
+    },
+    "card.whyDelay": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Почему задержка"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why the delay"
+          }
+        }
+      }
+    },
+    "card.etaRange": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "обычно {usual}, в плохом случае {worst}"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "usually {usual}, worst case {worst}"
+          }
+        }
+      }
+    },
+    "card.mapHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Откроет карту на весь экран"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the full-screen map"
+          }
+        }
+      }
+    },
+    "map.close": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Закрыть карту"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close map"
+          }
+        }
+      }
+    },
+    "map.fitRoute": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Весь маршрут"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whole route"
+          }
+        }
+      }
+    },
+    "map.whereNow": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Где груз"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where it is"
+          }
+        }
+      }
+    },
+    "accuracy.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Точность прогноза за {days} дней"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forecast accuracy, last {days} days"
+          }
+        }
+      }
+    },
+    "accuracy.demo": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Демо-данные: синтетическая история штормов"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo data: synthetic storm history"
+          }
+        }
+      }
+    },
+    "accuracy.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Остановок за период не было"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No stoppages in this period"
+          }
+        }
+      }
+    },
+    "corridor.expand": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Карта на весь экран"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full-screen map"
+          }
+        }
+      }
+    },
+    "corridor.fit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Весь коридор"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whole corridor"
+          }
+        }
+      }
+    },
+    "chart.outlook.share": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Прогноз: {level} {n} из {hours} ч, ветер до {max}, порывы до {gust} м/с"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forecast: {level} for {n} of {hours} h, wind up to {max}, gusts up to {gust} m/s"
           }
         }
       }

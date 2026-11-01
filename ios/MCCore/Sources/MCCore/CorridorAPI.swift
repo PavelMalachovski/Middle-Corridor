@@ -11,12 +11,15 @@ public protocol CorridorAPI: Sendable {
     /// Часы демо; сервер без пульта (не мок или без DEMO_CONTROL) — `APIError.notFound`.
     func demoClock() async throws -> DemoClockState
     func demo(_ action: DemoAction) async throws -> DemoClockState
+    /// Точность прогноза за `days` дней; нет данных (боевой без БД) — ошибка.
+    func accuracy(days: Int) async throws -> AccuracyReport
 }
 
 extension CorridorAPI {
     // по умолчанию пульта нет — как у боевого сервера
     public func demoClock() async throws -> DemoClockState { throw APIError.notFound }
     public func demo(_ action: DemoAction) async throws -> DemoClockState { throw APIError.notFound }
+    public func accuracy(days: Int) async throws -> AccuracyReport { throw APIError.notFound }
 }
 
 /// Действие пульта ведущего: перевести часы, следующий шаг истории, сброс.
@@ -73,6 +76,12 @@ public struct HTTPCorridorAPI: CorridorAPI {
 
     public func demoClock() async throws -> DemoClockState {
         try await get(baseURL.appending(path: "api/v1/demo/clock"))
+    }
+
+    public func accuracy(days: Int) async throws -> AccuracyReport {
+        var url = baseURL.appending(path: "api/v1/accuracy")
+        url.append(queryItems: [URLQueryItem(name: "days", value: String(days))])
+        return try await get(url)
     }
 
     public func demo(_ action: DemoAction) async throws -> DemoClockState {

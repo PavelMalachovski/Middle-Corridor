@@ -2,157 +2,140 @@ import MCCore
 import MapKit
 import SwiftUI
 
-/// Обзорная карта коридора: линии (рельсы — сплошные, паромы — пунктир), порты цветом риска,
-/// остальные узлы — серыми точками. В списке карта неподвижна; нажатие открывает её целиком.
+/// Живая карта коридора: сегменты (ж/д — линия, море — пунктир), порты цветом риска,
+/// паромы в эфире AIS (без позиции не рисуем: «нет данных», а не «стоит»), мои грузы.
+/// Масштаб щипком и перетаскивание — как в Telegram.
 struct CorridorMapView: View {
     let snapshot: MapSnapshot
+    let mine: [Shipment]
+    var identifier = "corridor.map"
+    let onPort: (String) -> Void
+    let onShipment: (String) -> Void
     @Environment(\.l10n) private var l
-    @ScaledMetric(relativeTo: .body) private var height: CGFloat = 200
-    @State private var showFull = false
+    @State private var position: MapCameraPosition = .automatic
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            CorridorMap(snapshot: snapshot, interactive: false)
-                .frame(height: height)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture { showFull = true }
+        let labels = Labels(lang: l.lang, nodes: snapshot.nodes)
+        Map(position: $position) {
+            ForEach(Array((snapshot.segments ?? []).enumerated()), id: \.offset) { _, segment in
+                let points = segment.coordinates.compactMap { $0.count >= 2 ? GeoPoint(lat: $0[1], lon: $0[0]) : nil }
+                if segment.mode.known == .sea {
+                    MapPolyline(coordinates: points.map(\.coordinate))
+                        .stroke(Theme.accent.opacity(0.7), style: StrokeStyle(lineWidth: 2, dash: [5, 4]))
+                } else {
+                    MapPolyline(coordinates: points.map(\.coordinate)).stroke(.secondary, lineWidth: 2)
                 }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(accessibilityText)
-                .accessibilityAddTraits(.isButton)
-                .accessibilityAction { showFull = true }
-                .accessibilityIdentifier("corridor.map")
-            legend
-        }
-        .padding(.vertical, 4)
-        .fullScreenCover(isPresented: $showFull) {
-            NavigationStack {
-                CorridorMap(snapshot: snapshot, interactive: true)
-                    .ignoresSafeArea(edges: .bottom)
-                    .navigationTitle(l("tab.corridor"))
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button(l("settings.done")) { showFull = false }
+            }
+            ForEach(snapshot.nodes.filter { $0.kind.known == .port }) { node in
+                let name = labels.node(node.code) ?? node.name
+                Annotation(name, coordinate: .init(latitude: node.lat, longitude: node.lon)) {
+                    Button { onPort(node.code) } label: {
+                        Circle()
+                            .fill(Theme.level(node.alertLevel?.known))
+                            .frame(width: 16, height: 16)
+                            .overlay(Circle().stroke(.background, lineWidth: 2))
+                    }
+                    .accessibilityLabel(name)
+                    .accessibilityIdentifier("port.pin.\(node.code)")
+                }
+            }
+            ForEach(CorridorMap.liveVessels(snapshot.vessels ?? []), id: \.name) { vessel in
+                Annotation(vessel.name, coordinate: .init(latitude: vessel.lat ?? 0, longitude: vessel.lon ?? 0)) {
+                    // в море — стрелка курса; у причала — просто паром, без «движения»
+                    Group {
+                        if CorridorMap.isMoving(vessel) {
+                            Image(systemName: "location.north.fill").rotationEffect(.degrees(vessel.cog ?? 0))
+                        } else {
+                            Image(systemName: "ferry.fill")
                         }
                     }
+                    .font(.caption)
+                    .foregroundStyle(.primary)
+                    .padding(4)
+                    .background(.regularMaterial, in: Circle())
+                }
             }
-        }
-    }
-
-    /// Условные обозначения — только уровни, которые сейчас есть на карте, и «спокойно».
-    private var legend: some View {
-        let present = Set(snapshot.nodes.compactMap { $0.kind.known == .port ? $0.alertLevel?.known : nil })
-        let levels = AlertLevel.allLevels.filter { present.contains($0) }
-        return HStack(spacing: 12) {
-            ForEach(levels, id: \.self) { level in
-                dot(Theme.level(level), l("level.\(level.rawValue)"))
-            }
-            dot(Theme.ok, l("corridor.calm.short"))
-            Spacer(minLength: 0)
-        }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .accessibilityHidden(true)
-    }
-
-    private func dot(_ color: Color, _ text: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 8, height: 8)
-            Text(text).lineLimit(1)
-        }
-    }
-
-    /// «Карта коридора. Вероятна остановка: Актау, Курык».
-    private var accessibilityText: String {
-        let labels = Labels(lang: l.lang, nodes: snapshot.nodes)
-        var parts = [l("corridor.mapLabel")]
-        for level in AlertLevel.allLevels.reversed() {
-            let names = snapshot.nodes
-                .filter { $0.kind.known == .port && $0.alertLevel?.known == level }
-                .map { labels.node($0.code) ?? $0.name }
-            if !names.isEmpty {
-                parts.append("\(l("level.\(level.rawValue)")): \(names.joined(separator: ", "))")
-            }
-        }
-        return parts.joined(separator: ". ")
-    }
-}
-
-/// Сама карта: на весь экран — интерактивная и с подписями портов.
-private struct CorridorMap: View {
-    let snapshot: MapSnapshot
-    let interactive: Bool
-    @Environment(\.l10n) private var l
-
-    var body: some View {
-        let labels = Labels(lang: l.lang, nodes: snapshot.nodes)
-        let segments = (snapshot.segments ?? []).enumerated().map { SegmentItem(id: $0.offset, segment: $0.element) }
-        Map(initialPosition: .rect(Self.rect(snapshot.nodes)), interactionModes: interactive ? .all : []) {
-            ForEach(segments) { item in
-                MapPolyline(coordinates: Self.coordinates(item.segment))
-                    .stroke(
-                        .secondary,
-                        style: StrokeStyle(
-                            lineWidth: 2, lineCap: .round,
-                            dash: item.segment.mode.known == .sea ? [5, 4] : []))
-            }
-            ForEach(snapshot.nodes) { node in
-                Annotation(
-                    interactive && node.kind.known == .port ? (labels.node(node.code) ?? node.name) : "",
-                    coordinate: CLLocationCoordinate2D(latitude: node.lat, longitude: node.lon)
-                ) {
-                    marker(node)
+            ForEach(CorridorMap.shipments(mine)) { pin in
+                Annotation(pin.ref, coordinate: pin.point.coordinate) {
+                    Button { onShipment(pin.ref) } label: {
+                        // подтверждено — заливка; оценка по расписанию — контур (проекция — не факт)
+                        if pin.confirmed {
+                            Image(systemName: "shippingbox.fill")
+                                .font(.caption)
+                                .foregroundStyle(.white)
+                                .padding(6)
+                                .background(Theme.tone(pin.tone), in: Circle())
+                        } else {
+                            Image(systemName: "shippingbox")
+                                .font(.caption)
+                                .foregroundStyle(Theme.tone(pin.tone))
+                                .padding(6)
+                                .background(Circle().fill(.background))
+                                .overlay(Circle().stroke(Theme.tone(pin.tone), style: StrokeStyle(lineWidth: 2, dash: [3, 2])))
+                        }
+                    }
+                    .accessibilityLabel(pin.ref)
                 }
             }
         }
         .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
+        .mapControls { MapScaleView() }
+        .onAppear { fit() }
+        .accessibilityIdentifier(identifier)
     }
 
-    /// Порт — цветом уровня риска (спокойный — `ok`), прочие узлы — маленькой серой точкой.
-    @ViewBuilder
-    private func marker(_ node: NodeStatus) -> some View {
-        if node.kind.known == .port {
-            Circle()
-                .fill(node.alertLevel?.known.map { Theme.level($0) } ?? Theme.ok)
-                .frame(width: 11, height: 11)
-                .overlay(Circle().stroke(.white, lineWidth: 1.5))
-        } else {
-            Circle()
-                .fill(.secondary)
-                .frame(width: 5, height: 5)
-        }
-    }
-
-    /// `[lon, lat]` бэкенда → координаты MapKit.
-    private static func coordinates(_ segment: CorridorSegment) -> [CLLocationCoordinate2D] {
-        segment.coordinates.compactMap { point in
-            point.count >= 2 ? CLLocationCoordinate2D(latitude: point[1], longitude: point[0]) : nil
-        }
-    }
-
-    private static func rect(_ nodes: [NodeStatus]) -> MKMapRect {
-        let points = nodes.map { MKMapPoint(CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon)) }
-        guard let first = points.first else { return .world }
-        var rect = MKMapRect(origin: first, size: MKMapSize(width: 0, height: 0))
-        for point in points.dropFirst() {
-            rect = rect.union(MKMapRect(origin: point, size: MKMapSize(width: 0, height: 0)))
-        }
-        let pad = max(rect.size.width, rect.size.height) * 0.05
-        return rect.insetBy(dx: -pad, dy: -pad)
+    /// Рамка — порты (Каспий и Чёрное море: там паромы и шторма) и мои грузы, а не весь путь от Сианя:
+    /// иначе морская часть коридора на телефоне мелкая.
+    func fit() {
+        let ports = snapshot.nodes.filter { $0.kind.known == .port }.map { GeoPoint(lat: $0.lat, lon: $0.lon) }
+        let points = ports + CorridorMap.shipments(mine).map(\.point)
+        // поля шире: справа кнопки карты, по краям — подписи портов
+        if !points.isEmpty { position = .rect(RouteMapView.rect(points, padding: 0.18)) }
     }
 }
 
-/// Сегмент с порядковым номером: `ForEach` в `Map` — по `Identifiable`.
-private struct SegmentItem: Identifiable {
-    let id: Int
-    let segment: CorridorSegment
-}
+/// Закреплённая карта сверху «Коридора» с кнопками «Весь коридор» и «Развернуть».
+struct CorridorMapHeader: View {
+    let snapshot: MapSnapshot
+    let mine: [Shipment]
+    let onPort: (String) -> Void
+    let onShipment: (String) -> Void
+    @Environment(\.l10n) private var l
+    @State private var expanded = false
+    @State private var resetToken = 0
 
-extension AlertLevel {
-    /// От слабого к сильному: усиление ветра → риск остановки → вероятна остановка.
-    static let allLevels: [AlertLevel] = [.watch, .warning, .critical]
+    var body: some View {
+        CorridorMapView(snapshot: snapshot, mine: mine, onPort: onPort, onShipment: onShipment)
+            .id(resetToken)  // «Весь коридор» — пересоздать карту с исходной рамкой
+            .overlay(alignment: .topTrailing) {
+                VStack(spacing: 8) {
+                    mapButton("arrow.up.left.and.arrow.down.right", "corridor.expand", l("corridor.expand")) {
+                        expanded = true
+                    }
+                    mapButton("scope", "corridor.fit", l("corridor.fit")) { resetToken += 1 }
+                }
+                .padding(10)
+            }
+            .sheet(isPresented: $expanded) {
+                CorridorMapView(
+                    snapshot: snapshot, mine: mine, identifier: "corridor.mapFull",
+                    onPort: { code in expanded = false; onPort(code) },
+                    onShipment: { ref in expanded = false; onShipment(ref) }
+                )
+                .overlay(alignment: .topTrailing) {
+                    mapButton("xmark", "corridor.close", l("map.close")) { expanded = false }.padding()
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+    }
+
+    private func mapButton(_ icon: String, _ id: String, _ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.subheadline.weight(.semibold)).padding(10)
+        }
+        .background(.regularMaterial, in: Circle())
+        .accessibilityLabel(label)
+        .accessibilityIdentifier(id)
+    }
 }
