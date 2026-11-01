@@ -218,3 +218,17 @@ def test_queue_only_while_waiting() -> None:
     assert waiting.queue is not None and waiting.queue.port_code == "KURYK"
     assert project_shipment(plan, NOW + 20 * H).state == ShipmentState.delivered
     assert project_shipment(plan, NOW + 20 * H).queue is None
+
+
+def test_queue_only_at_its_port() -> None:
+    """Очередь Курыка не показывается, когда груз ждёт в другом узле."""
+    base = _plan(
+        [
+            TrackingEvent(EventKind.departed, "BEINEU", NOW - 40 * H),
+            TrackingEvent(EventKind.arrived, "KURYK", NOW - 28 * H),
+        ]
+    )
+    plan = dataclasses.replace(base, queue=QueueInput("AKTAU", 4, 8.0, 0.0, "ferry_wait"))
+    waiting = project_shipment(plan, NOW - 10 * H)
+    assert waiting.state == ShipmentState.waiting
+    assert waiting.queue is None

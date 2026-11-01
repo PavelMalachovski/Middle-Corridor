@@ -265,9 +265,11 @@ def project_shipment(  # noqa: PLR0912, PLR0915 — линейный разбо�
         last_event_at=last.ts if last else None,
         eta=eta,
         position=position,
-        queue=(
+        queue=(  # очередь — только пока ждём в её порту
             forecast_queue(plan.queue)
-            if plan.queue is not None and state == ShipmentState.waiting
+            if plan.queue is not None
+            and state == ShipmentState.waiting
+            and current_code == plan.queue.port_code
             else None
         ),
         progress=round(progress, 4),

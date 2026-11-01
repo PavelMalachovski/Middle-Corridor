@@ -9,10 +9,10 @@
 начинается заново.
 
 Часы таймлайна — от T0 (старт цикла):
-  −8      прибыл в Актау (по плану отход в +4)
-  [−12, 6)  ветер в Актау 15/18 м/с — warning, ждём погрузки на паром
-  [6, 66)   21/29 м/с — critical, погодный запрет на швартовку
-  [66, 90)  11/14 м/с — watch, ветер стихает
+  −30     прибыл в Актау (по плану отход в −18: на старте задержка 18 ч)
+  [−36, 6)  ветер в Актау 15/18 м/с — warning, ждём погрузки на паром; очередь ≈ 12 ч
+  [6, 66)   21/29 м/с — critical, погодный запрет на швартовку; очередь 2–3 дня, до 5
+  [66, 90)  11/14 м/с — watch, ветер стихает, снова ждём погрузки
   70      отход из Актау на пароме «Azerbaijan» (без AIS — проекция)
   220     прибыл в Констанцу — доставлен
   244     следующий цикл
@@ -40,11 +40,11 @@ PORT = "AKTAU"
 
 PERIOD = timedelta(hours=244)
 BEAT_SETTLE = timedelta(minutes=1)  # «следующий шаг» встаёт чуть после такта
-ARRIVE_PORT_H = -8.0
+ARRIVE_PORT_H = -30.0
 STORM_START_H = 6.0
 STORM_END_H = 66.0
 CALM_END_H = 90.0
-WARNING_FROM_H = -12.0
+WARNING_FROM_H = -36.0
 DEPART_PORT_H = 70.0
 
 WIND_WARNING = (15.0, 18.0)
@@ -153,24 +153,36 @@ class DemoStory:
                     )
                 )
 
-        storm = at(STORM_START_H) <= now
-        if storm:
+        in_port = now < at(DEPART_PORT_H)  # после отхода — ни запрета, ни очереди Актау
+        storm = at(STORM_START_H) <= now < at(STORM_END_H)
+        hold: dict[str, str | None] = {}
+        queue: QueueInput | None = None
+        if in_port and storm:
             hold = {
                 "hold_reason": "Погодный запрет на швартовку: Актау — критический ветер",
                 "hold_code": "weather_ban",
                 "hold_node": PORT,
                 "hold_vessel": None,
             }
-        else:
+        elif in_port:
             hold = {
                 "hold_reason": f"Ожидание погрузки на паром «{FERRY}»",
                 "hold_code": "ferry_loading_wait",
                 "hold_node": PORT,
                 "hold_vessel": FERRY,
             }
-        weather_hours = sum(
-            1 for i in range(FORECAST_H) if at(STORM_START_H) <= now + i * H < at(STORM_END_H)
-        )
+        if in_port:
+            # простой по погоде — только пока действует запрет: до шторма очередь короткая
+            weather_hours = (
+                sum(1 for i in range(FORECAST_H) if now + i * H < at(STORM_END_H)) if storm else 0
+            )
+            queue = QueueInput(
+                PORT,
+                QUEUE_POSITION,
+                QUEUE_PER_DAY,
+                float(weather_hours),
+                "weather_ban" if storm else "ferry_wait",
+            )
         return ShipmentPlan(
             ref=REF,
             client=CLIENT,
@@ -178,13 +190,7 @@ class DemoStory:
             cargo_en=CARGO_EN.get(CARGO),
             legs=legs,
             events=tuple(sorted(events, key=lambda e: e.ts)),
-            queue=QueueInput(
-                PORT,
-                QUEUE_POSITION,
-                QUEUE_PER_DAY,
-                float(weather_hours),
-                "weather_ban" if storm else "ferry_wait",
-            ),
+            queue=queue,
             **hold,
         )
 
