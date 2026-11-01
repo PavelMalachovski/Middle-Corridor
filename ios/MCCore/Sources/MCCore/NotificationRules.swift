@@ -60,10 +60,11 @@ public enum NotificationRules {
         var notices: [AppNotice] = []
         for ref in new.keys.sorted() {
             guard let now = new[ref], let before = old[ref] else { continue }
-            if settings.storm {
+            // без прошлого снимка любой «риск» выглядел бы эскалацией — молчим
+            if settings.storm, !oldNodes.isEmpty {
                 notices += storms(now, oldLevels: oldLevels, newNodes: newByCode, labels: labels)
             }
-            if settings.event, now.lastEventAt != before.lastEventAt || now.lastEvent != before.lastEvent {
+            if settings.event, isNewer(now.lastEventAt, than: before.lastEventAt) {
                 let stamp = Int(now.lastEventAt?.timeIntervalSince1970 ?? 0)
                 notices.append(
                     AppNotice(
@@ -92,10 +93,50 @@ public enum NotificationRules {
         return notices
     }
 
+    /// Одно уведомление на груз за обновление: сверху самое важное (шторм → очередь → задержка
+    /// → событие), остальное — строками текста. Иначе на шаге «шторм» три баннера разом, и
+    /// сверху оказывается последний («Задержка»), а не шторм.
+    public static func merge(_ notices: [AppNotice]) -> [AppNotice] {
+        var order: [String] = []
+        var byRef: [String: [AppNotice]] = [:]
+        for notice in notices {
+            if byRef[notice.ref] == nil { order.append(notice.ref) }
+            byRef[notice.ref, default: []].append(notice)
+        }
+        return order.compactMap { ref in
+            guard let group = byRef[ref]?.sorted(by: { priority($0.kind) < priority($1.kind) }),
+                let top = group.first
+            else { return nil }
+            if group.count == 1 { return top }
+            let body = ([top.body] + group.dropFirst().map(\.title)).joined(separator: "\n")
+            return AppNotice(
+                id: group.map(\.id).sorted().joined(separator: "+"), kind: top.kind, ref: ref, title: top.title,
+                body: body)
+        }
+    }
+
+    private static func priority(_ kind: NoticeKind) -> Int {
+        switch kind {
+        case .storm: 0
+        case .queue: 1
+        case .delay: 2
+        case .event: 3
+        }
+    }
+
+    /// Событие новее прежнего; назад во времени (сброс истории демо) — не новость.
+    private static func isNewer(_ new: Date?, than old: Date?) -> Bool {
+        guard let new else { return false }
+        guard let old else { return true }
+        return new > old
+    }
+
     /// Порты на пути груза (от текущего узла включительно), где риск вырос до warning и выше.
+    /// Доставленному грузу шторма «на пути» нет.
     private static func storms(
         _ s: Shipment, oldLevels: [String: AlertLevel], newNodes: [String: NodeStatus], labels: Labels
     ) -> [AppNotice] {
+        guard s.state.known != .delivered else { return [] }
         let standing = s.position.mode == nil ? s.position.fromCode : nil
         var codes: [String] = standing.map { [$0] } ?? []
         for checkpoint in s.checkpoints where checkpoint.state.known != .done && !codes.contains(checkpoint.code) {

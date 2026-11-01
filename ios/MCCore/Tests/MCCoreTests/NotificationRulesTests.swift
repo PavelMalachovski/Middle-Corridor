@@ -143,4 +143,51 @@ final class NotificationRulesTests: XCTestCase {
         XCTAssertEqual(a.map(\.id), b.map(\.id))
         XCTAssertEqual(a.first?.id, "storm-MC-26-0398-AKTAU-critical")
     }
+
+    // MARK: ревью недель 3–4
+
+    func test_delivered_noStormForDestination() {
+        var delivered = s0398!
+        delivered.state = Coded(.delivered)
+        delivered.position.fromCode = "CONSTANTA"
+        delivered.position.mode = nil
+        let notices = diff(
+            old: [delivered], new: [delivered], oldNodes: level("CONSTANTA", nil),
+            newNodes: level("CONSTANTA", .critical))
+        XCTAssertTrue(notices.isEmpty, notices.map(\.title).joined(separator: "; "))
+    }
+
+    func test_eventBackwards_isSilent() {
+        var later = s0398!
+        later.lastEventAt = later.lastEventAt?.addingTimeInterval(3600)
+        // старое → новое во времени назад (сброс истории демо)
+        XCTAssertTrue(diff(old: [later], new: [s0398]).filter { $0.kind == .event }.isEmpty)
+    }
+
+    func test_noPreviousSnapshot_noStorms() {
+        XCTAssertTrue(diff(old: [s0398], new: [s0398], oldNodes: [], newNodes: level("AKTAU", .critical)).isEmpty)
+    }
+
+    func test_merge_onePerShipment_stormOnTop() {
+        var old = s0398!
+        old.delayHours -= 6
+        old.queue?.p50Hours = 12
+        let notices = diff(old: [old], new: [s0398], oldNodes: level("AKTAU", .warning), newNodes: level("AKTAU", .critical))
+        XCTAssertEqual(notices.count, 3)
+        let merged = NotificationRules.merge(notices)
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(merged[0].kind, .storm)
+        XCTAssertEqual(merged[0].title, "Шторм: Актау — вероятна остановка")
+        XCTAssertTrue(merged[0].body.contains("в очереди в этом порту"), merged[0].body)
+        XCTAssertTrue(merged[0].body.contains("2–3 дня"), merged[0].body)
+        XCTAssertTrue(merged[0].body.contains("+18 ч"), merged[0].body)
+    }
+
+    func test_merge_keepsShipmentsApart() {
+        var a = s0398!, b = s0412!
+        a.lastEventAt = a.lastEventAt?.addingTimeInterval(-3600)
+        b.lastEventAt = b.lastEventAt?.addingTimeInterval(-3600)
+        let merged = NotificationRules.merge(diff(old: [a, b], new: [s0398, s0412]))
+        XCTAssertEqual(Set(merged.map(\.ref)), ["MC-26-0398", "MC-26-0412"])
+    }
 }
