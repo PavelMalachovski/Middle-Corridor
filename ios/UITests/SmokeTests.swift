@@ -12,6 +12,9 @@ final class SmokeTests: XCTestCase {
         let app = XCUIApplication()
         // -mc.demo NO: пульт выключен при каждом запуске (UserDefaults симулятора живут между тестами)
         app.launchArguments = ["-mc-fake-api", "-mc.lang", lang, "-mc.demo", "NO"]
+        // система могла поднять приложение в фоне (Live Activity, виджет) без наших аргументов —
+        // тогда launch() прицепился бы к нему
+        app.terminate()
         app.launch()
         return app
     }
@@ -239,5 +242,33 @@ final class SmokeTests: XCTestCase {
         shot(app, "17-large-card")
         app.swipeUp()
         shot(app, "18-large-card-queue")
+    }
+
+    @MainActor
+    func test_liveActivityEndsWhenShipmentRemoved() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0412")
+        let button = element(app, "card.liveActivity")
+        for _ in 0..<4 where !button.exists { app.swipeUp() }
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        if button.label.contains("На экран") { button.tap() }
+        let started = NSPredicate(format: "label CONTAINS %@", "Убрать")
+        expectation(for: started, evaluatedWith: button)
+        waitForExpectations(timeout: 5)
+
+        // удалить груз из списка — его Live Activity не должна остаться висеть
+        app.navigationBars["MC-26-0412"].buttons.firstMatch.tap()
+        let row = element(app, "row.MC-26-0412")
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.swipeLeft()
+        app.buttons["Delete"].exists ? app.buttons["Delete"].tap() : app.buttons["Удалить"].tap()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        sleep(1)
+
+        add(app, "MC-26-0412")
+        for _ in 0..<4 where !button.exists { app.swipeUp() }
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        XCTAssertTrue(button.label.contains("На экран блокировки"), button.label)
     }
 }
