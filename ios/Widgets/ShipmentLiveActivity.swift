@@ -9,6 +9,7 @@ struct ShipmentLiveActivity: Widget {
         ActivityConfiguration(for: ShipmentActivityAttributes.self) { context in
             LiveStatusLockView(status: context.state, lang: context.attributes.lang)
                 .padding()
+                .widgetURL(URL(string: "mcstatus://s/\(context.attributes.ref)"))
         } dynamicIsland: { context in
             let status = context.state
             let lang = context.attributes.lang

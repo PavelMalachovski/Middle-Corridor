@@ -44,6 +44,7 @@ final class AppModel {
         self.api = api
         store = TrackedShipments(api: api, storage: storage, cache: cache, server: server)
         observe(store)
+        notifier.onOpen = { [weak self] ref in self?.show(ref) }
     }
 
     /// Меняет сервер: список номеров сохраняется, данные перезагрузятся с нового адреса.
@@ -84,6 +85,25 @@ final class AppModel {
         }
     }
 
+    /// Удалить груз из списка — и его Live Activity, и «груз виджета», если это он.
+    func remove(_ ref: String) {
+        store.remove(ref)
+        Task { await LiveActivities.stop(ref) }
+        if AppGroup.defaults?.string(forKey: AppGroup.refKey) == ref {
+            AppGroup.defaults?.removeObject(forKey: AppGroup.refKey)
+        }
+    }
+
+    /// Нажатие на уведомление, виджет или Live Activity: карточка этого груза.
+    func show(_ ref: String) {
+        tab = .shipments
+        if store.refs.contains(ref) {
+            path = [ref]
+        } else if let url = URL(string: "mcstatus://s/\(ref)") {
+            Task { await open(url) }
+        }
+    }
+
     /// После каждого обновления: что изменилось → уведомления и Live Activity.
     private func observe(_ store: TrackedShipments) {
         store.onChange = { [weak self] change in self?.handle(change) }
@@ -92,10 +112,10 @@ final class AppModel {
     private func handle(_ change: StoreChange) {
         let lang = (LangChoice(rawValue: defaults.string(forKey: LangChoice.key) ?? "") ?? .system).resolved()
         let labels = Labels(lang: lang, nodes: change.newNodes)
-        let notices = NotificationRules.diff(
+        let notices = NotificationRules.merge(NotificationRules.diff(
             old: change.oldShipments, new: change.newShipments,
             oldNodes: change.oldNodes, newNodes: change.newNodes,
-            settings: NotifyPrefs.load(defaults), labels: labels)
+            settings: NotifyPrefs.load(defaults), labels: labels))
         notifier.deliver(notices, after: demo.isActive ? TimeInterval(demo.notifyDelay) : 0)
         Task { await LiveActivities.update(change.newShipments, labels: labels) }
         if let shared = AppGroup.defaults {  // виджет на симуляторе: язык и груз по умолчанию

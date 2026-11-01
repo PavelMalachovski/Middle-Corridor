@@ -77,7 +77,7 @@ struct MyShipmentsView: View {
                 }
                 .onDelete { offsets in
                     let refs = offsets.map { store.rows[$0].ref }
-                    for ref in refs { store.remove(ref) }
+                    for ref in refs { model.remove(ref) }
                 }
             } footer: {
                 if let updated = store.updatedAt, !offline {

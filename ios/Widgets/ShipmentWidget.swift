@@ -73,7 +73,9 @@ struct ShipmentWidgetView: View {
     var body: some View {
         if let status = entry.status {
             ShipmentWidgetContent(
-                status: status, lang: entry.lang, note: entry.message, family: family == .systemMedium ? .medium : .small)
+                status: status, lang: entry.lang, note: entry.message, family: family == .systemMedium ? .medium : .small
+            )
+            .widgetURL(URL(string: "mcstatus://s/\(status.ref)"))  // нажатие — карточка груза
         } else {
             Text(entry.message ?? "")
                 .font(.footnote)

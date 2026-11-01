@@ -67,6 +67,10 @@ final class DemoController {
         do {
             state = try await model.api.demo(action)
             available = true
+            if action == .reset {  // репетиция окончена: чистый экран блокировки и уведомлений
+                await LiveActivities.stopAll()
+                model.notifier.clearDelivered()
+            }
             await model.store.refresh()
             feedback.notificationOccurred(.success)
         } catch {

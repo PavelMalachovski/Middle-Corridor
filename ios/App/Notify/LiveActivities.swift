@@ -7,8 +7,15 @@ import MCCore
 enum LiveActivities {
     static var enabled: Bool { ActivityAuthorizationInfo().areActivitiesEnabled }
 
+    /// Живые активности: завершённые остаются в списке до закрытия — их не трогаем.
+    private static var live: [Activity<ShipmentActivityAttributes>] {
+        Activity<ShipmentActivityAttributes>.activities.filter {
+            $0.activityState == .active || $0.activityState == .stale
+        }
+    }
+
     private static func activity(_ ref: String) -> Activity<ShipmentActivityAttributes>? {
-        Activity<ShipmentActivityAttributes>.activities.first { $0.attributes.ref == ref }
+        live.first { $0.attributes.ref == ref }
     }
 
     static func isActive(_ ref: String) -> Bool { activity(ref) != nil }
@@ -25,9 +32,18 @@ enum LiveActivities {
         await activity(ref)?.end(nil, dismissalPolicy: .immediate)
     }
 
+    /// Все активности — «Сброс истории» в пульте: после репетиции экран блокировки чистый.
+    static func stopAll() async {
+        for activity in live { await activity.end(nil, dismissalPolicy: .immediate) }
+    }
+
     static func update(_ shipments: [String: Shipment], labels: Labels) async {
-        for activity in Activity<ShipmentActivityAttributes>.activities {
-            guard let s = shipments[activity.attributes.ref] else { continue }
+        for activity in live {
+            guard let s = shipments[activity.attributes.ref] else {
+                // груза больше нет в списке — активность не должна висеть
+                await activity.end(nil, dismissalPolicy: .immediate)
+                continue
+            }
             let content = ActivityContent(state: LiveStatus.make(s, labels: labels), staleDate: nil)
             if content.state.delivered {
                 await activity.end(content, dismissalPolicy: .after(.now.addingTimeInterval(60)))

@@ -6,6 +6,8 @@ import UserNotifications
 @MainActor
 final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     private let center = UNUserNotificationCenter.current()
+    /// Нажали на уведомление — открыть груз (задаёт AppModel).
+    var onOpen: ((String) -> Void)?
 
     override init() {
         super.init()
@@ -37,6 +39,21 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         _ center: UNUserNotificationCenter, willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         [.banner, .sound, .list]
+    }
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse
+    ) async {
+        guard let ref = response.notification.request.content.userInfo["ref"] as? String else { return }
+        await open(ref)
+    }
+
+    private func open(_ ref: String) { onOpen?(ref) }
+
+    /// «Сброс истории»: старые баннеры о будущем, которое отменили, не нужны.
+    func clearDelivered() {
+        center.removeAllDeliveredNotifications()
+        center.removeAllPendingNotificationRequests()
     }
 }
 
