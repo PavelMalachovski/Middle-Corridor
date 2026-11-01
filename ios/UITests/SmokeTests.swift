@@ -165,4 +165,33 @@ final class SmokeTests: XCTestCase {
         }
         shot(app, "11-settings-notify-ru")
     }
+
+    @MainActor
+    func test_liveActivity() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0412")
+        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
+        let button = element(app, "card.liveActivity")
+        for _ in 0..<4 where !button.exists { app.swipeUp() }
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        if button.label.contains("Убрать") { button.tap() }  // осталась с прошлого запуска
+        XCTAssertTrue(button.label.contains("На экран блокировки"), button.label)
+        button.tap()
+        let started = NSPredicate(format: "label CONTAINS %@", "Убрать с экрана блокировки")
+        expectation(for: started, evaluatedWith: button)
+        waitForExpectations(timeout: 5)
+        shot(app, "12-live-activity-ru")
+
+        XCUIDevice.shared.press(.home)
+        sleep(2)
+        let home = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        home.name = "13-dynamic-island"
+        home.lifetime = .keepAlways
+        add(home)
+
+        app.activate()
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        button.tap()  // убрать за собой
+    }
 }

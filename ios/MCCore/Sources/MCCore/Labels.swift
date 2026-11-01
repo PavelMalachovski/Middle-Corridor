@@ -1,7 +1,7 @@
 import Foundation
 
 /// Тон статуса груза — цвет «пилюли», как на сайте (`.pill--*` в web/src/styles.css).
-public enum StatusTone: Sendable, Equatable {
+public enum StatusTone: String, Codable, Sendable, Equatable {
     case planned, inTransit, waiting, delayed, delivered, unknown
 }
 

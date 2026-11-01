@@ -81,7 +81,7 @@ final class AppModel {
         }
     }
 
-    /// После каждого обновления: что изменилось → уведомления (и Live Activity — неделя 3).
+    /// После каждого обновления: что изменилось → уведомления и Live Activity.
     private func observe(_ store: TrackedShipments) {
         store.onChange = { [weak self] change in self?.handle(change) }
     }
@@ -94,6 +94,7 @@ final class AppModel {
             oldNodes: change.oldNodes, newNodes: change.newNodes,
             settings: NotifyPrefs.load(defaults), labels: labels)
         notifier.deliver(notices, after: demo.isActive ? TimeInterval(demo.notifyDelay) : 0)
+        Task { await LiveActivities.update(change.newShipments, labels: labels) }
     }
 
     /// Офлайн-кэш: Application Support/cache (неделя 3 — контейнер App Group для виджета).
