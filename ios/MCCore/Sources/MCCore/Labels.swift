@@ -217,6 +217,15 @@ public struct Labels: Sendable {
         return (main, worst)
     }
 
+    /// Румб, откуда дует ветер (метеорологическое направление): 236° → «ЮЗ» / «SW».
+    public func compass(_ degrees: Double) -> String {
+        let ru = ["С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ"]
+        let en = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+        let normalized = (degrees.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360)
+        let index = Int((normalized + 22.5) / 45) % 8
+        return (lang == .ru ? ru : en)[index]
+    }
+
     /// 1 день, 2–4 дня, 5+ дней (11–14 — дней).
     private static func daysRu(_ n: Int) -> String {
         let (mod10, mod100) = (n % 10, n % 100)

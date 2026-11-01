@@ -43,8 +43,13 @@ MOCK_DATA=true .venv/bin/python -m app.main     # слушает 0.0.0.0:8000
 ```
 
 Симулятор ходит на `http://localhost:8000` (по умолчанию). iPhone — на IP Мака
-в той же Wi‑Fi: `ipconfig getifaddr en0`, адрес вводится в «Настройках» приложения,
-на запрос «Локальная сеть» ответить «Разрешить».
+в той же Wi‑Fi: `ipconfig getifaddr en0`. Адрес — в разделе для разработчика: Настройки →
+долгое нажатие на строку версии → секция «Сервер» (там же пульт демо; обычному пользователю
+этот раздел не виден). На запрос «Локальная сеть» ответить «Разрешить».
+
+«Поделиться» в карточке груза отдаёт https-ссылку на веб-карту `<сайт>/?s=<номер>`, а не
+`mcstatus://` (его мессенджеры не делают ссылкой). Адрес сайта — ключ сборки `MC_SHARE_BASE_URL`
+в `project.yml` — `https://middle-corridor-weld.vercel.app`.
 
 ## Демо для ведущего (пульт времени)
 
@@ -107,7 +112,11 @@ xcrun simctl push booted com.malakhouski.mcstatus ios/demo/storm.apns   # event 
 ios/scripts/record_demo.sh            # → ios/build/demo.mp4
 ```
 
-- Иконка рисуется скриптом: `swift ios/scripts/make_icon.swift ios/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png`.
+- Иконка «Каспий» (силуэт моря, рельсы с двух берегов, переправа Актау → Алят, паром) рисуется
+  скриптом в трёх вариантах для iOS 18+ — обычный (без альфа-канала), тёмный и тонированный (без фона):
+  `swift ios/scripts/make_icon.swift ios/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png any`,
+  то же с `icon-dark-1024.png dark` и `icon-tinted-1024.png tinted`. PNG в репозитории отрисованы
+  с той же геометрией вне Мака — после первого запуска скрипта сверить глазами.
 - Скриншоты тёмной темы в UI-тестах — аргумент запуска `-mc-appearance dark` (только Debug).
 
 ## Чек-лист владельца на iPhone

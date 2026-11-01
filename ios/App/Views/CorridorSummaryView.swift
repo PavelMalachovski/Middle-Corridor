@@ -14,7 +14,9 @@ struct CorridorSummaryView: View {
                     Text(l("empty.title")).font(.title2.bold())
                     Text(l("empty.text")).foregroundStyle(.secondary)
                     Button(action: onAdd) {
+                        // значок — цветом текста: иначе он берёт tint кнопки и пропадает на светлой теме
                         Label(l("empty.add"), systemImage: "plus")
+                            .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)

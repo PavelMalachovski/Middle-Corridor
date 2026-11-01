@@ -89,6 +89,15 @@ final class ModelsTests: XCTestCase {
         XCTAssertNil(snapshot.thresholds)
     }
 
+    func test_decodesSegments() throws {
+        let segments = try XCTUnwrap(try Fixture.snapshot().segments)
+        let first = try XCTUnwrap(segments.first)
+        XCTAssertEqual(first.fromCode, "XIAN")
+        XCTAssertEqual(first.toCode, "URUMQI")
+        XCTAssertEqual(first.mode.known, .rail)
+        XCTAssertEqual(first.coordinates.first, [108.94, 34.34])
+    }
+
     func test_decodesDemoClock() throws {
         let json = #"{"now":"2026-11-01T10:00:00Z","offset_hours":6,"story_start":"2026-11-01T04:00:00.123456Z","story_ref":"MC-26-0398"}"#
         let state = try APIDate.makeDecoder().decode(DemoClockState.self, from: Data(json.utf8))

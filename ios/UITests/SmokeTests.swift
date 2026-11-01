@@ -87,13 +87,15 @@ final class SmokeTests: XCTestCase {
         let hold = element(app, "hold")
         XCTAssertTrue(hold.waitForExistence(timeout: 5))
         XCTAssertTrue(hold.label.contains("Погодный запрет"), hold.label)
-        XCTAssertTrue(element(app, "card.map").exists)
-        shot(app, "05-deeplink-hold-ru")
-
+        // очередь — в первом блоке карточки, без прокрутки
         let queue = element(app, "card.queue")
-        app.swipeUp()
         XCTAssertTrue(queue.waitForExistence(timeout: 5))
         XCTAssertTrue(queue.label.contains("2–3 дня"), queue.label)
+        shot(app, "05-deeplink-hold-ru")
+
+        let map = element(app, "card.map")
+        for _ in 0..<2 where !map.exists { app.swipeUp() }
+        XCTAssertTrue(map.exists)
         let weather = element(app, "card.weather")
         if !weather.exists { app.swipeUp() }
         XCTAssertTrue(weather.waitForExistence(timeout: 5))
@@ -121,9 +123,11 @@ final class SmokeTests: XCTestCase {
         tab.tap()
         let aktau = element(app, "port.AKTAU")
         XCTAssertTrue(aktau.waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "corridor.map").exists)
         shot(app, "07-corridor-ru")
         aktau.tap()
         XCTAssertTrue(element(app, "wind.chart").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "wind.outlook").exists)
         shot(app, "08-port-ru")
         app.navigationBars.buttons.firstMatch.tap()
 
@@ -134,6 +138,52 @@ final class SmokeTests: XCTestCase {
             listArea.press(forDuration: 0.05, thenDragTo: listArea.withOffset(CGVector(dx: 0, dy: -250)))
         }
         XCTAssertTrue(news.exists)
+    }
+
+    @MainActor
+    func test_listSectionsByUrgency() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0412")
+        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
+        app.navigationBars["MC-26-0412"].buttons.firstMatch.tap()
+        app.buttons["add"].tap()
+        let field = app.textFields["add.field"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("MC-26-0398")
+        app.buttons["add.submit"].tap()
+        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
+        app.navigationBars["MC-26-0398"].buttons.firstMatch.tap()
+
+        // 0398 стоит под штормом с задержкой — секция «Требуют внимания» над «В пути»
+        let attention = element(app, "section.0")
+        let active = element(app, "section.1")
+        XCTAssertTrue(attention.waitForExistence(timeout: 5))
+        XCTAssertTrue(active.exists)
+        XCTAssertLessThan(attention.frame.minY, active.frame.minY)
+        let urgent = element(app, "row.MC-26-0398")
+        let moving = element(app, "row.MC-26-0412")
+        XCTAssertLessThan(urgent.frame.minY, moving.frame.minY)
+        shot(app, "23-list-sections-ru")
+    }
+
+    @MainActor
+    func test_removeAndUndo() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0412")
+        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
+        app.navigationBars["MC-26-0412"].buttons.firstMatch.tap()
+        let row = element(app, "row.MC-26-0412")
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.swipeLeft()
+        app.buttons["Delete"].exists ? app.buttons["Delete"].tap() : app.buttons["Удалить"].tap()
+        let undo = app.buttons["undo"]
+        XCTAssertTrue(undo.waitForExistence(timeout: 3))
+        shot(app, "24-undo-ru")
+        undo.tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -257,8 +307,10 @@ final class SmokeTests: XCTestCase {
         let app = launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
         add(app, "MC-26-0412")
+        // ждём карточку: свайпы во время закрытия шторки и перехода уходят в пустоту
+        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
         let button = element(app, "card.liveActivity")
-        for _ in 0..<4 where !button.exists { app.swipeUp() }
+        for _ in 0..<6 where !button.exists { app.swipeUp() }
         XCTAssertTrue(button.waitForExistence(timeout: 5))
         if button.label.contains("На экран") { button.tap() }
         let started = NSPredicate(format: "label CONTAINS %@", "Убрать")
@@ -275,7 +327,8 @@ final class SmokeTests: XCTestCase {
         sleep(1)
 
         add(app, "MC-26-0412")
-        for _ in 0..<4 where !button.exists { app.swipeUp() }
+        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
+        for _ in 0..<6 where !button.exists { app.swipeUp() }
         XCTAssertTrue(button.waitForExistence(timeout: 5))
         XCTAssertTrue(button.label.contains("На экран блокировки"), button.label)
     }

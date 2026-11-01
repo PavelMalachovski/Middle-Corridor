@@ -14,12 +14,23 @@ enum Theme {
     static let warning = Color(light: 0xB24A1C, dark: 0xEC835A)
     static let critical = Color(light: 0xB42318, dark: 0xF07070)
 
+    /// Доставлен — `ok`: успех не должен выглядеть как «ещё не отправлен».
     static func tone(_ tone: StatusTone) -> Color {
         switch tone {
         case .inTransit: accent
         case .waiting: watch
         case .delayed: warning
-        case .planned, .delivered, .unknown: .secondary
+        case .delivered: ok
+        case .planned, .unknown: .secondary
+        }
+    }
+
+    /// Значок рядом со статусом — смысл передаёт не только цвет.
+    static func symbol(_ tone: StatusTone) -> String? {
+        switch tone {
+        case .delayed: "clock.badge.exclamationmark"
+        case .delivered: "checkmark.circle.fill"
+        case .planned, .inTransit, .waiting, .unknown: nil
         }
     }
 

@@ -72,15 +72,36 @@ struct ShipmentWidgetView: View {
 
     var body: some View {
         if let status = entry.status {
-            ShipmentWidgetContent(
-                status: status, lang: entry.lang, note: entry.message, family: family == .systemMedium ? .medium : .small
-            )
-            .widgetURL(URL(string: "mcstatus://s/\(status.ref)"))  // нажатие — карточка груза
+            content(status)
+                .widgetURL(URL(string: "mcstatus://s/\(status.ref)"))  // нажатие — карточка груза
         } else {
             Text(entry.message ?? "")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+        }
+    }
+}
+
+extension ShipmentWidgetView {
+    /// Домашний экран — общий вид из Shared; экран блокировки — строка и прямоугольник.
+    @ViewBuilder
+    fileprivate func content(_ status: LiveStatus) -> some View {
+        let eta = LiveStatusStyle.etaShort(status, lang: entry.lang)
+        switch family {
+        case .accessoryRectangular:
+            VStack(alignment: .leading, spacing: 1) {
+                Label(status.ref, systemImage: LiveStatusStyle.icon(status))
+                    .font(.headline)
+                    .widgetAccentable()
+                Text(status.status).font(.caption).lineLimit(1)
+                Text("\(LiveStatusStyle.etaLabel(entry.lang)) \(eta)").font(.caption).lineLimit(1)
+            }
+        case .accessoryInline:
+            Label("\(status.ref) · \(eta)", systemImage: LiveStatusStyle.icon(status))
+        default:
+            ShipmentWidgetContent(
+                status: status, lang: entry.lang, note: entry.message, family: family == .systemMedium ? .medium : .small)
         }
     }
 }
@@ -92,8 +113,8 @@ struct ShipmentWidget: Widget {
                 .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Middle Corridor")
-        .description("Статус груза")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .description("Статус груза")  // перевод — Widgets/Localizable.xcstrings
+        .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular, .accessoryInline])
     }
 }
 

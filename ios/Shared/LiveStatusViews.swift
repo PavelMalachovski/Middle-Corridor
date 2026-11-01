@@ -1,5 +1,6 @@
 import MCCore
 import SwiftUI
+import WidgetKit
 
 /// Общие виды статуса груза: экран блокировки, Dynamic Island, виджет и предпросмотр в приложении.
 enum LiveStatusStyle {
@@ -15,6 +16,11 @@ enum LiveStatusStyle {
     static func eta(_ status: LiveStatus, lang: Lang) -> String {
         guard let eta = status.eta else { return "—" }
         return eta.formatted(.dateTime.day().month(.abbreviated).hour().minute().locale(Locale(identifier: lang.rawValue)))
+    }
+
+    /// «Прибытие» / «ETA» — из MCCore, а не тернарником в коде вида.
+    static func etaLabel(_ lang: Lang) -> String {
+        Labels(lang: lang, nodes: []).text("widget.eta")
     }
 
     static func etaShort(_ status: LiveStatus, lang: Lang) -> String {
@@ -42,7 +48,7 @@ struct LiveStatusLockView: View {
             Text(status.leg).font(.subheadline).lineLimit(2)
             HStack {
                 ProgressView(value: status.progress).tint(Theme.tone(status.tone))
-                Text(lang == .en ? "ETA" : "Прибытие").font(.caption2).foregroundStyle(.secondary)
+                Text(LiveStatusStyle.etaLabel(lang)).font(.caption2).foregroundStyle(.secondary)
                 Text(LiveStatusStyle.eta(status, lang: lang)).font(.caption.weight(.semibold))
             }
         }
@@ -63,6 +69,7 @@ struct ShipmentWidgetContent: View {
                 Text(status.ref).font(.caption.weight(.bold)).lineLimit(1)
             }
             .foregroundStyle(Theme.tone(status.tone))
+            .widgetAccentable()  // тонированный домашний экран (iOS 18+): номер — акцентом
             Text(status.status)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Theme.tone(status.tone))
@@ -71,7 +78,7 @@ struct ShipmentWidgetContent: View {
             Spacer(minLength: 0)
             ProgressView(value: status.progress).tint(Theme.tone(status.tone))
             HStack {
-                Text(lang == .en ? "ETA" : "Прибытие").foregroundStyle(.secondary)
+                Text(LiveStatusStyle.etaLabel(lang)).foregroundStyle(.secondary)
                 Spacer(minLength: 2)
                 Text(LiveStatusStyle.etaShort(status, lang: lang))
             }

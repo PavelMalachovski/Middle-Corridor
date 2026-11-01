@@ -26,25 +26,3 @@ struct DelaySection: View {
         }
     }
 }
-
-/// Строка «Прибытие»: вилка «6–9 нояб.» и под ней «обычно …, в плохом случае …».
-struct EtaRow: View {
-    let shipment: Shipment
-    let labels: Labels
-    @Environment(\.l10n) private var l
-
-    var body: some View {
-        let range = shipment.eta.flatMap { labels.etaRange($0, shipment.etaLatest) }
-        VStack(alignment: .leading, spacing: 2) {
-            // вилки нет — одна дата со временем, как раньше
-            LabeledContent(l("card.eta"), value: range ?? shipment.eta.map(l.dateTime) ?? "—")
-            if range != nil, let eta = shipment.eta, let latest = shipment.etaLatest {
-                Text(l("card.etaRange", ["usual": l.dateTime(eta), "worst": l.dateTime(latest)]))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("card.eta")
-    }
-}
