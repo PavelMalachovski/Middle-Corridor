@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # корень р�
 from app.api.main import create_app  # noqa: E402
 from app.config import get_settings  # noqa: E402
 from app.db.base import create_engine, create_session_factory  # noqa: E402
+from app.integrations.mock.accuracy import MockAccuracySource  # noqa: E402
 from app.main import build_map_service  # noqa: E402
 from app.services.predictor_accuracy import PredictorAccuracyService  # noqa: E402
 from app.services.weather_predictor import WindThresholds  # noqa: E402
@@ -36,6 +37,6 @@ app = create_app(
     accuracy_service=(
         PredictorAccuracyService(session_factory, WindThresholds.from_settings(settings))
         if session_factory is not None
-        else None
+        else MockAccuracySource()  # MOCK_DATA: синтетика с пометкой demo
     ),
 )
