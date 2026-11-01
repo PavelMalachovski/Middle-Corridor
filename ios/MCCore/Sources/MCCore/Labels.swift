@@ -127,6 +127,15 @@ public struct Labels: Sendable {
         }
     }
 
+    /// «3 часа назад» относительно серверного «сейчас», а не часов телефона: при переводе
+    /// часов демо (и при MOCK_TIME_SCALE) они расходятся.
+    public func relative(_ date: Date, to now: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = Locale(identifier: lang.rawValue)
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: now)
+    }
+
     /// Прогноз очереди словами: ожидаемо («2–3 дня», «≈ 12 ч») и в плохом сценарии («до 5 дней»).
     public func queue(_ q: QueueForecast) -> (main: String, worst: String) {
         let main: String
