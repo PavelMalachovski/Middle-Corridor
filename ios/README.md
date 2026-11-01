@@ -102,7 +102,11 @@ xcrun simctl push booted com.malakhouski.mcstatus ios/demo/storm.apns   # event 
 ios/scripts/record_demo.sh            # → ios/build/demo.mp4
 ```
 
-- Иконка рисуется скриптом: `swift ios/scripts/make_icon.swift ios/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png`.
+- Иконка «Каспий» (силуэт моря, рельсы с двух берегов, переправа Актау → Алят, паром) рисуется
+  скриптом в трёх вариантах для iOS 18+ — обычный (без альфа-канала), тёмный и тонированный (без фона):
+  `swift ios/scripts/make_icon.swift ios/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png any`,
+  то же с `icon-dark-1024.png dark` и `icon-tinted-1024.png tinted`. PNG в репозитории отрисованы
+  с той же геометрией вне Мака — после первого запуска скрипта сверить глазами.
 - Скриншоты тёмной темы в UI-тестах — аргумент запуска `-mc-appearance dark` (только Debug).
 
 ## Чек-лист владельца на iPhone
