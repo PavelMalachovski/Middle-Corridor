@@ -97,4 +97,19 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(event.label.contains("loaded onto ferry"), event.label)
         shot(app, "06-card-en")
     }
+
+    @MainActor
+    func test_corridorTab() {
+        let app = launch()
+        let tab = app.tabBars.buttons["tab.corridor"]
+        XCTAssertTrue(tab.waitForExistence(timeout: 5))
+        tab.tap()
+        let aktau = element(app, "port.AKTAU")
+        XCTAssertTrue(aktau.waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "corridor.news").exists)
+        shot(app, "07-corridor-ru")
+        aktau.tap()
+        XCTAssertTrue(element(app, "wind.chart").waitForExistence(timeout: 5))
+        shot(app, "08-port-ru")
+    }
 }

@@ -12,6 +12,7 @@ final class AppModel {
     private(set) var store: TrackedShipments
     private(set) var serverURL: String
     var path: [String] = []
+    var tab: AppTab = .shipments
     var linkError: AddError?
     var showLinkError: Bool {
         get { linkError != nil }
@@ -61,6 +62,7 @@ final class AppModel {
         guard let ref = ShipmentRef.from(url: url) else { return }
         do {
             let added = try await store.add(ref)
+            tab = .shipments
             path = [added]
             // номер уже был в списке, но данных нет (старт без сети) — дозапросить
             if store.shipments[added] == nil { await store.refresh() }

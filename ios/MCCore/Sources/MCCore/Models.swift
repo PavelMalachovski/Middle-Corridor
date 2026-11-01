@@ -40,7 +40,7 @@ public enum AlertLevel: String, Sendable, Comparable {
     case watch, warning, critical
 
     public static func < (a: AlertLevel, b: AlertLevel) -> Bool { a.rank < b.rank }
-    private var rank: Int {
+    public var rank: Int {
         switch self {
         case .watch: 0
         case .warning: 1
