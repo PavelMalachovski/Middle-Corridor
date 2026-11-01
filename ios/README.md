@@ -87,6 +87,19 @@ MOCK_DATA=true DEMO_CONTROL=true .venv/bin/python -m app.main
 xcrun simctl push booted com.malakhouski.mcstatus ios/demo/storm.apns   # event / delay / queue
 ```
 
+## Видео демо и сценарий ведущего
+
+- Сценарий показа (≈ 2 минуты), подготовка и запасной план — [`docs/IOS-DEMO.md`](../docs/IOS-DEMO.md).
+- Видео с симулятора — сценарий ведёт `UITests/DemoScenarioTests`, время переводит сам тест
+  через `/api/v1/demo/clock` (пульт в кадр не попадает); нужен бэкенд с `DEMO_CONTROL=true`:
+
+```bash
+ios/scripts/record_demo.sh            # → ios/build/demo.mp4
+```
+
+- Иконка рисуется скриптом: `swift ios/scripts/make_icon.swift ios/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png`.
+- Скриншоты тёмной темы в UI-тестах — аргумент запуска `-mc-appearance dark` (только Debug).
+
 ## Чек-лист владельца на iPhone
 
 1. iPhone по кабелю → Xcode → Settings → Accounts → добавить Apple ID.
