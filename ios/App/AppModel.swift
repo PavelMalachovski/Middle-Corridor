@@ -10,6 +10,10 @@ final class AppModel {
     static let defaultServer = "http://localhost:8000"
 
     private(set) var store: TrackedShipments
+    /// Клиент текущего сервера (данные — через store, часы демо — через demo).
+    private(set) var api: any CorridorAPI
+    /// Пульт ведущего (скрыт; включается долгим нажатием на версию в настройках).
+    @ObservationIgnored lazy var demo = DemoController(model: self, defaults: defaults)
     private(set) var serverURL: String
     var path: [String] = []
     var tab: AppTab = .shipments
@@ -33,8 +37,9 @@ final class AppModel {
         serverURL = server
         storage = isFake ? MemoryRefStorage() : UserDefaultsRefStorage()
         cache = isFake ? MemoryShipmentCache() : FileShipmentCache(directory: Self.cacheDirectory)
-        store = TrackedShipments(
-            api: Self.makeAPI(fake: isFake, server: server), storage: storage, cache: cache)
+        let api = Self.makeAPI(fake: isFake, server: server)
+        self.api = api
+        store = TrackedShipments(api: api, storage: storage, cache: cache)
     }
 
     /// Меняет сервер: список номеров сохраняется, данные перезагрузятся с нового адреса.
@@ -43,8 +48,9 @@ final class AppModel {
         guard normalized != serverURL, URL(string: normalized) != nil else { return }
         serverURL = normalized
         defaults.set(normalized, forKey: Self.serverKey)
-        store = TrackedShipments(
-            api: Self.makeAPI(fake: isFake, server: normalized), storage: storage, cache: cache)
+        api = Self.makeAPI(fake: isFake, server: normalized)
+        store = TrackedShipments(api: api, storage: storage, cache: cache)
+        Task { await demo.probe() }
     }
 
     /// Проверка адреса из настроек: число узлов коридора или ошибка.
