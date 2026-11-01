@@ -127,6 +127,37 @@ public struct Labels: Sendable {
         }
     }
 
+    /// Прогноз очереди словами: ожидаемо («2–3 дня», «≈ 12 ч») и в плохом сценарии («до 5 дней»).
+    public func queue(_ q: QueueForecast) -> (main: String, worst: String) {
+        let main: String
+        if q.p50Hours < 24 {
+            main = "≈ \(Int(q.p50Hours.rounded())) \(lang == .en ? "h" : "ч")"
+        } else {
+            let lo = Int((q.p50Hours / 24).rounded(.down))
+            let hi = Int((q.p50Hours / 24).rounded(.up))
+            let range = lo == hi ? "\(hi)" : "\(lo)–\(hi)"
+            main = "\(range) \(lang == .en ? (hi == 1 ? "day" : "days") : Self.daysRu(hi))"
+        }
+        let worst: String
+        if q.p90Hours < 24 {
+            let h = Int(q.p90Hours.rounded())
+            worst = lang == .en ? "up to \(h) h" : "до \(h) ч"
+        } else {
+            let n = Int((q.p90Hours / 24).rounded(.up))
+            let oneLike = n % 10 == 1 && n % 100 != 11
+            worst = lang == .en ? "up to \(n) \(n == 1 ? "day" : "days")" : "до \(n) \(oneLike ? "дня" : "дней")"
+        }
+        return (main, worst)
+    }
+
+    /// 1 день, 2–4 дня, 5+ дней (11–14 — дней).
+    private static func daysRu(_ n: Int) -> String {
+        let (mod10, mod100) = (n % 10, n % 100)
+        if mod10 == 1 && mod100 != 11 { return "день" }
+        if (2...4).contains(mod10) && !(12...14).contains(mod100) { return "дня" }
+        return "дней"
+    }
+
     private func nameOrCode(_ code: String?) -> String {
         node(code) ?? code ?? ""
     }
