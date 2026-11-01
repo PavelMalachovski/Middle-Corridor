@@ -57,8 +57,8 @@ targets:
         MCShareBaseURL: $(MC_SHARE_BASE_URL)
     settings:
       base:
-        # адрес веб-карты для ссылок «Поделиться»; заглушка — заменить на боевой домен сайта
-        MC_SHARE_BASE_URL: https://mc-status.example
+        # адрес веб-карты для ссылок «Поделиться» (сайт открывает груз по ?s=<номер>)
+        MC_SHARE_BASE_URL: https://middle-corridor-weld.vercel.app
         PRODUCT_BUNDLE_IDENTIFIER: com.malakhouski.mcstatus
         PRODUCT_NAME: MiddleCorridor
         # App Group (общий кэш с виджетом) — только симулятор: Personal Team на iPhone его не подписывает

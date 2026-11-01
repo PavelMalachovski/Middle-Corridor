@@ -49,7 +49,7 @@ MOCK_DATA=true .venv/bin/python -m app.main     # слушает 0.0.0.0:8000
 
 «Поделиться» в карточке груза отдаёт https-ссылку на веб-карту `<сайт>/?s=<номер>`, а не
 `mcstatus://` (его мессенджеры не делают ссылкой). Адрес сайта — ключ сборки `MC_SHARE_BASE_URL`
-в `project.yml`; пока там заглушка `https://mc-status.example`.
+в `project.yml` — `https://middle-corridor-weld.vercel.app`.
 
 ## Демо для ведущего (пульт времени)
 
