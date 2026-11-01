@@ -271,4 +271,34 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(button.waitForExistence(timeout: 5))
         XCTAssertTrue(button.label.contains("На экран блокировки"), button.label)
     }
+
+    @MainActor
+    func test_cardEtaRangeDelayAndFullMap() throws {
+        let app = launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        app.open(try XCTUnwrap(URL(string: "mcstatus://s/MC-26-0398")))
+        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 10))
+
+        let eta = element(app, "card.eta")
+        for _ in 0..<4 where !eta.exists { app.swipeUp() }
+        XCTAssertTrue(eta.waitForExistence(timeout: 5))
+        XCTAssertTrue(eta.label.contains("–"), eta.label)
+        let why = element(app, "card.delayBreakdown")
+        for _ in 0..<2 where !why.exists { app.swipeUp() }
+        XCTAssertTrue(why.waitForExistence(timeout: 5))
+        XCTAssertTrue(why.label.contains("Погодный запрет"), why.label)
+        shot(app, "19-card-eta-delay")
+
+        for _ in 0..<6 { app.swipeDown() }
+        let map = element(app, "card.map")
+        XCTAssertTrue(map.waitForExistence(timeout: 5))
+        map.tap()
+        XCTAssertTrue(element(app, "map.full").waitForExistence(timeout: 5))
+        element(app, "map.whereNow").tap()
+        sleep(1)
+        shot(app, "20-full-map")
+        element(app, "map.fitRoute").tap()
+        element(app, "map.close").tap()
+        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
+    }
 }

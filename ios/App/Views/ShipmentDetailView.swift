@@ -30,7 +30,7 @@ struct ShipmentDetailView: View {
         let position = labels.position(s)
         return List {
             Section {
-                RouteMapView(shipment: s)
+                RouteMapView(shipment: s, nodes: store.snapshot?.nodes ?? [])
                     .listRowInsets(EdgeInsets())
             }
             Section {
@@ -85,13 +85,17 @@ struct ShipmentDetailView: View {
             }
 
             Section {
-                LabeledContent(l("card.eta"), value: s.eta.map(l.dateTime) ?? "—")
+                EtaRow(shipment: s, labels: labels)
                 if s.isDelayed {
                     LabeledContent(l("card.delay")) {
                         Text("+\(l.hours(s.delayHours))").foregroundStyle(Theme.warning)
                     }
                 }
                 LabeledContent(l("card.client"), value: s.client)
+            }
+
+            if s.isDelayed, let parts = s.delayBreakdown, !parts.isEmpty {
+                DelaySection(parts: parts, labels: labels)
             }
 
             if LiveActivities.enabled {
