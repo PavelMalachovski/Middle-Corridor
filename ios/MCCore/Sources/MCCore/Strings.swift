@@ -7,6 +7,19 @@ public enum Lang: String, Sendable, CaseIterable {
 
 enum Strings {
     static let ru: [String: String] = [
+        "level.watch": "усиление ветра",
+        "level.warning": "риск остановки",
+        "level.critical": "вероятна остановка",
+        "notice.storm.title": "Шторм: {port} — {level}",
+        "notice.storm.here": "Груз {ref} в очереди в этом порту",
+        "notice.storm.ahead": "Порт на пути груза {ref}",
+        "notice.event.body": "{route} · прибытие {eta}",
+        "notice.delay.title": "Задержка {ref}: +{hours}",
+        "notice.queue.title": "Выход из очереди {ref}: {main}",
+        "notice.queue.body": "в плохом сценарии — {worst}",
+        "unit.hours": "{value} ч",
+        "unit.days": "{days} д {hours} ч",
+        "unit.lessThanHour": "меньше часа",
         "state.planned": "Ожидает отправления",
         "state.in_transit": "В пути",
         "state.waiting": "Стоянка",
@@ -35,6 +48,19 @@ enum Strings {
     ]
 
     static let en: [String: String] = [
+        "level.watch": "wind picking up",
+        "level.warning": "risk of stoppage",
+        "level.critical": "stoppage likely",
+        "notice.storm.title": "Storm: {port} — {level}",
+        "notice.storm.here": "Shipment {ref} is queued at this port",
+        "notice.storm.ahead": "A port on the route of {ref}",
+        "notice.event.body": "{route} · arrival {eta}",
+        "notice.delay.title": "{ref} delay: +{hours}",
+        "notice.queue.title": "{ref} out of the queue in: {main}",
+        "notice.queue.body": "worst case — {worst}",
+        "unit.hours": "{value} h",
+        "unit.days": "{days} d {hours} h",
+        "unit.lessThanHour": "under an hour",
         "state.planned": "Awaiting departure",
         "state.in_transit": "In transit",
         "state.waiting": "Waiting",
