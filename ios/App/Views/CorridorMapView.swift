@@ -27,35 +27,54 @@ struct CorridorMapView: View {
                 }
             }
             ForEach(snapshot.nodes.filter { $0.kind.known == .port }) { node in
-                Annotation(labels.node(node.code) ?? node.name, coordinate: .init(latitude: node.lat, longitude: node.lon)) {
+                let name = labels.node(node.code) ?? node.name
+                Annotation(name, coordinate: .init(latitude: node.lat, longitude: node.lon)) {
                     Button { onPort(node.code) } label: {
                         Circle()
                             .fill(Theme.level(node.alertLevel?.known))
                             .frame(width: 16, height: 16)
                             .overlay(Circle().stroke(.background, lineWidth: 2))
                     }
+                    .accessibilityLabel(name)
                     .accessibilityIdentifier("port.pin.\(node.code)")
                 }
             }
             ForEach(CorridorMap.liveVessels(snapshot.vessels ?? []), id: \.name) { vessel in
                 Annotation(vessel.name, coordinate: .init(latitude: vessel.lat ?? 0, longitude: vessel.lon ?? 0)) {
-                    Image(systemName: "location.north.fill")
-                        .font(.caption)
-                        .rotationEffect(.degrees(vessel.cog ?? 0))
-                        .foregroundStyle(.primary)
-                        .padding(4)
-                        .background(.regularMaterial, in: Circle())
+                    // в море — стрелка курса; у причала — просто паром, без «движения»
+                    Group {
+                        if CorridorMap.isMoving(vessel) {
+                            Image(systemName: "location.north.fill").rotationEffect(.degrees(vessel.cog ?? 0))
+                        } else {
+                            Image(systemName: "ferry.fill")
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.primary)
+                    .padding(4)
+                    .background(.regularMaterial, in: Circle())
                 }
             }
-            ForEach(mine) { s in
-                Annotation(s.ref, coordinate: .init(latitude: s.position.lat, longitude: s.position.lon)) {
-                    Button { onShipment(s.ref) } label: {
-                        Image(systemName: "shippingbox.fill")
-                            .font(.caption)
-                            .foregroundStyle(.white)
-                            .padding(6)
-                            .background(Theme.tone(s.tone), in: Circle())
+            ForEach(CorridorMap.shipments(mine)) { pin in
+                Annotation(pin.ref, coordinate: pin.point.coordinate) {
+                    Button { onShipment(pin.ref) } label: {
+                        // подтверждено — заливка; оценка по расписанию — контур (проекция — не факт)
+                        if pin.confirmed {
+                            Image(systemName: "shippingbox.fill")
+                                .font(.caption)
+                                .foregroundStyle(.white)
+                                .padding(6)
+                                .background(Theme.tone(pin.tone), in: Circle())
+                        } else {
+                            Image(systemName: "shippingbox")
+                                .font(.caption)
+                                .foregroundStyle(Theme.tone(pin.tone))
+                                .padding(6)
+                                .background(Circle().fill(.background))
+                                .overlay(Circle().stroke(Theme.tone(pin.tone), style: StrokeStyle(lineWidth: 2, dash: [3, 2])))
+                        }
                     }
+                    .accessibilityLabel(pin.ref)
                 }
             }
         }
@@ -69,7 +88,7 @@ struct CorridorMapView: View {
     /// иначе морская часть коридора на телефоне мелкая.
     func fit() {
         let ports = snapshot.nodes.filter { $0.kind.known == .port }.map { GeoPoint(lat: $0.lat, lon: $0.lon) }
-        let points = ports + mine.map { GeoPoint(lat: $0.position.lat, lon: $0.position.lon) }
+        let points = ports + CorridorMap.shipments(mine).map(\.point)
         // поля шире: справа кнопки карты, по краям — подписи портов
         if !points.isEmpty { position = .rect(RouteMapView.rect(points, padding: 0.18)) }
     }

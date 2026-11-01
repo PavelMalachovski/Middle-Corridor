@@ -162,8 +162,9 @@ public struct Labels: Sendable {
         return text.replacingOccurrences(of: "{node}", with: nameOrCode(code))
     }
 
-    /// Вилка прибытия: «7–9 нояб.», «30 нояб. – 2 дек.»; вилка меньше 12 ч — одна дата.
-    public func etaRange(_ eta: Date, _ latest: Date?, timeZone: TimeZone = .current) -> String {
+    /// Вилка прибытия: «7–9 нояб.», «30 нояб. – 2 дек.». Вилки нет (меньше 12 ч, тот же день,
+    /// нет поздней границы) — nil: тогда показываем одну дату со временем.
+    public func etaRange(_ eta: Date, _ latest: Date?, timeZone: TimeZone = .current) -> String? {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
         let formatter = DateFormatter()
@@ -173,7 +174,7 @@ public struct Labels: Sendable {
         let single = formatter.string(from: eta)
         guard let latest, latest.timeIntervalSince(eta) >= 12 * 3600,
             !calendar.isDate(eta, inSameDayAs: latest)
-        else { return single }
+        else { return nil }
         let end = formatter.string(from: latest)
         let sameMonth = calendar.component(.month, from: eta) == calendar.component(.month, from: latest)
         if !sameMonth { return "\(single) – \(end)" }

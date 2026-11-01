@@ -49,10 +49,14 @@ final class Week5Tests: XCTestCase {
         func d(_ month: Int, _ day: Int, _ hour: Int = 12) -> Date {
             utc.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour))!
         }
-        XCTAssertEqual(ru.etaRange(d(11, 7), d(11, 7, 20), timeZone: utc.timeZone), "7 нояб.")
+        // вилки нет (меньше 12 ч или нет поздней границы) — nil: показываем одну дату со временем
+        XCTAssertNil(ru.etaRange(d(11, 7), d(11, 7, 20), timeZone: utc.timeZone))
+        XCTAssertNil(ru.etaRange(d(11, 7), nil, timeZone: utc.timeZone))
         XCTAssertEqual(ru.etaRange(d(11, 7), d(11, 9), timeZone: utc.timeZone), "7–9 нояб.")
         XCTAssertEqual(ru.etaRange(d(11, 30), d(12, 2), timeZone: utc.timeZone), "30 нояб. – 2 дек.")
-        XCTAssertEqual(ru.etaRange(d(11, 7), nil, timeZone: utc.timeZone), "7 нояб.")
+        let en = try labels(.en)
+        XCTAssertEqual(en.etaRange(d(11, 7), d(11, 9), timeZone: utc.timeZone), "Nov 7–9")
+        XCTAssertEqual(en.etaRange(d(11, 30), d(12, 2), timeZone: utc.timeZone), "Nov 30 – Dec 2")
     }
 
     func test_accuracySummary() throws {
@@ -80,5 +84,26 @@ final class Week5Tests: XCTestCase {
             VesselStatus(name: "C", lat: 41, lon: 50, cog: nil, sog: nil, hasRecentData: false, route: nil, phaseCode: nil),
         ]
         XCTAssertEqual(CorridorMap.liveVessels(v).map(\.name), ["A"])
+    }
+
+    func test_mapShipments_projectionAndDelivered() throws {
+        let confirmed = try Fixture.shipment("MC-26-0412")
+        var projected = try Fixture.shipment("MC-26-0398")
+        projected.position.confirmed = false
+        var delivered = try Fixture.shipment("MC-26-0412")
+        delivered.ref = "MC-26-0001"
+        delivered.state = Coded(.delivered)
+        let pins = CorridorMap.shipments([confirmed, projected, delivered])
+        XCTAssertEqual(pins.map(\.ref), ["MC-26-0412", "MC-26-0398"])  // доставленный — не на живой карте
+        XCTAssertEqual(pins.map(\.confirmed), [true, false])  // проекция — не факт
+    }
+
+    func test_isMoving() {
+        func v(_ sog: Double?, _ cog: Double?) -> VesselStatus {
+            VesselStatus(name: "X", lat: 41, lon: 50, cog: cog, sog: sog, hasRecentData: true, route: nil, phaseCode: nil)
+        }
+        XCTAssertTrue(CorridorMap.isMoving(v(10.5, 270)))
+        XCTAssertFalse(CorridorMap.isMoving(v(0, 0)))  // у причала — без стрелки курса
+        XCTAssertFalse(CorridorMap.isMoving(v(9, nil)))
     }
 }

@@ -32,8 +32,31 @@ public struct AccuracySummary: Sendable, Equatable {
     }
 }
 
+/// Мой груз на карте коридора: положение и подтверждено ли оно (проекция рисуется контуром).
+public struct MapShipment: Sendable, Hashable, Identifiable {
+    public var id: String { ref }
+    public let ref: String
+    public let point: GeoPoint
+    public let confirmed: Bool
+    public let tone: StatusTone
+}
+
 /// Что рисовать на карте коридора.
 public enum CorridorMap {
+    /// Мои грузы для живой карты: доставленные не рисуем (их нет «в пути»), проекция — не факт.
+    public static func shipments(_ list: [Shipment]) -> [MapShipment] {
+        list.filter { $0.state.known != .delivered }.map {
+            MapShipment(
+                ref: $0.ref, point: GeoPoint(lat: $0.position.lat, lon: $0.position.lon),
+                confirmed: $0.position.confirmed, tone: $0.tone)
+        }
+    }
+
+    /// Паром движется: у причала стрелка курса вводила бы в заблуждение.
+    public static func isMoving(_ vessel: VesselStatus) -> Bool {
+        (vessel.sog ?? 0) >= 1 && vessel.cog != nil
+    }
+
     /// Паромы с живой позицией: без AIS судна на карте нет («нет данных», а не «стоит»).
     public static func liveVessels(_ vessels: [VesselStatus]) -> [VesselStatus] {
         vessels.filter { $0.hasRecentData && $0.lat != nil && $0.lon != nil }
