@@ -3,28 +3,50 @@ import SwiftUI
 
 /// Вкладка «Коридор»: порты с риском и ветром, неделя, новости.
 struct CorridorView: View {
-    let store: TrackedShipments
+    let model: AppModel
     @Environment(\.l10n) private var l
     @Environment(\.openURL) private var openURL
+    @State private var path: [String] = []
+
+    private var store: TrackedShipments { model.store }
 
     var body: some View {
-        NavigationStack {
-            List {
-                if store.lastError != nil {
-                    Section { OfflineBanner(updatedAt: store.updatedAt) }
-                }
-                if let snapshot = store.snapshot {
-                    ports(snapshot)
-                    week(snapshot)
-                    news(snapshot)
-                } else if store.lastError == nil {
-                    Section { ProgressView().frame(maxWidth: .infinity) }
+        NavigationStack(path: $path) {
+            GeometryReader { geo in
+                VStack(spacing: 0) {
+                    // карта закреплена: список прокручивается под ней, жесты карты не мешают прокрутке
+                    if let snapshot = store.snapshot {
+                        CorridorMapHeader(
+                            snapshot: snapshot,
+                            mine: store.refs.compactMap { store.shipments[$0] },
+                            onPort: { path.append($0) },
+                            onShipment: { model.show($0) }
+                        )
+                        .frame(height: geo.size.height * 0.4)
+                    }
+                    List {
+                        if store.lastError != nil {
+                            Section { OfflineBanner(updatedAt: store.updatedAt) }
+                        }
+                        if let report = model.accuracy {
+                            AccuracyCard(report: report)
+                        }
+                        if let snapshot = store.snapshot {
+                            ports(snapshot)
+                            week(snapshot)
+                            news(snapshot)
+                        } else if store.lastError == nil {
+                            Section { ProgressView().frame(maxWidth: .infinity) }
+                        }
+                    }
                 }
             }
             .navigationTitle(l("tab.corridor"))
+            .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: String.self) { code in
-                PortDetailView(code: code, store: store)
+                PortDetailView(code: code, store: store, accuracy: model.accuracy)
             }
+            .task { await model.loadAccuracy() }
             .refreshable { await store.refresh() }
             // первый запуск: переключились сюда, пока шло первое обновление (оно отменилось)
             .task { if store.snapshot == nil { await store.refresh() } }

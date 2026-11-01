@@ -7,6 +7,13 @@ public enum Lang: String, Codable, Sendable, CaseIterable {
 
 enum Strings {
     static let ru: [String: String] = [
+        "delay.weather_ban": "Погодный запрет: {node}",
+        "delay.ferry_wait": "Ожидание парома: {node}",
+        "delay.customs_wait": "Таможня: {node}",
+        "delay.schedule": "Отставание от графика",
+        "accuracy.main": "Предупредили о {hits} из {closures} остановок",
+        "accuracy.lead": "в среднем за {lead} до остановки",
+        "accuracy.falseAlarms": "ложных тревог {n}",
         "widget.choose": "Выберите груз в настройках виджета",
         "widget.offline": "Нет связи с сервером",
         "widget.eta": "Прибытие",
@@ -53,6 +60,13 @@ enum Strings {
     ]
 
     static let en: [String: String] = [
+        "delay.weather_ban": "Weather ban: {node}",
+        "delay.ferry_wait": "Ferry wait: {node}",
+        "delay.customs_wait": "Customs: {node}",
+        "delay.schedule": "Behind schedule",
+        "accuracy.main": "Warned of {hits} of {closures} stoppages",
+        "accuracy.lead": "on average {lead} ahead",
+        "accuracy.falseAlarms": "{n} false alarms",
         "widget.choose": "Choose a shipment in the widget settings",
         "widget.offline": "No connection to the server",
         "widget.eta": "ETA",

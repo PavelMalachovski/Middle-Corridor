@@ -3070,7 +3070,15 @@
     "p50_hours": 60.0,
     "p90_hours": 120.0,
     "basis_code": "weather_ban"
-   }
+   },
+   "delay_breakdown": [
+    {
+     "code": "weather_ban",
+     "node_code": "AKTAU",
+     "hours": 18.0
+    }
+   ],
+   "eta_latest": "2026-11-09T05:08:54Z"
   },
   {
    "ref": "MC-26-0322",
@@ -3462,6 +3470,428 @@
     [
      87.62,
      43.83
+    ]
+   ]
+  },
+  {
+   "from_code": "URUMQI",
+   "to_code": "KHORGOS",
+   "mode": "rail",
+   "coordinates": [
+    [
+     87.62,
+     43.83
+    ],
+    [
+     82.9,
+     44.6
+    ],
+    [
+     80.1,
+     44.19
+    ]
+   ]
+  },
+  {
+   "from_code": "KHORGOS",
+   "to_code": "ALMATY",
+   "mode": "rail",
+   "coordinates": [
+    [
+     80.1,
+     44.19
+    ],
+    [
+     79.0,
+     44.15
+    ],
+    [
+     76.95,
+     43.24
+    ]
+   ]
+  },
+  {
+   "from_code": "ALMATY",
+   "to_code": "SHYMKENT",
+   "mode": "rail",
+   "coordinates": [
+    [
+     76.95,
+     43.24
+    ],
+    [
+     73.75,
+     43.6
+    ],
+    [
+     71.4,
+     42.9
+    ],
+    [
+     69.6,
+     42.32
+    ]
+   ]
+  },
+  {
+   "from_code": "SHYMKENT",
+   "to_code": "KYZYLORDA",
+   "mode": "rail",
+   "coordinates": [
+    [
+     69.6,
+     42.32
+    ],
+    [
+     68.25,
+     43.3
+    ],
+    [
+     65.51,
+     44.85
+    ]
+   ]
+  },
+  {
+   "from_code": "KYZYLORDA",
+   "to_code": "BEINEU",
+   "mode": "rail",
+   "coordinates": [
+    [
+     65.51,
+     44.85
+    ],
+    [
+     61.66,
+     46.78
+    ],
+    [
+     58.0,
+     46.3
+    ],
+    [
+     55.19,
+     45.32
+    ]
+   ]
+  },
+  {
+   "from_code": "BEINEU",
+   "to_code": "AKTAU",
+   "mode": "rail",
+   "coordinates": [
+    [
+     55.19,
+     45.32
+    ],
+    [
+     52.1,
+     44.17
+    ],
+    [
+     51.25,
+     43.63
+    ]
+   ]
+  },
+  {
+   "from_code": "BEINEU",
+   "to_code": "KURYK",
+   "mode": "rail",
+   "coordinates": [
+    [
+     55.19,
+     45.32
+    ],
+    [
+     52.1,
+     44.17
+    ],
+    [
+     51.9,
+     43.55
+    ],
+    [
+     51.65,
+     43.19
+    ]
+   ]
+  },
+  {
+   "from_code": "KURYK",
+   "to_code": "BAKU_ALAT",
+   "mode": "sea",
+   "coordinates": [
+    [
+     51.65,
+     43.19
+    ],
+    [
+     51.4,
+     42.3
+    ],
+    [
+     51.1,
+     41.0
+    ],
+    [
+     50.9,
+     40.45
+    ],
+    [
+     50.1,
+     40.05
+    ],
+    [
+     49.41,
+     39.93
+    ]
+   ]
+  },
+  {
+   "from_code": "AKTAU",
+   "to_code": "BAKU_ALAT",
+   "mode": "sea",
+   "coordinates": [
+    [
+     51.25,
+     43.63
+    ],
+    [
+     51.2,
+     42.8
+    ],
+    [
+     51.1,
+     41.0
+    ],
+    [
+     50.9,
+     40.45
+    ],
+    [
+     50.1,
+     40.05
+    ],
+    [
+     49.41,
+     39.93
+    ]
+   ]
+  },
+  {
+   "from_code": "BAKU_ALAT",
+   "to_code": "GANJA",
+   "mode": "rail",
+   "coordinates": [
+    [
+     49.41,
+     39.93
+    ],
+    [
+     48.15,
+     40.34
+    ],
+    [
+     47.15,
+     40.62
+    ],
+    [
+     46.36,
+     40.68
+    ]
+   ]
+  },
+  {
+   "from_code": "GANJA",
+   "to_code": "BOYUK_KASIK",
+   "mode": "rail",
+   "coordinates": [
+    [
+     46.36,
+     40.68
+    ],
+    [
+     45.63,
+     40.99
+    ],
+    [
+     45.1,
+     41.44
+    ]
+   ]
+  },
+  {
+   "from_code": "BOYUK_KASIK",
+   "to_code": "TBILISI",
+   "mode": "rail",
+   "coordinates": [
+    [
+     45.1,
+     41.44
+    ],
+    [
+     45.09,
+     41.46
+    ],
+    [
+     44.8,
+     41.72
+    ]
+   ]
+  },
+  {
+   "from_code": "TBILISI",
+   "to_code": "POTI",
+   "mode": "rail",
+   "coordinates": [
+    [
+     44.8,
+     41.72
+    ],
+    [
+     44.11,
+     41.98
+    ],
+    [
+     43.6,
+     41.99
+    ],
+    [
+     43.05,
+     42.11
+    ],
+    [
+     42.34,
+     42.16
+    ],
+    [
+     41.65,
+     42.15
+    ]
+   ]
+  },
+  {
+   "from_code": "TBILISI",
+   "to_code": "BATUMI",
+   "mode": "rail",
+   "coordinates": [
+    [
+     44.8,
+     41.72
+    ],
+    [
+     44.11,
+     41.98
+    ],
+    [
+     43.6,
+     41.99
+    ],
+    [
+     43.05,
+     42.11
+    ],
+    [
+     42.34,
+     42.16
+    ],
+    [
+     41.8,
+     41.9
+    ],
+    [
+     41.64,
+     41.65
+    ]
+   ]
+  },
+  {
+   "from_code": "POTI",
+   "to_code": "CONSTANTA",
+   "mode": "sea",
+   "coordinates": [
+    [
+     41.65,
+     42.15
+    ],
+    [
+     38.0,
+     43.2
+    ],
+    [
+     33.0,
+     43.6
+    ],
+    [
+     28.65,
+     44.17
+    ]
+   ]
+  },
+  {
+   "from_code": "BATUMI",
+   "to_code": "CONSTANTA",
+   "mode": "sea",
+   "coordinates": [
+    [
+     41.64,
+     41.65
+    ],
+    [
+     38.0,
+     42.9
+    ],
+    [
+     33.0,
+     43.6
+    ],
+    [
+     28.65,
+     44.17
+    ]
+   ]
+  },
+  {
+   "from_code": "CONSTANTA",
+   "to_code": "BUCHAREST",
+   "mode": "rail",
+   "coordinates": [
+    [
+     28.65,
+     44.17
+    ],
+    [
+     26.1,
+     44.43
+    ]
+   ]
+  },
+  {
+   "from_code": "BUCHAREST",
+   "to_code": "BUDAPEST",
+   "mode": "rail",
+   "coordinates": [
+    [
+     26.1,
+     44.43
+    ],
+    [
+     25.6,
+     45.66
+    ],
+    [
+     23.6,
+     46.77
+    ],
+    [
+     21.93,
+     47.07
+    ],
+    [
+     19.05,
+     47.5
     ]
    ]
   }

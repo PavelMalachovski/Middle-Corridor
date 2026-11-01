@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from app.services.corridor import NODES, SEGMENTS, route_points, segment
+from app.services.delay_breakdown import DelayCause, DelayPart, breakdown
 from app.services.geo import haversine_km, point_along, polyline_length_km
 from app.services.queue_forecast import QueueInput, forecast_queue
 from app.services.tracking import (
@@ -232,3 +233,60 @@ def test_queue_only_at_its_port() -> None:
     waiting = project_shipment(plan, NOW - 10 * H)
     assert waiting.state == ShipmentState.waiting
     assert waiting.queue is None
+
+
+# --- разбор задержки и вилка ETA ------------------------------------------------
+
+
+def test_breakdown_fallback_from_hold() -> None:
+    parts = breakdown(
+        [], NOW - 20 * H, NOW, 18.0, DelayPart(code="weather_ban", node_code="AKTAU", hours=0)
+    )
+    assert [(p.code, p.node_code, p.hours) for p in parts] == [("weather_ban", "AKTAU", 18.0)]
+
+
+def test_breakdown_remainder_is_schedule() -> None:
+    causes = [DelayCause("ferry_wait", "AKTAU", NOW - 10 * H, NOW)]
+    parts = breakdown(causes, NOW - 30 * H, NOW, 14.0, None)
+    assert [(p.code, p.hours) for p in parts] == [("ferry_wait", 10.0), ("schedule", 4.0)]
+
+
+def test_breakdown_small_delay_empty() -> None:
+    assert breakdown([], NOW - 5 * H, NOW, 0.5, DelayPart(code="schedule", hours=0)) == []
+
+
+def test_breakdown_scales_down_when_over() -> None:
+    causes = [
+        DelayCause("weather_ban", "AKTAU", NOW - 30 * H, NOW),
+        DelayCause("ferry_wait", "AKTAU", NOW - 50 * H, NOW - 30 * H),
+    ]
+    parts = breakdown(causes, NOW - 60 * H, NOW, 25.0, None)
+    assert sum(p.hours for p in parts) == pytest.approx(25.0, abs=0.1)
+    assert parts[0].code == "weather_ban"
+
+
+def test_eta_latest_after_eta_in_transit() -> None:
+    plan = _plan(
+        [
+            TrackingEvent(EventKind.departed, "BEINEU", NOW - 40 * H),
+            TrackingEvent(EventKind.arrived, "KURYK", NOW - 28 * H),
+            TrackingEvent(EventKind.departed, "KURYK", NOW - 4 * H),
+        ]
+    )
+    s = project_shipment(plan, NOW)
+    assert s.eta is not None and s.eta_latest is not None
+    assert 6.0 <= (s.eta_latest - s.eta).total_seconds() / 3600 <= 72.0
+
+
+def test_delivered_eta_latest_equals_eta() -> None:
+    plan = _plan(
+        [
+            TrackingEvent(EventKind.departed, "BEINEU", NOW - 40 * H),
+            TrackingEvent(EventKind.arrived, "KURYK", NOW - 28 * H),
+            TrackingEvent(EventKind.departed, "KURYK", NOW - 20 * H),
+            TrackingEvent(EventKind.arrived, "BAKU_ALAT", NOW - 1 * H),
+        ]
+    )
+    s = project_shipment(plan, NOW)
+    assert s.state == ShipmentState.delivered
+    assert s.eta_latest == s.eta

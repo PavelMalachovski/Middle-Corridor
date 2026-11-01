@@ -4,9 +4,11 @@
 есть); прогноз очереди появился позже — добавляем его у MC-26-0398 так, как
 его отдаёт мок без демо-истории: Актау, 4 места, 8 в сутки, 48 ч погоды.
 Запуск: python3 ios/scripts/patch_fixtures.py (идемпотентно).
+Сегменты коридора (неделя 5) взяты целиком из app.services.map_snapshot.static_segments().
 """
 
 import json
+from datetime import datetime, timedelta
 from pathlib import Path
 
 FIXTURES = Path(__file__).resolve().parent.parent / "MCCore/Tests/MCCoreTests/Fixtures"
@@ -21,9 +23,19 @@ QUEUE = {
 }
 
 
+# вилка ETA и разбор задержки (неделя 5): +18 ч — погодный запрет в Актау; вилка — P90−P50 очереди
+DELAY_BREAKDOWN = [{"code": "weather_ban", "node_code": "AKTAU", "hours": 18.0}]
+SPREAD_H = 60
+
+
 def _with_queue(shipment: dict) -> dict:
     if shipment.get("ref") == "MC-26-0398":
         shipment["queue"] = QUEUE
+        shipment["delay_breakdown"] = DELAY_BREAKDOWN
+        if shipment.get("eta"):
+            eta = datetime.fromisoformat(shipment["eta"].replace("Z", "+00:00"))
+            latest = eta + timedelta(hours=SPREAD_H)
+            shipment["eta_latest"] = latest.strftime("%Y-%m-%dT%H:%M:%SZ")
     return shipment
 
 

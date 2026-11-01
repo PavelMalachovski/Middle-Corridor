@@ -153,6 +153,47 @@ public struct Labels: Sendable {
         return formatter.localizedString(for: date, relativeTo: now)
     }
 
+    /// Причина задержки: «Погодный запрет: Актау», «Отставание от графика». Неизвестный код — как есть.
+    public func delayPart(_ part: DelayPart) -> String {
+        let key = "delay.\(part.code)"
+        let text = t(key)
+        guard text != key else { return part.code }
+        guard let code = part.nodeCode else { return text.replacingOccurrences(of: ": {node}", with: "") }
+        return text.replacingOccurrences(of: "{node}", with: nameOrCode(code))
+    }
+
+    /// Вилка прибытия: «7–9 нояб.», «30 нояб. – 2 дек.». Вилки нет (меньше 12 ч, тот же день,
+    /// нет поздней границы) — nil: тогда показываем одну дату со временем.
+    public func etaRange(_ eta: Date, _ latest: Date?, timeZone: TimeZone = .current) -> String? {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: lang == .en ? "en_US" : "ru_RU")
+        formatter.timeZone = timeZone
+        formatter.setLocalizedDateFormatFromTemplate("dMMM")
+        let single = formatter.string(from: eta)
+        guard let latest, latest.timeIntervalSince(eta) >= 12 * 3600,
+            !calendar.isDate(eta, inSameDayAs: latest)
+        else { return nil }
+        let end = formatter.string(from: latest)
+        let sameMonth = calendar.component(.month, from: eta) == calendar.component(.month, from: latest)
+        if !sameMonth { return "\(single) – \(end)" }
+        let startDay = calendar.component(.day, from: eta)
+        let endDay = calendar.component(.day, from: latest)
+        // «7–9 нояб.» / «Nov 7–9»: число начала подставляем к дате конца
+        return lang == .en
+            ? end.replacingOccurrences(of: "\(endDay)", with: "\(startDay)–\(endDay)")
+            : "\(startDay)–\(end)"
+    }
+
+    /// Точность словами: «Предупредили о 35 из 40 остановок», «в среднем за 15 ч · ложных тревог 6».
+    public func accuracy(_ s: AccuracySummary) -> (main: String, detail: String) {
+        let main = t("accuracy.main", ["hits": String(s.hits), "closures": String(s.closures)])
+        let fa = t("accuracy.falseAlarms", ["n": String(s.falseAlarms)])
+        guard let lead = s.medianLeadH else { return (main, fa) }
+        return (main, "\(t("accuracy.lead", ["lead": hours(lead)])) · \(fa)")
+    }
+
     /// Прогноз очереди словами: ожидаемо («2–3 дня», «≈ 12 ч») и в плохом сценарии («до 5 дней»).
     public func queue(_ q: QueueForecast) -> (main: String, worst: String) {
         let main: String

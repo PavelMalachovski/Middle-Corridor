@@ -5,6 +5,7 @@ import SwiftUI
 struct PortDetailView: View {
     let code: String
     let store: TrackedShipments
+    var accuracy: AccuracyReport?
     @Environment(\.l10n) private var l
 
     var body: some View {
@@ -15,6 +16,9 @@ struct PortDetailView: View {
             if let node, let snapshot {
                 Section(l("card.now")) {
                     PortRow(node: node, name: name)
+                }
+                if let report = accuracy, let port = report.ports.first(where: { $0.code == code }) {
+                    PortAccuracySection(port: port, days: report.days, demo: report.demo == true)
                 }
                 if let forecast = node.forecast, !forecast.isEmpty {
                     Section(l("port.forecast")) {
