@@ -7,6 +7,9 @@ public enum Lang: String, Codable, Sendable, CaseIterable {
 
 enum Strings {
     static let ru: [String: String] = [
+        "widget.choose": "Выберите груз в настройках виджета",
+        "widget.offline": "Нет связи с сервером",
+        "widget.eta": "Прибытие",
         "live.ferryLeg": "{from} → паром «{vessel}» → {to}",
         "live.vesselLeg": "{from} → судно «{vessel}» → {to}",
         "level.watch": "усиление ветра",
@@ -50,6 +53,9 @@ enum Strings {
     ]
 
     static let en: [String: String] = [
+        "widget.choose": "Choose a shipment in the widget settings",
+        "widget.offline": "No connection to the server",
+        "widget.eta": "ETA",
         "live.ferryLeg": "{from} → ferry “{vessel}” → {to}",
         "live.vesselLeg": "{from} → vessel “{vessel}” → {to}",
         "level.watch": "wind picking up",

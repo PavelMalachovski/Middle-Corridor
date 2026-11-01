@@ -20,6 +20,21 @@ public struct LiveStatus: Codable, Hashable, Sendable {
     public var phase: LivePhase
     public var delivered: Bool
 
+    public init(
+        ref: String, leg: String, status: String, eta: Date?, delayHours: Double, progress: Double,
+        tone: StatusTone, phase: LivePhase, delivered: Bool
+    ) {
+        self.ref = ref
+        self.leg = leg
+        self.status = status
+        self.eta = eta
+        self.delayHours = delayHours
+        self.progress = progress
+        self.tone = tone
+        self.phase = phase
+        self.delivered = delivered
+    }
+
     public static func make(_ s: Shipment, labels: Labels) -> LiveStatus {
         let p = s.position
         let delivered = s.state.known == .delivered

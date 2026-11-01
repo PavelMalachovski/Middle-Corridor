@@ -182,6 +182,7 @@ private struct LiveActivityButton: View {
                     await LiveActivities.stop(shipment.ref)
                 } else {
                     try? LiveActivities.start(shipment, labels: labels)
+                    AppGroup.defaults?.set(shipment.ref, forKey: AppGroup.refKey)  // виджет — тот же груз
                 }
                 isActive = LiveActivities.isActive(shipment.ref)
             }

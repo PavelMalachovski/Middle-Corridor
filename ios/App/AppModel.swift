@@ -1,6 +1,7 @@
 import Foundation
 import MCCore
 import Observation
+import WidgetKit
 
 /// Состояние приложения: адрес сервера, «Мои грузы», навигация и открытие ссылок.
 @MainActor
@@ -38,6 +39,7 @@ final class AppModel {
         serverURL = server
         storage = isFake ? MemoryRefStorage() : UserDefaultsRefStorage()
         cache = isFake ? MemoryShipmentCache() : FileShipmentCache(directory: Self.cacheDirectory)
+        AppGroup.defaults?.set(server, forKey: AppGroup.serverKey)
         let api = Self.makeAPI(fake: isFake, server: server)
         self.api = api
         store = TrackedShipments(api: api, storage: storage, cache: cache)
@@ -50,6 +52,7 @@ final class AppModel {
         guard normalized != serverURL, URL(string: normalized) != nil else { return }
         serverURL = normalized
         defaults.set(normalized, forKey: Self.serverKey)
+        AppGroup.defaults?.set(normalized, forKey: AppGroup.serverKey)
         api = Self.makeAPI(fake: isFake, server: normalized)
         store = TrackedShipments(api: api, storage: storage, cache: cache)
         observe(store)
@@ -95,11 +98,19 @@ final class AppModel {
             settings: NotifyPrefs.load(defaults), labels: labels)
         notifier.deliver(notices, after: demo.isActive ? TimeInterval(demo.notifyDelay) : 0)
         Task { await LiveActivities.update(change.newShipments, labels: labels) }
+        if let shared = AppGroup.defaults {  // виджет на симуляторе: язык и груз по умолчанию
+            shared.set(lang.rawValue, forKey: AppGroup.langKey)
+            if shared.string(forKey: AppGroup.refKey) == nil, let first = store.refs.first {
+                shared.set(first, forKey: AppGroup.refKey)
+            }
+        }
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
-    /// Офлайн-кэш: Application Support/cache (неделя 3 — контейнер App Group для виджета).
+    /// Офлайн-кэш: в контейнере App Group (его читает виджет), а без него — Application Support.
     static var cacheDirectory: URL {
-        URL.applicationSupportDirectory.appending(path: "cache", directoryHint: .isDirectory)
+        (AppGroup.container ?? URL.applicationSupportDirectory)
+            .appending(path: "cache", directoryHint: .isDirectory)
     }
 
     static func normalize(_ input: String) -> String {

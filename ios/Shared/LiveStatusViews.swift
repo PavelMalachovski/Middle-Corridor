@@ -48,3 +48,40 @@ struct LiveStatusLockView: View {
         }
     }
 }
+
+/// Содержимое виджета (small / medium); то же рисует предпросмотр в приложении.
+struct ShipmentWidgetContent: View {
+    let status: LiveStatus
+    let lang: Lang
+    let note: String?
+    let family: WidgetFamilyKind
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Image(systemName: LiveStatusStyle.icon(status))
+                Text(status.ref).font(.caption.weight(.bold)).lineLimit(1)
+            }
+            .foregroundStyle(Theme.tone(status.tone))
+            Text(status.status)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.tone(status.tone))
+                .lineLimit(1)
+            Text(status.leg).font(family == .medium ? .subheadline : .caption).lineLimit(2)
+            Spacer(minLength: 0)
+            ProgressView(value: status.progress).tint(Theme.tone(status.tone))
+            HStack {
+                Text(lang == .en ? "ETA" : "Прибытие").foregroundStyle(.secondary)
+                Spacer(minLength: 2)
+                Text(LiveStatusStyle.etaShort(status, lang: lang))
+            }
+            .font(.caption2)
+            if let note { Text(note).font(.caption2).foregroundStyle(.secondary).lineLimit(1) }
+        }
+    }
+}
+
+/// Размер виджета без WidgetKit (приложению предпросмотра он не нужен).
+enum WidgetFamilyKind {
+    case small, medium
+}
