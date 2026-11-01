@@ -14,6 +14,7 @@ final class AppModel {
     private(set) var api: any CorridorAPI
     /// Пульт ведущего (скрыт; включается долгим нажатием на версию в настройках).
     @ObservationIgnored lazy var demo = DemoController(model: self, defaults: defaults)
+    @ObservationIgnored let notifier = Notifier()
     private(set) var serverURL: String
     var path: [String] = []
     var tab: AppTab = .shipments
@@ -40,6 +41,7 @@ final class AppModel {
         let api = Self.makeAPI(fake: isFake, server: server)
         self.api = api
         store = TrackedShipments(api: api, storage: storage, cache: cache)
+        observe(store)
     }
 
     /// Меняет сервер: список номеров сохраняется, данные перезагрузятся с нового адреса.
@@ -50,6 +52,7 @@ final class AppModel {
         defaults.set(normalized, forKey: Self.serverKey)
         api = Self.makeAPI(fake: isFake, server: normalized)
         store = TrackedShipments(api: api, storage: storage, cache: cache)
+        observe(store)
         Task { await demo.probe() }
     }
 
@@ -70,11 +73,27 @@ final class AppModel {
             let added = try await store.add(ref)
             tab = .shipments
             path = [added]
+            await notifier.requestAuthorizationIfNeeded()
             // номер уже был в списке, но данных нет (старт без сети) — дозапросить
             if store.shipments[added] == nil { await store.refresh() }
         } catch {
             linkError = error  // add — typed throws(AddError)
         }
+    }
+
+    /// После каждого обновления: что изменилось → уведомления (и Live Activity — неделя 3).
+    private func observe(_ store: TrackedShipments) {
+        store.onChange = { [weak self] change in self?.handle(change) }
+    }
+
+    private func handle(_ change: StoreChange) {
+        let lang = (LangChoice(rawValue: defaults.string(forKey: LangChoice.key) ?? "") ?? .system).resolved()
+        let labels = Labels(lang: lang, nodes: change.newNodes)
+        let notices = NotificationRules.diff(
+            old: change.oldShipments, new: change.newShipments,
+            oldNodes: change.oldNodes, newNodes: change.newNodes,
+            settings: NotifyPrefs.load(defaults), labels: labels)
+        notifier.deliver(notices, after: demo.isActive ? TimeInterval(demo.notifyDelay) : 0)
     }
 
     /// Офлайн-кэш: Application Support/cache (неделя 3 — контейнер App Group для виджета).

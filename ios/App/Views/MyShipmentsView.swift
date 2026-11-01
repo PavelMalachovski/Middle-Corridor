@@ -42,6 +42,7 @@ struct MyShipmentsView: View {
             AddShipmentView(store: store) { ref in
                 showAdd = false
                 model.path = [ref]
+                Task { await model.notifier.requestAuthorizationIfNeeded() }
             }
         }
         .sheet(isPresented: $showSettings) {

@@ -18,6 +18,10 @@ struct DemoSection: View {
                 button("demo.advance24", .advance(hours: 24))
             }
             button("demo.next", .nextBeat)
+            Picker(l("demo.delay"), selection: Bindable(demo).notifyDelay) {
+                ForEach([0, 5, 10], id: \.self) { Text(l("demo.delay.value", ["n": String($0)])).tag($0) }
+            }
+            .accessibilityIdentifier("demo.delay")
             button("demo.reset", .reset, role: .destructive)
         } header: {
             Text(l("demo.title")).accessibilityIdentifier("demo.section")

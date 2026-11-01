@@ -14,6 +14,11 @@ final class DemoController {
     var isEnabled: Bool {
         didSet { defaults.set(isEnabled, forKey: Self.key) }
     }
+    /// Задержка уведомлений после шага (0/5/10 с): успеть заблокировать телефон.
+    var notifyDelay: Int {
+        didSet { defaults.set(notifyDelay, forKey: Self.delayKey) }
+    }
+    static let delayKey = "mc.demo.notifyDelay"
     private(set) var state: DemoClockState?
     /// Сервер умеет переводить часы.
     private(set) var available = false
@@ -26,6 +31,7 @@ final class DemoController {
         self.model = model
         self.defaults = defaults
         isEnabled = defaults.bool(forKey: Self.key)
+        notifyDelay = defaults.object(forKey: Self.delayKey) as? Int ?? 5
     }
 
     /// Жест и кнопки работают только при включённом пульте и сервере с часами демо.
@@ -45,7 +51,12 @@ final class DemoController {
     func perform(_ action: DemoAction) async {
         guard let model, !busy else { return }
         busy = true
-        defer { busy = false }
+        // заблокировали телефон посреди шага — доделать обновление и Live Activity в фоне
+        let background = UIApplication.shared.beginBackgroundTask(withName: "demo-step")
+        defer {
+            busy = false
+            UIApplication.shared.endBackgroundTask(background)
+        }
         let feedback = UINotificationFeedbackGenerator()
         do {
             state = try await model.api.demo(action)

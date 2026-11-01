@@ -139,7 +139,8 @@ final class SmokeTests: XCTestCase {
         if !section.waitForExistence(timeout: 5) { app.swipeDown() }
         XCTAssertTrue(section.waitForExistence(timeout: 5))
         let advance = element(app, "demo.advance24")
-        XCTAssertTrue(advance.exists)
+        if !advance.waitForExistence(timeout: 2) { app.swipeUp() }  // пульт — под секцией уведомлений
+        XCTAssertTrue(advance.waitForExistence(timeout: 5))
         advance.tap()
         let offset = element(app, "demo.offset")
         XCTAssertTrue(offset.waitForExistence(timeout: 5))
@@ -147,5 +148,21 @@ final class SmokeTests: XCTestCase {
         expectation(for: shifted, evaluatedWith: offset)
         waitForExpectations(timeout: 5)
         shot(app, "10-demo-ru")
+    }
+
+    @MainActor
+    func test_notificationSettings() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
+        app.buttons["settings"].tap()
+        let storm = app.switches["notify.storm"]
+        if !storm.waitForExistence(timeout: 3) { app.swipeUp() }
+        XCTAssertTrue(storm.waitForExistence(timeout: 5))
+        for id in ["notify.storm", "notify.event", "notify.delay", "notify.queue"] {
+            let toggle = app.switches[id]
+            XCTAssertTrue(toggle.exists, id)
+            XCTAssertEqual(toggle.value as? String, "1", id)
+        }
+        shot(app, "11-settings-notify-ru")
     }
 }
