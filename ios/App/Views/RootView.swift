@@ -24,7 +24,7 @@ struct RootView: View {
                 .tag(AppTab.corridor)
         }
         .background {
-            // ведущий: двойной тап тремя пальцами — следующий шаг демо-истории
+            // ведущий: долгое нажатие двумя пальцами — следующий шаг демо-истории
             DemoGesture {
                 guard model.demo.isActive else { return }
                 Task { await model.demo.perform(.nextBeat) }
