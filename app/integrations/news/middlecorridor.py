@@ -11,7 +11,7 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 import structlog
-from selectolax.parser import HTMLParser
+from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from app.integrations.news.base import (
     MAX_EXTERNAL_ID_LEN,

@@ -23,6 +23,9 @@ cd web; npm run build                                       # web/dist → ра�
 cd web; npm run lint; npm test; npm run typecheck           # Biome + Vitest + tsc (обязательно перед коммитом)
 cd web; npm run e2e                                         # Playwright: нужен build; API с MOCK_DATA поднимет сам (или возьмёт :8000)
 cd web; npx playwright test e2e/screens.spec.ts             # галерея экранов → web/screenshots/*.png (смотреть глазами после правок UI)
+cd ios; xcodegen generate                                   # (Мак) проект Xcode из ios/project.yml — после pull
+cd ios/MCCore; swift test                                   # (Мак) логика iOS без симулятора
+cd ios; xcodebuild test -scheme MiddleCorridor -destination 'platform=iOS Simulator,name=iPhone 17'   # UI-смоук на -mc-fake-api
 ```
 
 Конфиг — только через ENV/`.env` (pydantic-settings, `app/config.py`).
@@ -52,6 +55,9 @@ web/           фронт карты: React 19 + Vite 8 + TS 7 + MapLibre 6; х�
                *.test.ts рядом с кодом (Vitest), e2e/ — Playwright (+ a11y, галерея экранов), biome.json — линт и формат
 .github/       ci.yml (backend · postgres · web), security.yml (pip-audit/npm audit), dependabot.yml
 docs/          AUDIT.md — аудит и бэклог крупных улучшений; GROWTH.md — фичи, продвижение, монетизация
+ios/           приложение iOS (SwiftUI, iOS 17+, docs/IOS.md): project.yml (XcodeGen, .xcodeproj не в git);
+               MCCore/ — Swift Package без UI (модели /api/v1, клиент, ShipmentRef, Labels RU/EN, TrackedShipments);
+               App/ — экраны; UITests/ — смоук на вшитых фикстурах (-mc-fake-api)
 api/index.py   точка входа Vercel (serverless FastAPI: только /api/v1 и /health); vercel.json — маршрутизация
 ```
 
@@ -236,6 +242,14 @@ api/index.py   точка входа Vercel (serverless FastAPI: только /a
   16 есть без Docker: `initdb`/`pg_ctl` через `runuser -u postgres`, порт 5433,
   данные — в `/var/lib/postgresql/…` (в scratchpad права каталога сбрасываются
   и сервер падает).
+
+- iOS: модели — зеркало `map_snapshot.py`/`tracking.py`; новое поле или код в
+  ответе `/api/v1` → поправить `ios/MCCore/Sources/MCCore/Models.swift` и
+  фикстуры. Даты бэкенда — с микросекундами: только `APIDate.parse`, не
+  `ISO8601DateFormatter`. Подписи из кодов — `Labels.swift` + `Strings.swift`
+  (дословно ключи `web/src/i18n`), тексты интерфейса — `App/Localizable.xcstrings`
+  через `L10n` (язык выбирается в приложении, не системой). Язык в UI-тестах —
+  аргумент `-mc.lang en` (домен аргументов UserDefaults).
 
 ## Продукт (для контекста решений)
 

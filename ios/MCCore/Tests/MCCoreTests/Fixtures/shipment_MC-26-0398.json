@@ -1,0 +1,322 @@
+{
+ "ref": "MC-26-0398",
+ "client": "Steppe Freight KZ",
+ "cargo": "3 × 20', полипропилен",
+ "cargo_en": "3 × 20', polypropylene",
+ "origin": "Сиань",
+ "destination": "Констанца",
+ "origin_code": "XIAN",
+ "destination_code": "CONSTANTA",
+ "state": "waiting",
+ "hold_reason": "Погодный запрет на швартовку: Актау — критический ветер",
+ "hold_code": "weather_ban",
+ "hold_node": "AKTAU",
+ "hold_vessel": null,
+ "delay_hours": 18.0,
+ "last_event": "Прибытие: Актау",
+ "last_event_kind": "arrived",
+ "last_event_node": "AKTAU",
+ "last_event_note_code": null,
+ "last_event_note_vessel": null,
+ "last_event_at": "2026-10-30T05:08:54.315320Z",
+ "eta": "2026-11-06T17:08:54.312620Z",
+ "position": {
+  "lat": 43.63,
+  "lon": 51.25,
+  "heading": null,
+  "confirmed": true,
+  "source": "event",
+  "on_vessel": null,
+  "mode": null,
+  "from_code": "AKTAU",
+  "to_code": "BAKU_ALAT",
+  "leg_progress": 0.0
+ },
+ "progress": 0.7003,
+ "checkpoints": [
+  {
+   "code": "XIAN",
+   "name": "Сиань",
+   "lat": 34.34,
+   "lon": 108.94,
+   "planned_at": "2026-10-22T01:08:54.315320Z",
+   "actual_at": "2026-10-22T00:38:54.315320Z",
+   "state": "done"
+  },
+  {
+   "code": "URUMQI",
+   "name": "Урумчи",
+   "lat": 43.83,
+   "lon": 87.62,
+   "planned_at": "2026-10-24T13:08:54.315320Z",
+   "actual_at": "2026-10-24T13:38:54.315320Z",
+   "state": "done"
+  },
+  {
+   "code": "KHORGOS",
+   "name": "Хоргос / Алтынколь",
+   "lat": 44.19,
+   "lon": 80.1,
+   "planned_at": "2026-10-25T09:08:54.315320Z",
+   "actual_at": "2026-10-25T07:38:54.315320Z",
+   "state": "done"
+  },
+  {
+   "code": "ALMATY",
+   "name": "Алматы",
+   "lat": 43.24,
+   "lon": 76.95,
+   "planned_at": "2026-10-26T15:08:54.315320Z",
+   "actual_at": "2026-10-26T15:08:54.315320Z",
+   "state": "done"
+  },
+  {
+   "code": "SHYMKENT",
+   "name": "Шымкент",
+   "lat": 42.32,
+   "lon": 69.6,
+   "planned_at": "2026-10-27T11:08:54.315320Z",
+   "actual_at": "2026-10-27T10:38:54.315320Z",
+   "state": "done"
+  },
+  {
+   "code": "KYZYLORDA",
+   "name": "Кызылорда",
+   "lat": 44.85,
+   "lon": 65.51,
+   "planned_at": "2026-10-28T05:08:54.315320Z",
+   "actual_at": "2026-10-28T04:08:54.315320Z",
+   "state": "done"
+  },
+  {
+   "code": "BEINEU",
+   "name": "Бейнеу",
+   "lat": 45.32,
+   "lon": 55.19,
+   "planned_at": "2026-10-29T13:08:54.315320Z",
+   "actual_at": "2026-10-29T13:08:54.315320Z",
+   "state": "done"
+  },
+  {
+   "code": "AKTAU",
+   "name": "Актау",
+   "lat": 43.63,
+   "lon": 51.25,
+   "planned_at": "2026-10-30T05:08:54.315320Z",
+   "actual_at": "2026-10-30T05:08:54.315320Z",
+   "state": "current"
+  },
+  {
+   "code": "BAKU_ALAT",
+   "name": "Баку (Алят)",
+   "lat": 39.93,
+   "lon": 49.41,
+   "planned_at": "2026-10-31T15:08:54.315320Z",
+   "actual_at": null,
+   "state": "planned"
+  },
+  {
+   "code": "GANJA",
+   "name": "Гянджа",
+   "lat": 40.68,
+   "lon": 46.36,
+   "planned_at": "2026-11-01T11:08:54.315320Z",
+   "actual_at": null,
+   "state": "planned"
+  },
+  {
+   "code": "BOYUK_KASIK",
+   "name": "Бёюк-Кясик / Гардабани",
+   "lat": 41.44,
+   "lon": 45.1,
+   "planned_at": "2026-11-01T22:08:54.315320Z",
+   "actual_at": null,
+   "state": "planned"
+  },
+  {
+   "code": "TBILISI",
+   "name": "Тбилиси",
+   "lat": 41.72,
+   "lon": 44.8,
+   "planned_at": "2026-11-02T19:08:54.315320Z",
+   "actual_at": null,
+   "state": "planned"
+  },
+  {
+   "code": "POTI",
+   "name": "Поти",
+   "lat": 42.15,
+   "lon": 41.65,
+   "planned_at": "2026-11-03T11:08:54.315320Z",
+   "actual_at": null,
+   "state": "planned"
+  },
+  {
+   "code": "CONSTANTA",
+   "name": "Констанца",
+   "lat": 44.17,
+   "lon": 28.65,
+   "planned_at": "2026-11-05T23:08:54.315320Z",
+   "actual_at": null,
+   "state": "planned"
+  }
+ ],
+ "track": [
+  [
+   108.94,
+   34.34
+  ],
+  [
+   103.83,
+   36.06
+  ],
+  [
+   98.5,
+   39.75
+  ],
+  [
+   93.5,
+   42.83
+  ],
+  [
+   87.62,
+   43.83
+  ],
+  [
+   82.9,
+   44.6
+  ],
+  [
+   80.1,
+   44.19
+  ],
+  [
+   79.0,
+   44.15
+  ],
+  [
+   76.95,
+   43.24
+  ],
+  [
+   73.75,
+   43.6
+  ],
+  [
+   71.4,
+   42.9
+  ],
+  [
+   69.6,
+   42.32
+  ],
+  [
+   68.25,
+   43.3
+  ],
+  [
+   65.51,
+   44.85
+  ],
+  [
+   61.66,
+   46.78
+  ],
+  [
+   58.0,
+   46.3
+  ],
+  [
+   55.19,
+   45.32
+  ],
+  [
+   52.1,
+   44.17
+  ],
+  [
+   51.25,
+   43.63
+  ],
+  [
+   51.2,
+   42.8
+  ],
+  [
+   51.1,
+   41.0
+  ],
+  [
+   50.9,
+   40.45
+  ],
+  [
+   50.1,
+   40.05
+  ],
+  [
+   49.41,
+   39.93
+  ],
+  [
+   48.15,
+   40.34
+  ],
+  [
+   47.15,
+   40.62
+  ],
+  [
+   46.36,
+   40.68
+  ],
+  [
+   45.63,
+   40.99
+  ],
+  [
+   45.1,
+   41.44
+  ],
+  [
+   45.09,
+   41.46
+  ],
+  [
+   44.8,
+   41.72
+  ],
+  [
+   44.11,
+   41.98
+  ],
+  [
+   43.6,
+   41.99
+  ],
+  [
+   43.05,
+   42.11
+  ],
+  [
+   42.34,
+   42.16
+  ],
+  [
+   41.65,
+   42.15
+  ],
+  [
+   38.0,
+   43.2
+  ],
+  [
+   33.0,
+   43.6
+  ],
+  [
+   28.65,
+   44.17
+  ]
+ ]
+}
