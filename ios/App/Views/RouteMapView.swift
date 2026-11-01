@@ -59,14 +59,14 @@ struct RouteMapView: View {
     }
 
     /// Рамка всего трека с полями, чтобы линия не упиралась в края.
-    static func rect(_ points: [GeoPoint]) -> MKMapRect {
+    static func rect(_ points: [GeoPoint], padding: Double = 0.08) -> MKMapRect {
         let mapPoints = points.map { MKMapPoint($0.coordinate) }
         guard let first = mapPoints.first else { return .world }
         var rect = MKMapRect(origin: first, size: MKMapSize(width: 0, height: 0))
         for point in mapPoints.dropFirst() {
             rect = rect.union(MKMapRect(origin: point, size: MKMapSize(width: 0, height: 0)))
         }
-        let pad = max(rect.size.width, rect.size.height) * 0.08
+        let pad = max(rect.size.width, rect.size.height) * padding
         return rect.insetBy(dx: -pad, dy: -pad)
     }
 }

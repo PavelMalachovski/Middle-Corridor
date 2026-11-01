@@ -19,6 +19,8 @@ final class AppModel {
     private(set) var serverURL: String
     var path: [String] = []
     var tab: AppTab = .shipments
+    /// Точность прогноза за 90 дней (вкладка «Коридор»); нет ответа — блок скрыт.
+    private(set) var accuracy: AccuracyReport?
     var linkError: AddError?
     var showLinkError: Bool {
         get { linkError != nil }
@@ -83,6 +85,10 @@ final class AppModel {
         } catch {
             linkError = error  // add — typed throws(AddError)
         }
+    }
+
+    func loadAccuracy() async {
+        if let report = try? await api.accuracy(days: 90) { accuracy = report }
     }
 
     /// Удалить груз из списка — и его Live Activity, и «груз виджета», если это он.

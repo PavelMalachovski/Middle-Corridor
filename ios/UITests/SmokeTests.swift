@@ -121,11 +121,19 @@ final class SmokeTests: XCTestCase {
         tab.tap()
         let aktau = element(app, "port.AKTAU")
         XCTAssertTrue(aktau.waitForExistence(timeout: 5))
-        XCTAssertTrue(element(app, "corridor.news").exists)
         shot(app, "07-corridor-ru")
         aktau.tap()
         XCTAssertTrue(element(app, "wind.chart").waitForExistence(timeout: 5))
         shot(app, "08-port-ru")
+        app.navigationBars.buttons.firstMatch.tap()
+
+        // новости — ниже карты и точности: листаем список под закреплённой картой
+        let news = element(app, "corridor.news")
+        let listArea = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+        for _ in 0..<6 where !news.exists {
+            listArea.press(forDuration: 0.05, thenDragTo: listArea.withOffset(CGVector(dx: 0, dy: -250)))
+        }
+        XCTAssertTrue(news.exists)
     }
 
     @MainActor
@@ -300,5 +308,38 @@ final class SmokeTests: XCTestCase {
         element(app, "map.fitRoute").tap()
         element(app, "map.close").tap()
         XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func test_corridorMapAndAccuracy() {
+        let app = launch()
+        let tab = app.tabBars.buttons["tab.corridor"]
+        XCTAssertTrue(tab.waitForExistence(timeout: 5))
+        tab.tap()
+        let map = element(app, "corridor.map")
+        XCTAssertTrue(map.waitForExistence(timeout: 5))
+        let summary = element(app, "accuracy.summary")
+        XCTAssertTrue(summary.waitForExistence(timeout: 5))
+        XCTAssertTrue(summary.label.contains(" из "), summary.label)
+        XCTAssertTrue(element(app, "accuracy.demo").exists)
+        shot(app, "21-corridor-map")
+
+        element(app, "corridor.expand").tap()
+        XCTAssertTrue(element(app, "corridor.mapFull").waitForExistence(timeout: 5))
+        element(app, "corridor.close").tap()
+
+        let aktau = element(app, "port.AKTAU")
+        XCTAssertTrue(aktau.waitForExistence(timeout: 5))
+        aktau.tap()
+        let portAccuracy = element(app, "port.accuracy")
+        for _ in 0..<3 where !portAccuracy.exists { app.swipeUp() }
+        XCTAssertTrue(portAccuracy.waitForExistence(timeout: 5))
+        shot(app, "22-port-accuracy")
+        app.navigationBars.buttons.firstMatch.tap()
+
+        // карта закреплена: прокрутка списка её не уводит
+        XCTAssertTrue(summary.waitForExistence(timeout: 5))
+        summary.swipeUp()
+        XCTAssertTrue(map.isHittable)
     }
 }

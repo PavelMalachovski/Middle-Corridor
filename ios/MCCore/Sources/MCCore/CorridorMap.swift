@@ -8,6 +8,14 @@ public struct AccuracySummary: Sendable, Equatable {
     public var falseAlarms: Int
     public var medianLeadH: Double?
 
+    public init(closures: Int, hits: Int, alerts: Int, falseAlarms: Int, medianLeadH: Double?) {
+        self.closures = closures
+        self.hits = hits
+        self.alerts = alerts
+        self.falseAlarms = falseAlarms
+        self.medianLeadH = medianLeadH
+    }
+
     public static func make(_ report: AccuracyReport) -> AccuracySummary {
         let leads = report.ports.compactMap(\.medianLeadH).sorted()
         let median: Double? =

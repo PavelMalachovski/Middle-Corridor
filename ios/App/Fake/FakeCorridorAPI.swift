@@ -17,6 +17,13 @@
             return try await demoClock()
         }
 
+        func accuracy(days: Int) async throws -> AccuracyReport {
+            guard let url = Bundle.main.url(forResource: "accuracy", withExtension: "json") else {
+                throw APIError.notFound
+            }
+            return try APIDate.makeDecoder().decode(AccuracyReport.self, from: Data(contentsOf: url))
+        }
+
         func snapshot() async throws -> MapSnapshot {
             try Self.load()
         }
