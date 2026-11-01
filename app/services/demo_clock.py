@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal, Protocol, Self
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class DemoClockState(BaseModel):
@@ -15,7 +15,8 @@ class DemoClockState(BaseModel):
 
 class DemoClockAction(BaseModel):
     action: Literal["advance", "next_beat", "reset"]
-    hours: float | None = None  # только для advance, > 0
+    # только для advance: > 0 и не больше 30 суток — огромный сдвиг переполнил бы часы
+    hours: float | None = Field(default=None, le=720)
 
     @model_validator(mode="after")
     def _hours_for_advance(self) -> Self:

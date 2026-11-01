@@ -48,6 +48,14 @@ public struct TrackedRow: Identifiable, Sendable, Hashable {
     public let shipment: Shipment?
 }
 
+/// Что было до обновления и что стало — для уведомлений и Live Activity.
+public struct StoreChange: Sendable {
+    public let oldShipments: [String: Shipment]
+    public let newShipments: [String: Shipment]
+    public let oldNodes: [NodeStatus]
+    public let newNodes: [NodeStatus]
+}
+
 /// «Мои грузы»: номера, последние данные по ним и снимок коридора.
 @MainActor
 @Observable
@@ -63,24 +71,31 @@ public final class TrackedShipments {
     /// Номера, которых сервер не знает (404 при последнем обновлении): «не найден», а не вечное «загружается».
     public private(set) var missing: Set<String> = []
 
+    /// Вызывается после каждого завершённого обновления (не при отмене и не при `add`).
+    @ObservationIgnored public var onChange: (@MainActor (StoreChange) -> Void)?
+
     private let api: any CorridorAPI
     private let storage: any RefStorage
     private let cache: any ShipmentCache
+    private let server: String?
     private let now: @Sendable () -> Date
 
     public init(
         api: any CorridorAPI,
         storage: any RefStorage,
         cache: any ShipmentCache = MemoryShipmentCache(),
+        server: String? = nil,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.api = api
         self.storage = storage
         self.cache = cache
+        self.server = server
         self.now = now
         let refs = storage.load()
         self.refs = refs
-        if let cached = cache.load() {
+        // кэш старого формата (без адреса) — свой; кэш другого сервера — не наш
+        if let cached = cache.load(), cached.server == nil || server == nil || cached.server == server {
             shipments = cached.shipments.filter { refs.contains($0.key) }
             snapshot = cached.snapshot
             updatedAt = cached.updatedAt
@@ -88,7 +103,7 @@ public final class TrackedShipments {
     }
 
     private func persist() {
-        cache.save(CachedState(shipments: shipments, snapshot: snapshot, updatedAt: updatedAt))
+        cache.save(CachedState(shipments: shipments, snapshot: snapshot, updatedAt: updatedAt, server: server))
     }
 
     public var rows: [TrackedRow] {
@@ -150,6 +165,8 @@ public final class TrackedShipments {
 
         guard !Task.isCancelled else { return }
 
+        let oldShipments = shipments
+        let oldNodes = snapshot?.nodes ?? []
         var failure: APIError?
         switch snapshotLoaded {
         case .success(let snap): snapshot = snap
@@ -171,6 +188,10 @@ public final class TrackedShipments {
         lastError = failure
         if failure == nil { updatedAt = now() }
         persist()
+        onChange?(
+            StoreChange(
+                oldShipments: oldShipments, newShipments: shipments,
+                oldNodes: oldNodes, newNodes: snapshot?.nodes ?? []))
     }
 
     private nonisolated static func load<T: Sendable>(

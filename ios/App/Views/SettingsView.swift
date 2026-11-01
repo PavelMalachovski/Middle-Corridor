@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var server = ""
     @State private var probe: Result<Int, APIError>?
     @State private var probing = false
+    @State private var showPreview = false
 
     var body: some View {
         NavigationStack {
@@ -49,8 +50,14 @@ struct SettingsView: View {
                     .labelsHidden()
                 }
 
+                Section(l("settings.notify")) {
+                    ForEach(NoticeKind.allCases, id: \.self) { kind in
+                        NotifyToggle(kind: kind, title: l("notify.\(kind.rawValue)"))
+                    }
+                }
+
                 if model.demo.isActive {
-                    DemoSection(demo: model.demo)
+                    DemoSection(demo: model.demo) { showPreview = true }
                 }
 
                 Section {
@@ -75,6 +82,9 @@ struct SettingsView: View {
             }
             .onAppear { server = model.serverURL }
             .task { await model.demo.probe() }
+            .sheet(isPresented: $showPreview) {
+                PreviewSheet(status: model.demo.previewStatus(lang: l.lang))
+            }
             .onChange(of: server) { probe = nil }
         }
     }
@@ -102,5 +112,22 @@ struct SettingsView: View {
         let short = info?["CFBundleShortVersionString"] as? String ?? "?"
         let build = info?["CFBundleVersion"] as? String ?? "?"
         return "\(short) (\(build))"
+    }
+}
+
+/// Переключатель вида уведомлений; по умолчанию включён.
+private struct NotifyToggle: View {
+    let kind: NoticeKind
+    let title: String
+    @AppStorage private var isOn: Bool
+
+    init(kind: NoticeKind, title: String) {
+        self.kind = kind
+        self.title = title
+        _isOn = AppStorage(wrappedValue: true, NotifyPrefs.key(kind))
+    }
+
+    var body: some View {
+        Toggle(title, isOn: $isOn).accessibilityIdentifier("notify.\(kind.rawValue)")
     }
 }

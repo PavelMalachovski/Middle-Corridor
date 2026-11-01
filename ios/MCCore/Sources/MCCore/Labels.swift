@@ -1,7 +1,7 @@
 import Foundation
 
 /// Тон статуса груза — цвет «пилюли», как на сайте (`.pill--*` в web/src/styles.css).
-public enum StatusTone: Sendable, Equatable {
+public enum StatusTone: String, Codable, Sendable, Equatable {
     case planned, inTransit, waiting, delayed, delivered, unknown
 }
 
@@ -125,6 +125,23 @@ public struct Labels: Sendable {
                 confirmed: false
             )
         }
+    }
+
+    /// Текст по ключу на языке подписей (уведомления, Live Activity).
+    public func text(_ key: String, _ params: [String: String] = [:]) -> String { t(key, params) }
+
+    /// Часы как на сайте: «меньше часа», «18 ч», «2 д 18 ч».
+    public func hours(_ value: Double) -> String {
+        if value < 1 { return t("unit.lessThanHour") }
+        if value < 48 { return t("unit.hours", ["value": String(Int(value.rounded()))]) }
+        let days = Int(value / 24)
+        let rest = Int((value - Double(days) * 24).rounded())
+        return t("unit.days", ["days": String(days), "hours": String(rest)])
+    }
+
+    /// «7 нояб., 23:00» / «Nov 7, 11:00 PM».
+    public func dateTime(_ date: Date) -> String {
+        date.formatted(.dateTime.day().month(.abbreviated).hour().minute().locale(Locale(identifier: lang.rawValue)))
     }
 
     /// «3 часа назад» относительно серверного «сейчас», а не часов телефона: при переводе

@@ -9,6 +9,7 @@ enum AppTab: String, Hashable {
 struct RootView: View {
     @Bindable var model: AppModel
     @Environment(\.l10n) private var l
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         TabView(selection: $model.tab) {
@@ -31,5 +32,17 @@ struct RootView: View {
             }
         }
         .task { await model.demo.probe() }
+        .task {
+            // на переднем плане — обновление раз в минуту: изменения → уведомления, Live Activity
+            // без проверки scenePhase: в долгой задаче это копия на момент её старта (могла
+            // быть не .active — и таймер молчал бы всегда); в фоне приложение и так стоит
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60))
+                if !Task.isCancelled { await model.store.refresh() }
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await model.store.refresh() } }
+        }
     }
 }

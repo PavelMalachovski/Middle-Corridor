@@ -1,12 +1,30 @@
 // Подписи для данных бэкенда — дословно ключи web/src/i18n/{ru,en}.ts, чтобы
 // приложение и сайт говорили одно и то же. Тексты интерфейса — в Localizable.xcstrings.
 
-public enum Lang: String, Sendable, CaseIterable {
+public enum Lang: String, Codable, Sendable, CaseIterable {
     case ru, en
 }
 
 enum Strings {
     static let ru: [String: String] = [
+        "widget.choose": "Выберите груз в настройках виджета",
+        "widget.offline": "Нет связи с сервером",
+        "widget.eta": "Прибытие",
+        "live.ferryLeg": "{from} → паром «{vessel}» → {to}",
+        "live.vesselLeg": "{from} → судно «{vessel}» → {to}",
+        "level.watch": "усиление ветра",
+        "level.warning": "риск остановки",
+        "level.critical": "вероятна остановка",
+        "notice.storm.title": "Шторм: {port} — {level}",
+        "notice.storm.here": "Груз {ref} в очереди в этом порту",
+        "notice.storm.ahead": "Порт на пути груза {ref}",
+        "notice.event.body": "{route} · прибытие {eta}",
+        "notice.delay.title": "Задержка {ref}: +{hours}",
+        "notice.queue.title": "Выход из очереди {ref}: {main}",
+        "notice.queue.body": "в плохом сценарии — {worst}",
+        "unit.hours": "{value} ч",
+        "unit.days": "{days} д {hours} ч",
+        "unit.lessThanHour": "меньше часа",
         "state.planned": "Ожидает отправления",
         "state.in_transit": "В пути",
         "state.waiting": "Стоянка",
@@ -35,6 +53,24 @@ enum Strings {
     ]
 
     static let en: [String: String] = [
+        "widget.choose": "Choose a shipment in the widget settings",
+        "widget.offline": "No connection to the server",
+        "widget.eta": "ETA",
+        "live.ferryLeg": "{from} → ferry “{vessel}” → {to}",
+        "live.vesselLeg": "{from} → vessel “{vessel}” → {to}",
+        "level.watch": "wind picking up",
+        "level.warning": "risk of stoppage",
+        "level.critical": "stoppage likely",
+        "notice.storm.title": "Storm: {port} — {level}",
+        "notice.storm.here": "Shipment {ref} is queued at this port",
+        "notice.storm.ahead": "A port on the route of {ref}",
+        "notice.event.body": "{route} · arrival {eta}",
+        "notice.delay.title": "{ref} delay: +{hours}",
+        "notice.queue.title": "{ref} out of the queue in: {main}",
+        "notice.queue.body": "worst case — {worst}",
+        "unit.hours": "{value} h",
+        "unit.days": "{days} d {hours} h",
+        "unit.lessThanHour": "under an hour",
         "state.planned": "Awaiting departure",
         "state.in_transit": "In transit",
         "state.waiting": "Waiting",

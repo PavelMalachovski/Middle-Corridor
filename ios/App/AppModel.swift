@@ -1,6 +1,7 @@
 import Foundation
 import MCCore
 import Observation
+import WidgetKit
 
 /// Состояние приложения: адрес сервера, «Мои грузы», навигация и открытие ссылок.
 @MainActor
@@ -14,6 +15,7 @@ final class AppModel {
     private(set) var api: any CorridorAPI
     /// Пульт ведущего (скрыт; включается долгим нажатием на версию в настройках).
     @ObservationIgnored lazy var demo = DemoController(model: self, defaults: defaults)
+    @ObservationIgnored let notifier = Notifier()
     private(set) var serverURL: String
     var path: [String] = []
     var tab: AppTab = .shipments
@@ -37,9 +39,12 @@ final class AppModel {
         serverURL = server
         storage = isFake ? MemoryRefStorage() : UserDefaultsRefStorage()
         cache = isFake ? MemoryShipmentCache() : FileShipmentCache(directory: Self.cacheDirectory)
+        AppGroup.defaults?.set(server, forKey: AppGroup.serverKey)
         let api = Self.makeAPI(fake: isFake, server: server)
         self.api = api
-        store = TrackedShipments(api: api, storage: storage, cache: cache)
+        store = TrackedShipments(api: api, storage: storage, cache: cache, server: server)
+        observe(store)
+        notifier.onOpen = { [weak self] ref in self?.show(ref) }
     }
 
     /// Меняет сервер: список номеров сохраняется, данные перезагрузятся с нового адреса.
@@ -48,8 +53,10 @@ final class AppModel {
         guard normalized != serverURL, URL(string: normalized) != nil else { return }
         serverURL = normalized
         defaults.set(normalized, forKey: Self.serverKey)
+        AppGroup.defaults?.set(normalized, forKey: AppGroup.serverKey)
         api = Self.makeAPI(fake: isFake, server: normalized)
-        store = TrackedShipments(api: api, storage: storage, cache: cache)
+        store = TrackedShipments(api: api, storage: storage, cache: cache, server: normalized)
+        observe(store)
         Task { await demo.probe() }
     }
 
@@ -66,10 +73,11 @@ final class AppModel {
     /// `mcstatus://s/<номер>` или `https://…/?s=<номер>` → груз в списке и открыт.
     func open(_ url: URL) async {
         guard let ref = ShipmentRef.from(url: url) else { return }
+        tab = .shipments  // ошибку ссылки показывает экран «Грузы» — он должен быть открыт
         do {
             let added = try await store.add(ref)
-            tab = .shipments
             path = [added]
+            await notifier.requestAuthorizationIfNeeded()
             // номер уже был в списке, но данных нет (старт без сети) — дозапросить
             if store.shipments[added] == nil { await store.refresh() }
         } catch {
@@ -77,9 +85,52 @@ final class AppModel {
         }
     }
 
-    /// Офлайн-кэш: Application Support/cache (неделя 3 — контейнер App Group для виджета).
+    /// Удалить груз из списка — и его Live Activity, и «груз виджета», если это он.
+    func remove(_ ref: String) {
+        store.remove(ref)
+        Task { await LiveActivities.stop(ref) }
+        if AppGroup.defaults?.string(forKey: AppGroup.refKey) == ref {
+            AppGroup.defaults?.removeObject(forKey: AppGroup.refKey)
+        }
+    }
+
+    /// Нажатие на уведомление, виджет или Live Activity: карточка этого груза.
+    func show(_ ref: String) {
+        tab = .shipments
+        if store.refs.contains(ref) {
+            path = [ref]
+        } else if let url = URL(string: "mcstatus://s/\(ref)") {
+            Task { await open(url) }
+        }
+    }
+
+    /// После каждого обновления: что изменилось → уведомления и Live Activity.
+    private func observe(_ store: TrackedShipments) {
+        store.onChange = { [weak self] change in self?.handle(change) }
+    }
+
+    private func handle(_ change: StoreChange) {
+        let lang = (LangChoice(rawValue: defaults.string(forKey: LangChoice.key) ?? "") ?? .system).resolved()
+        let labels = Labels(lang: lang, nodes: change.newNodes)
+        let notices = NotificationRules.merge(NotificationRules.diff(
+            old: change.oldShipments, new: change.newShipments,
+            oldNodes: change.oldNodes, newNodes: change.newNodes,
+            settings: NotifyPrefs.load(defaults), labels: labels))
+        notifier.deliver(notices, after: demo.isActive ? TimeInterval(demo.notifyDelay) : 0)
+        Task { await LiveActivities.update(change.newShipments, labels: labels) }
+        if let shared = AppGroup.defaults {  // виджет на симуляторе: язык и груз по умолчанию
+            shared.set(lang.rawValue, forKey: AppGroup.langKey)
+            if shared.string(forKey: AppGroup.refKey) == nil, let first = store.refs.first {
+                shared.set(first, forKey: AppGroup.refKey)
+            }
+        }
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Офлайн-кэш: в контейнере App Group (его читает виджет), а без него — Application Support.
     static var cacheDirectory: URL {
-        URL.applicationSupportDirectory.appending(path: "cache", directoryHint: .isDirectory)
+        (AppGroup.container ?? URL.applicationSupportDirectory)
+            .appending(path: "cache", directoryHint: .isDirectory)
     }
 
     static func normalize(_ input: String) -> String {

@@ -12,6 +12,9 @@ final class SmokeTests: XCTestCase {
         let app = XCUIApplication()
         // -mc.demo NO: пульт выключен при каждом запуске (UserDefaults симулятора живут между тестами)
         app.launchArguments = ["-mc-fake-api", "-mc.lang", lang, "-mc.demo", "NO"]
+        // система могла поднять приложение в фоне (Live Activity, виджет) без наших аргументов —
+        // тогда launch() прицепился бы к нему
+        app.terminate()
         app.launch()
         return app
     }
@@ -139,7 +142,8 @@ final class SmokeTests: XCTestCase {
         if !section.waitForExistence(timeout: 5) { app.swipeDown() }
         XCTAssertTrue(section.waitForExistence(timeout: 5))
         let advance = element(app, "demo.advance24")
-        XCTAssertTrue(advance.exists)
+        if !advance.waitForExistence(timeout: 2) { app.swipeUp() }  // пульт — под секцией уведомлений
+        XCTAssertTrue(advance.waitForExistence(timeout: 5))
         advance.tap()
         let offset = element(app, "demo.offset")
         XCTAssertTrue(offset.waitForExistence(timeout: 5))
@@ -147,5 +151,124 @@ final class SmokeTests: XCTestCase {
         expectation(for: shifted, evaluatedWith: offset)
         waitForExpectations(timeout: 5)
         shot(app, "10-demo-ru")
+    }
+
+    @MainActor
+    func test_notificationSettings() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
+        app.buttons["settings"].tap()
+        let storm = app.switches["notify.storm"]
+        if !storm.waitForExistence(timeout: 3) { app.swipeUp() }
+        XCTAssertTrue(storm.waitForExistence(timeout: 5))
+        for id in ["notify.storm", "notify.event", "notify.delay", "notify.queue"] {
+            let toggle = app.switches[id]
+            XCTAssertTrue(toggle.exists, id)
+            XCTAssertEqual(toggle.value as? String, "1", id)
+        }
+        shot(app, "11-settings-notify-ru")
+    }
+
+    @MainActor
+    func test_liveActivity() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0412")
+        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
+        let button = element(app, "card.liveActivity")
+        for _ in 0..<4 where !button.exists { app.swipeUp() }
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        if button.label.contains("Убрать") { button.tap() }  // осталась с прошлого запуска
+        XCTAssertTrue(button.label.contains("На экран блокировки"), button.label)
+        button.tap()
+        let started = NSPredicate(format: "label CONTAINS %@", "Убрать с экрана блокировки")
+        expectation(for: started, evaluatedWith: button)
+        waitForExpectations(timeout: 5)
+        shot(app, "12-live-activity-ru")
+
+        XCUIDevice.shared.press(.home)
+        sleep(2)
+        let home = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        home.name = "13-dynamic-island"
+        home.lifetime = .keepAlways
+        add(home)
+
+        app.activate()
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        button.tap()  // убрать за собой
+    }
+
+    @MainActor
+    func test_demoPreview() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0398")
+        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
+        app.navigationBars["MC-26-0398"].buttons.firstMatch.tap()
+        app.buttons["settings"].tap()
+        let version = element(app, "settings.version")
+        for _ in 0..<3 where !version.exists { app.swipeUp() }
+        version.press(forDuration: 1.2)
+        let preview = element(app, "demo.preview")
+        for _ in 0..<3 where !preview.exists { app.swipeUp() }
+        XCTAssertTrue(preview.waitForExistence(timeout: 5))
+        preview.tap()
+        XCTAssertTrue(element(app, "preview.live").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "preview.widget").exists)
+        shot(app, "14-preview-ru")
+    }
+
+    @MainActor
+    func test_darkAndLargeText() {
+        var app = XCUIApplication()
+        app.launchArguments = ["-mc-fake-api", "-mc.lang", "ru", "-mc.demo", "NO", "-mc-appearance", "dark"]
+        app.launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        shot(app, "15-dark-empty")
+        add(app, "MC-26-0398")
+        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
+        shot(app, "16-dark-card")
+        app.terminate()
+
+        app = XCUIApplication()
+        app.launchArguments = [
+            "-mc-fake-api", "-mc.lang", "ru", "-mc.demo", "NO",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL",
+        ]
+        app.launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0398")
+        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
+        shot(app, "17-large-card")
+        app.swipeUp()
+        shot(app, "18-large-card-queue")
+    }
+
+    @MainActor
+    func test_liveActivityEndsWhenShipmentRemoved() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0412")
+        let button = element(app, "card.liveActivity")
+        for _ in 0..<4 where !button.exists { app.swipeUp() }
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        if button.label.contains("На экран") { button.tap() }
+        let started = NSPredicate(format: "label CONTAINS %@", "Убрать")
+        expectation(for: started, evaluatedWith: button)
+        waitForExpectations(timeout: 5)
+
+        // удалить груз из списка — его Live Activity не должна остаться висеть
+        app.navigationBars["MC-26-0412"].buttons.firstMatch.tap()
+        let row = element(app, "row.MC-26-0412")
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.swipeLeft()
+        app.buttons["Delete"].exists ? app.buttons["Delete"].tap() : app.buttons["Удалить"].tap()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        sleep(1)
+
+        add(app, "MC-26-0412")
+        for _ in 0..<4 where !button.exists { app.swipeUp() }
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        XCTAssertTrue(button.label.contains("На экран блокировки"), button.label)
     }
 }

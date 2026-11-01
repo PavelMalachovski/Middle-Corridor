@@ -6,6 +6,9 @@ import UIKit
 /// оттенки, светлая — тёмные `*-text`, чтобы текст на белом проходил контраст AA.
 enum Theme {
     static let accent = Color(light: 0x0B7A55, dark: 0x2FD39A)
+    /// Заливка кнопок с белым текстом: мятный акцент тёмной темы с белым не читается (≈ 1,9:1),
+    /// поэтому насыщенный зелёный в обеих темах (≈ 5,5:1).
+    static let accentStrong = Color(red: 0x0B / 255, green: 0x7A / 255, blue: 0x55 / 255)
     static let ok = Color(light: 0x0F7A33, dark: 0x3DDC5F)
     static let watch = Color(light: 0x8A5A00, dark: 0xFAB219)
     static let warning = Color(light: 0xB24A1C, dark: 0xEC835A)

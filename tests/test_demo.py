@@ -81,7 +81,7 @@ def test_story_start_waits_for_ferry() -> None:
     assert s.ref == "MC-26-0398"
     assert s.state == ShipmentState.waiting
     assert s.hold_code == "ferry_loading_wait"
-    assert s.hold_vessel == "Azerbaijan"
+    assert s.hold_vessel == "Turkestan"
     assert s.queue is not None
     # до шторма — короткая очередь: только погрузка, без погоды
     assert (s.queue.p50_hours, s.queue.p90_hours) == (12.0, 24.0)
@@ -132,7 +132,7 @@ def test_story_no_aktau_hold_or_queue_after_departure() -> None:
 def test_story_departs_on_ferry() -> None:
     s = _at(71)
     assert s.state == ShipmentState.in_transit
-    assert s.position.on_vessel == "Azerbaijan"
+    assert s.position.on_vessel == "Turkestan"
     assert s.position.confirmed is False
     assert s.last_event_note_code == "loaded_on_ferry"
     assert s.queue is None
@@ -146,11 +146,11 @@ def test_story_delivered_then_cycles() -> None:
     assert again.hold_code == "ferry_loading_wait"
 
 
-def test_story_beats_order() -> None:
+def test_story_beats_are_coarse() -> None:
+    """Пять шагов на всю историю: ведущему не нужно 12 жестов и 12 баннеров до доставки."""
     beats = _story().beats(T0)
-    assert beats[0] == T0 + 6 * H
-    assert all(a < b for a, b in zip(beats, beats[1:], strict=False))
-    assert beats[-1] == T0 + 220 * H
+    # шторм, паром из Актау, Алят, отход из Поти, доставлен
+    assert beats == [T0 + h * H for h in (6, 70, 92, 172, 220)]
 
 
 def test_story_before_start_is_first_cycle() -> None:
@@ -263,3 +263,20 @@ async def test_demo_advance_requires_hours() -> None:
         assert missing.status_code == 422
         negative = await client.post("/api/v1/demo/clock", json={"action": "advance", "hours": -1})
         assert negative.status_code == 422
+
+
+async def test_demo_advance_bounded() -> None:
+    async with _client(_demo_settings()) as client:
+        huge = await client.post("/api/v1/demo/clock", json={"action": "advance", "hours": 1e9})
+        assert huge.status_code == 422
+        month = await client.post("/api/v1/demo/clock", json={"action": "advance", "hours": 720})
+        assert month.status_code == 200
+        assert (await client.get("/api/v1/snapshot")).status_code == 200
+
+
+def test_story_ferry_not_in_fleet() -> None:
+    """Паром истории не совпадает с мок-флотом: иначе карта показала бы его в двух местах."""
+    from app.integrations.mock.fleet import FERRIES
+    from app.integrations.mock.story import FERRY
+
+    assert FERRY not in {f.name for f in FERRIES}

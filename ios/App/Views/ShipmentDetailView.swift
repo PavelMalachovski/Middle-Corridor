@@ -94,6 +94,12 @@ struct ShipmentDetailView: View {
                 LabeledContent(l("card.client"), value: s.client)
             }
 
+            if LiveActivities.enabled {
+                Section {
+                    LiveActivityButton(shipment: s, labels: labels)
+                }
+            }
+
             Section(l("card.route")) {
                 ForEach(Array(s.checkpoints.enumerated()), id: \.offset) { _, checkpoint in
                     CheckpointRow(checkpoint: checkpoint, name: labels.checkpoint(checkpoint))
@@ -159,5 +165,33 @@ private struct CheckpointRow: View {
 
     private var lateHours: Double? {
         checkpoint.actualAt.map { $0.timeIntervalSince(checkpoint.plannedAt) / 3600 }
+    }
+}
+
+/// «На экран блокировки» / «Убрать с экрана блокировки» — Live Activity этого груза.
+private struct LiveActivityButton: View {
+    let shipment: Shipment
+    let labels: Labels
+    @Environment(\.l10n) private var l
+    @State private var isActive = false
+
+    var body: some View {
+        Button {
+            Task {
+                if isActive {
+                    await LiveActivities.stop(shipment.ref)
+                } else {
+                    try? LiveActivities.start(shipment, labels: labels)
+                    AppGroup.defaults?.set(shipment.ref, forKey: AppGroup.refKey)  // виджет — тот же груз
+                }
+                isActive = LiveActivities.isActive(shipment.ref)
+            }
+        } label: {
+            Label(
+                l(isActive ? "card.liveActivity.stop" : "card.liveActivity.start"),
+                systemImage: isActive ? "lock.slash" : "lock.iphone")
+        }
+        .accessibilityIdentifier("card.liveActivity")
+        .onAppear { isActive = LiveActivities.isActive(shipment.ref) }
     }
 }

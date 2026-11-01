@@ -4,6 +4,8 @@ import SwiftUI
 /// Секция «Демо» в настройках: мок-время, сдвиг, шаги истории, сброс.
 struct DemoSection: View {
     let demo: DemoController
+    /// Лист предпросмотра показывает SettingsView: `.sheet` на строке Form теряется при перерисовке.
+    let onPreview: () -> Void
     @Environment(\.l10n) private var l
 
     var body: some View {
@@ -18,7 +20,14 @@ struct DemoSection: View {
                 button("demo.advance24", .advance(hours: 24))
             }
             button("demo.next", .nextBeat)
+            Picker(l("demo.delay"), selection: Bindable(demo).notifyDelay) {
+                ForEach([0, 5, 10], id: \.self) { Text(l("demo.delay.value", ["n": String($0)])).tag($0) }
+            }
+            .accessibilityIdentifier("demo.delay")
             button("demo.reset", .reset, role: .destructive)
+            Button(l("demo.preview"), action: onPreview)
+                .frame(maxWidth: .infinity)
+                .accessibilityIdentifier("demo.preview")
         } header: {
             Text(l("demo.title")).accessibilityIdentifier("demo.section")
         } footer: {

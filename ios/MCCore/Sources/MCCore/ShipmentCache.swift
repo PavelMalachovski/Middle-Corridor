@@ -6,11 +6,14 @@ public struct CachedState: Codable, Sendable {
     public var shipments: [String: Shipment]
     public var snapshot: MapSnapshot?
     public var updatedAt: Date?
+    /// С какого сервера данные: после смены адреса чужой кэш не показываем как свой.
+    public var server: String?
 
-    public init(shipments: [String: Shipment], snapshot: MapSnapshot?, updatedAt: Date?) {
+    public init(shipments: [String: Shipment], snapshot: MapSnapshot?, updatedAt: Date?, server: String? = nil) {
         self.shipments = shipments
         self.snapshot = snapshot
         self.updatedAt = updatedAt
+        self.server = server
     }
 }
 

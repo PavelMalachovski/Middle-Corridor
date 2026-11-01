@@ -13,7 +13,7 @@
   [−36, 6)  ветер в Актау 15/18 м/с — warning, ждём погрузки на паром; очередь ≈ 12 ч
   [6, 66)   21/29 м/с — critical, погодный запрет на швартовку; очередь 2–3 дня, до 5
   [66, 90)  11/14 м/с — watch, ветер стихает, снова ждём погрузки
-  70      отход из Актау на пароме «Azerbaijan» (без AIS — проекция)
+  70      отход из Актау на пароме «Turkestan» (без AIS — проекция)
   220     прибыл в Констанцу — доставлен
   244     следующий цикл
 """
@@ -34,7 +34,7 @@ H = timedelta(hours=1)
 REF = "MC-26-0398"
 CLIENT = "Steppe Freight KZ"
 CARGO = "3 × 20', полипропилен"
-FERRY = "Azerbaijan"
+FERRY = "Turkestan"  # не из мок-флота: иначе на карте паром был бы в двух местах
 SEA_VESSEL = "Black Sea Link"
 PORT = "AKTAU"
 
@@ -112,10 +112,18 @@ class DemoStory:
         return None
 
     def beats(self, now: datetime) -> list[datetime]:
-        """Такты текущего цикла для «следующего шага»: начало шторма и события."""
+        """Такты «следующего шага»: шторм, отход парома, Алят, отход из Поти, доставлен.
+
+        Не каждое событие маршрута — иначе до доставки 12 жестов и столько же баннеров.
+        """
         t0 = self.cycle_start(now)
-        events = [e.ts for e in self.plan(now).events if e.ts >= t0]
-        return sorted({t0 + STORM_START_H * H, *events})
+        return [
+            t0 + STORM_START_H * H,
+            t0 + _ACTUAL_DEPART[PORT] * H,
+            t0 + _ACTUAL_ARRIVE["BAKU_ALAT"] * H,
+            t0 + _ACTUAL_DEPART["POTI"] * H,
+            t0 + _ACTUAL_ARRIVE[ROUTE_AKTAU[-1]] * H,
+        ]
 
     def plan(self, now: datetime) -> ShipmentPlan:
         t0 = self.cycle_start(now)
