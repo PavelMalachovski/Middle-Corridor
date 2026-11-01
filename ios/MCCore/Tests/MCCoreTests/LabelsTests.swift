@@ -109,4 +109,11 @@ final class LabelsTests: XCTestCase {
         XCTAssertEqual(try labels(.ru).queue(queue(p50: 24, p90: 48)).main, "1 день")
         XCTAssertEqual(try labels(.en).queue(queue(p50: 24, p90: 48)).main, "1 day")
     }
+
+    func test_relative_usesGivenNow() throws {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let ago = now.addingTimeInterval(-3 * 3600)
+        XCTAssertEqual(try labels(.ru).relative(ago, to: now), "3 часа назад")
+        XCTAssertEqual(try labels(.en).relative(ago, to: now), "3 hours ago")
+    }
 }

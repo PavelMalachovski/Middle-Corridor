@@ -83,7 +83,10 @@ def test_story_start_waits_for_ferry() -> None:
     assert s.hold_code == "ferry_loading_wait"
     assert s.hold_vessel == "Azerbaijan"
     assert s.queue is not None
-    assert (s.queue.p50_hours, s.queue.p90_hours) == (54.0, 108.0)
+    # до шторма — короткая очередь: только погрузка, без погоды
+    assert (s.queue.p50_hours, s.queue.p90_hours) == (12.0, 24.0)
+    assert s.queue.basis_code == "ferry_wait"
+    assert s.delay_hours == 18.0  # ~30 ч в Актау, по плану ушёл бы 18 ч назад
 
 
 def test_story_storm() -> None:
@@ -93,7 +96,7 @@ def test_story_storm() -> None:
     assert s.queue is not None
     assert (s.queue.p50_hours, s.queue.p90_hours) == (60.0, 120.0)
     assert s.queue.basis_code == "weather_ban"
-    assert s.delay_hours == 2.0
+    assert s.delay_hours == 24.0  # +6 ч к старту — пуш «задержка растёт» (порог 3 ч)
 
 
 def test_story_aktau_levels() -> None:
@@ -104,11 +107,26 @@ def test_story_aktau_levels() -> None:
         assert wind is not None
         return evaluate_level(*wind, THRESHOLDS)
 
+    assert level(-30) == "warning"  # с прибытия в Актау — «риск шторма», а не поле ветра
     assert level(0) == "warning"
     assert level(6) == "critical"
     assert level(65) == "critical"
     assert level(66) == "watch"
     assert story.aktau_wind(T0 + 100 * H) is None
+
+
+def test_story_after_storm_waits_for_ferry_again() -> None:
+    s = _at(67)  # ветер стих (watch), паром ещё грузится
+    assert s.hold_code == "ferry_loading_wait"
+    assert s.queue is not None and s.queue.basis_code == "ferry_wait"
+
+
+def test_story_no_aktau_hold_or_queue_after_departure() -> None:
+    for hours in (93, 112, 123, 144, 160):  # Алят, Гянджа, Бёюк-Кясик, Тбилиси, Поти
+        s = _at(hours)
+        assert s.state == ShipmentState.waiting, hours
+        assert s.hold_code is None, hours
+        assert s.queue is None, hours
 
 
 def test_story_departs_on_ferry() -> None:

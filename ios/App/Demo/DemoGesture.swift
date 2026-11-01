@@ -1,7 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// Невидимый жест ведущего: двойной тап тремя пальцами в любом месте окна.
+/// Невидимый жест ведущего: долгое нажатие двумя пальцами в любом месте окна.
+/// Не двойной тап тремя пальцами: это системный жест «Отменить», и iOS показала бы баннер.
 /// Распознаватель вешается на окно и не мешает остальным касаниям.
 struct DemoGesture: UIViewRepresentable {
     let action: @MainActor () -> Void
@@ -19,22 +20,24 @@ struct DemoGesture: UIViewRepresentable {
 
     final class InstallerView: UIView, UIGestureRecognizerDelegate {
         var action: (@MainActor () -> Void)?
-        private weak var recognizer: UITapGestureRecognizer?
+        private weak var recognizer: UILongPressGestureRecognizer?
 
         override func didMoveToWindow() {
             super.didMoveToWindow()
             guard let window, recognizer == nil else { return }
-            let tap = UITapGestureRecognizer(target: self, action: #selector(fire))
-            tap.numberOfTouchesRequired = 3
-            tap.numberOfTapsRequired = 2
-            tap.cancelsTouchesInView = false
-            tap.delaysTouchesEnded = false
-            tap.delegate = self
-            window.addGestureRecognizer(tap)
-            recognizer = tap
+            let press = UILongPressGestureRecognizer(target: self, action: #selector(fire(_:)))
+            press.numberOfTouchesRequired = 2
+            press.minimumPressDuration = 0.8
+            press.cancelsTouchesInView = false
+            press.delaysTouchesEnded = false
+            press.delegate = self
+            window.addGestureRecognizer(press)
+            recognizer = press
         }
 
-        @objc private func fire() { action?() }
+        @objc private func fire(_ press: UILongPressGestureRecognizer) {
+            if press.state == .began { action?() }  // один шаг на одно нажатие
+        }
 
         func gestureRecognizer(
             _ gestureRecognizer: UIGestureRecognizer,

@@ -65,6 +65,7 @@ struct CorridorView: View {
 
     @ViewBuilder
     private func news(_ snapshot: MapSnapshot) -> some View {
+        let labels = Labels(lang: l.lang, nodes: snapshot.nodes)
         if !snapshot.news.isEmpty {
             Section {
                 ForEach(snapshot.news) { item in
@@ -77,7 +78,7 @@ struct CorridorView: View {
                                 Text(item.source)
                                 if let at = item.publishedAt {
                                     Text("·")
-                                    Text(l.relative(at))
+                                    Text(labels.relative(at, to: snapshot.serverTime))  // часы сервера, не телефона
                                 }
                             }
                             .font(.caption)

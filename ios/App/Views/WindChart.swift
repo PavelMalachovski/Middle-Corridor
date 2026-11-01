@@ -39,7 +39,7 @@ struct WindChart: View {
                     if let date = value.as(Date.self) {
                         VStack(spacing: 0) {
                             Text(date, format: .dateTime.day().month(.abbreviated).locale(l.locale))
-                            Text(date, format: .dateTime.hour(.twoDigits(amPM: .omitted)).minute().locale(l.locale))
+                            Text(date, format: .dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits).locale(l.locale))
                         }
                     }
                 }

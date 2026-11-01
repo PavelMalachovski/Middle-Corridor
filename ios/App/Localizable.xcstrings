@@ -1351,13 +1351,13 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Двойной тап тремя пальцами в любом месте приложения — следующий шаг. Пульт скрывается долгим нажатием на версию."
+            "value": "Долгое нажатие двумя пальцами в любом месте приложения — следующий шаг. Пульт скрывается долгим нажатием на версию."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Double-tap with three fingers anywhere in the app for the next step. Long-press the version to hide this panel."
+            "value": "Long-press with two fingers anywhere in the app for the next step. Long-press the version to hide this panel."
           }
         }
       }
