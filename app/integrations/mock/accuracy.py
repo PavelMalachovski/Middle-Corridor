@@ -19,8 +19,10 @@ _EPOCH = datetime(2026, 1, 5, tzinfo=UTC)  # понедельник: недел�
 WEEK = timedelta(days=7)
 H = timedelta(hours=1)
 
-PREDICTED_PCT = 70  # остановка с тревогой заранее
-FALSE_ALARM_PCT = 15  # тревога без остановки; остаток — пропуск (остановка без тревоги)
+# Типы штормов по кругу (а не независимый жребий — тот гулял за пределы правдоподобного и
+# давал «идеальные» порты): на 20 штормов — 12 предсказанных (P), 5 ложных тревог (F),
+# 3 пропуска (M); подряд не больше двух P. По коридору ≈ POD 0,8, FAR 0,25 (часть F сливается).
+PATTERN = "PPFPMPFPPMPFPPFPMPPF"
 
 
 def _seed(*parts: object) -> int:
@@ -56,6 +58,7 @@ class MockAccuracySource:
         alerts: list[Interval] = []
         first = int((since - _EPOCH) / WEEK) - 1
         last = int((until - _EPOCH) / WEEK) + 1
+        ordinal = _seed(code) % len(PATTERN)  # фаза круга своя у каждого порта
         for week in range(first, last + 1):
             week_start = _EPOCH + week * WEEK
             for i in range(_seed(code, week) % (self._max_storms(code) + 1)):
@@ -63,13 +66,14 @@ class MockAccuracySource:
                 start = week_start + (s % 168) * H
                 duration = (6 + (s >> 8) % 31) * H
                 lead = (6 + (s >> 16) % 19) * H
-                kind = (s >> 24) % 100
                 if not since <= start < until:
                     continue
-                if kind < PREDICTED_PCT:
+                kind = PATTERN[ordinal % len(PATTERN)]
+                ordinal += 1
+                if kind == "P":
                     closures.append(Interval(start, start + duration))
                     alerts.append(Interval(start - lead, start + duration))
-                elif kind < PREDICTED_PCT + FALSE_ALARM_PCT:
+                elif kind == "F":
                     alerts.append(Interval(start - lead, start + duration / 2))
                 else:
                     closures.append(Interval(start, start + duration))

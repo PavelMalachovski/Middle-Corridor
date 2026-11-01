@@ -1,7 +1,7 @@
 """Мок-точность прогноза: синтетические шторма → тот же score_events, что в бою."""
 
 import statistics
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 
@@ -65,3 +65,22 @@ async def test_accuracy_endpoint_mock_demo() -> None:
     body = res.json()
     assert body["demo"] is True
     assert any(p["code"] == "AKTAU" for p in body["ports"])
+
+
+async def test_mock_accuracy_plausible_every_day_for_a_year() -> None:
+    """Правдоподобно в любой день показа, а не только в день написания теста."""
+    bad: list[str] = []
+    for day in range(365):
+        when = NOW - timedelta(days=day)
+        ports = await MockAccuracySource(lambda when=when: when).accuracy(90)
+        closures = sum(p.score.closures for p in ports)
+        hits = sum(p.score.hits for p in ports)
+        episodes = sum(p.score.episodes for p in ports)
+        false_alarms = sum(p.score.false_alarms for p in ports)
+        pod, far = hits / closures, false_alarms / episodes
+        if not (0.7 <= pod <= 0.9 and 0.15 <= far <= 0.4):
+            bad.append(f"{when:%Y-%m-%d} pod={pod:.2f} far={far:.2f}")
+        for p in ports:  # «POD 100 %, ноль ложных тревог» у порта с заметной историей — анти-цель
+            if p.score.closures >= 3 and p.score.pod == 1.0 and p.score.false_alarms == 0:
+                bad.append(f"{when:%Y-%m-%d} {p.code} идеален")
+    assert not bad, bad[:5]
