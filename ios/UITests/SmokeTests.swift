@@ -194,4 +194,24 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(button.waitForExistence(timeout: 5))
         button.tap()  // убрать за собой
     }
+
+    @MainActor
+    func test_demoPreview() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0398")
+        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
+        app.navigationBars["MC-26-0398"].buttons.firstMatch.tap()
+        app.buttons["settings"].tap()
+        let version = element(app, "settings.version")
+        for _ in 0..<3 where !version.exists { app.swipeUp() }
+        version.press(forDuration: 1.2)
+        let preview = element(app, "demo.preview")
+        for _ in 0..<3 where !preview.exists { app.swipeUp() }
+        XCTAssertTrue(preview.waitForExistence(timeout: 5))
+        preview.tap()
+        XCTAssertTrue(element(app, "preview.live").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "preview.widget").exists)
+        shot(app, "14-preview-ru")
+    }
 }

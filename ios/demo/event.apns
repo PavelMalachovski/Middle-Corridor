@@ -1,0 +1,13 @@
+{
+  "Simulator Target Bundle": "com.malakhouski.mcstatus",
+  "aps": {
+    "alert": {
+      "title": "MC-26-0398: Отправление: Актау — погружен на паром «Azerbaijan»",
+      "body": "Сиань → Констанца"
+    },
+    "sound": "default",
+    "thread-id": "MC-26-0398"
+  },
+  "ref": "MC-26-0398",
+  "kind": "event"
+}

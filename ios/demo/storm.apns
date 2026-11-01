@@ -1,0 +1,13 @@
+{
+  "Simulator Target Bundle": "com.malakhouski.mcstatus",
+  "aps": {
+    "alert": {
+      "title": "Шторм: Актау — вероятна остановка",
+      "body": "Груз MC-26-0398 в очереди в этом порту"
+    },
+    "sound": "default",
+    "thread-id": "MC-26-0398"
+  },
+  "ref": "MC-26-0398",
+  "kind": "storm"
+}

@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var server = ""
     @State private var probe: Result<Int, APIError>?
     @State private var probing = false
+    @State private var showPreview = false
 
     var body: some View {
         NavigationStack {
@@ -56,7 +57,7 @@ struct SettingsView: View {
                 }
 
                 if model.demo.isActive {
-                    DemoSection(demo: model.demo)
+                    DemoSection(demo: model.demo) { showPreview = true }
                 }
 
                 Section {
@@ -81,6 +82,9 @@ struct SettingsView: View {
             }
             .onAppear { server = model.serverURL }
             .task { await model.demo.probe() }
+            .sheet(isPresented: $showPreview) {
+                PreviewSheet(status: model.demo.previewStatus(lang: l.lang))
+            }
             .onChange(of: server) { probe = nil }
         }
     }

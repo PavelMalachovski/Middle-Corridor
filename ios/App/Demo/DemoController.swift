@@ -37,6 +37,12 @@ final class DemoController {
     /// Жест и кнопки работают только при включённом пульте и сервере с часами демо.
     var isActive: Bool { isEnabled && available }
 
+    /// Статус первого груза из списка — для предпросмотра виджета и Live Activity.
+    func previewStatus(lang: Lang) -> LiveStatus? {
+        guard let model, let ref = model.store.refs.first, let s = model.store.shipments[ref] else { return nil }
+        return LiveStatus.make(s, labels: Labels(lang: lang, nodes: model.store.snapshot?.nodes ?? []))
+    }
+
     func probe() async {
         guard let model else { return }
         do {
