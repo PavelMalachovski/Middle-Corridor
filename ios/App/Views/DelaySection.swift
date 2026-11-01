@@ -34,10 +34,11 @@ struct EtaRow: View {
     @Environment(\.l10n) private var l
 
     var body: some View {
-        let range = shipment.eta.map { labels.etaRange($0, shipment.etaLatest) } ?? "—"
+        let range = shipment.eta.flatMap { labels.etaRange($0, shipment.etaLatest) }
         VStack(alignment: .leading, spacing: 2) {
-            LabeledContent(l("card.eta"), value: range)
-            if let eta = shipment.eta, let latest = shipment.etaLatest, latest.timeIntervalSince(eta) >= 12 * 3600 {
+            // вилки нет — одна дата со временем, как раньше
+            LabeledContent(l("card.eta"), value: range ?? shipment.eta.map(l.dateTime) ?? "—")
+            if range != nil, let eta = shipment.eta, let latest = shipment.etaLatest {
                 Text(l("card.etaRange", ["usual": l.dateTime(eta), "worst": l.dateTime(latest)]))
                     .font(.caption)
                     .foregroundStyle(.secondary)

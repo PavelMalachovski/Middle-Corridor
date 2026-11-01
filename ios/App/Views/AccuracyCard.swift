@@ -7,13 +7,18 @@ struct AccuracyCard: View {
     @Environment(\.l10n) private var l
 
     var body: some View {
-        let text = Labels(lang: l.lang, nodes: []).accuracy(AccuracySummary.make(report))
+        let summary = AccuracySummary.make(report)
+        let text = Labels(lang: l.lang, nodes: []).accuracy(summary)
         Section(l("accuracy.title", ["days": String(report.days)])) {
             VStack(alignment: .leading, spacing: 4) {
-                Label(text.main, systemImage: "checkmark.seal.fill")
-                    .font(.headline)
-                    .foregroundStyle(Theme.ok)
-                Text(text.detail).font(.subheadline).foregroundStyle(.secondary)
+                if summary.closures == 0 {  // журнал остановок пуст — не «0 из 0» зелёным
+                    Text(l("accuracy.none")).font(.headline).foregroundStyle(.secondary)
+                } else {
+                    Label(text.main, systemImage: "checkmark.seal.fill")
+                        .font(.headline)
+                        .foregroundStyle(Theme.ok)
+                    Text(text.detail).font(.subheadline).foregroundStyle(.secondary)
+                }
             }
             .padding(.vertical, 2)
             .accessibilityElement(children: .combine)

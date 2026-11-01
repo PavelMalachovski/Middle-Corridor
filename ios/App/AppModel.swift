@@ -55,6 +55,7 @@ final class AppModel {
         guard normalized != serverURL, URL(string: normalized) != nil else { return }
         serverURL = normalized
         defaults.set(normalized, forKey: Self.serverKey)
+        accuracy = nil  // точность прежнего сервера (например, демо-синтетика) не показываем
         AppGroup.defaults?.set(normalized, forKey: AppGroup.serverKey)
         api = Self.makeAPI(fake: isFake, server: normalized)
         store = TrackedShipments(api: api, storage: storage, cache: cache, server: normalized)
