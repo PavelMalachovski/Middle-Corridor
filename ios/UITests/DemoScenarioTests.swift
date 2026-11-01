@@ -67,7 +67,7 @@ final class DemoScenarioTests: XCTestCase {
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 20))
         pause(4)
         app.tabBars.buttons["tab.corridor"].tap()
-        pause(4)
+        pause(5)  // живая карта коридора и точность прогноза
         app.tabBars.buttons["tab.shipments"].tap()
         pause(1)
 
@@ -92,10 +92,26 @@ final class DemoScenarioTests: XCTestCase {
         pause(4)
         app.swipeUp()
         pause(4)
+        app.swipeUp()
+        pause(3)  // вилка прибытия и «Почему задержка»
         XCUIDevice.shared.press(.home)
         pause(5)  // Dynamic Island и уведомления
         app.activate()
         pause(2)
+
+        // карта как в Telegram: превью → на весь экран, «где груз», «весь маршрут»
+        for _ in 0..<6 { app.swipeDown() }
+        let map = el(app, "card.map")
+        if map.waitForExistence(timeout: 3) {
+            map.tap()
+            pause(2)
+            el(app, "map.whereNow").tap()
+            pause(3)
+            el(app, "map.fitRoute").tap()
+            pause(2)
+            el(app, "map.close").tap()
+            pause(1)
+        }
 
         // 7. Перемотка: погружен на паром, вышел, … доставлен — Live Activity закрывается
         for _ in 0..<5 { app.swipeDown() }

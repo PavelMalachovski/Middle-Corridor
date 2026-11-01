@@ -34,7 +34,8 @@ def _with_queue(shipment: dict) -> dict:
         shipment["delay_breakdown"] = DELAY_BREAKDOWN
         if shipment.get("eta"):
             eta = datetime.fromisoformat(shipment["eta"].replace("Z", "+00:00"))
-            shipment["eta_latest"] = (eta + timedelta(hours=SPREAD_H)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            latest = eta + timedelta(hours=SPREAD_H)
+            shipment["eta_latest"] = latest.strftime("%Y-%m-%dT%H:%M:%SZ")
     return shipment
 
 

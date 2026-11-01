@@ -150,8 +150,9 @@ def test_story_delivered_then_cycles() -> None:
 def test_story_beats_are_coarse() -> None:
     """Пять шагов на всю историю: ведущему не нужно 12 жестов и 12 баннеров до доставки."""
     beats = _story().beats(T0)
-    # шторм, паром из Актау, Алят, отход из Поти, доставлен
-    assert beats == [T0 + h * H for h in (6, 70, 92, 172, 220)]
+    # шторм (через 6 ч после начала — в «почему задержка» уже видна погода), паром, Алят, Поти,
+    # доставлен
+    assert beats == [T0 + h * H for h in (12, 70, 92, 172, 220)]
 
 
 def test_story_before_start_is_first_cycle() -> None:
@@ -297,3 +298,11 @@ def test_story_storm_eta_range_covers_actual() -> None:
     assert s.eta is not None and s.eta_latest is not None
     assert s.eta < s.eta_latest
     assert s.eta_latest >= T0 + 220 * H  # фактическое прибытие в Констанцу
+
+
+def test_story_storm_beat_shows_weather_in_breakdown() -> None:
+    beat = _story().beats(T0)[0]
+    s = project_shipment(_story().plan(beat + timedelta(minutes=1)), beat + timedelta(minutes=1))
+    parts = {p.code: p.hours for p in s.delay_breakdown}
+    assert parts["ferry_wait"] == 24.0
+    assert parts["weather_ban"] == pytest.approx(6.0, abs=0.1)
