@@ -40,7 +40,7 @@ public enum AlertLevel: String, Sendable, Comparable {
     case watch, warning, critical
 
     public static func < (a: AlertLevel, b: AlertLevel) -> Bool { a.rank < b.rank }
-    private var rank: Int {
+    public var rank: Int {
         switch self {
         case .watch: 0
         case .warning: 1
@@ -98,6 +98,8 @@ public struct Shipment: Codable, Sendable, Hashable, Identifiable {
     public var lastEventAt: Date?
     public var eta: Date?
     public var position: ShipmentPosition
+    /// Прогноз выхода из очереди — только пока груз ждёт отправки из порта.
+    public var queue: QueueForecast?
     public var progress: Double
     public var checkpoints: [Checkpoint]
     public var track: [[Double]]  // [lon, lat] — порядок GeoJSON
@@ -116,9 +118,57 @@ public struct NodeStatus: Codable, Sendable, Hashable, Identifiable {
     public var lon: Double
     public var isWeatherTracked: Bool
     public var alertLevel: Coded<AlertLevel>?
+    public var alertMessage: String?
     public var windSpeed: Double?
     public var windGust: Double?
+    public var windDir: Double?
     public var weatherTs: Date?
+    /// Почасовой ветер −6…+48 ч с уровнями предиктора; nil — источник не даёт прогноза.
+    public var forecast: [WindHour]?
+}
+
+/// Час прогноза (или недавнего прошлого) ветра в узле.
+public struct WindHour: Codable, Sendable, Hashable {
+    public var ts: Date
+    public var speed: Double
+    public var gust: Double
+    public var level: Coded<AlertLevel>?
+}
+
+/// Пороги предиктора (м/с) — линии на графике ветра.
+public struct Thresholds: Codable, Sendable, Hashable {
+    public var watchWind: Double
+    public var warningWind: Double
+    public var warningGust: Double
+    public var criticalWind: Double
+    public var criticalGust: Double
+}
+
+/// Прогноз выхода из очереди в порту: P50 — ожидаемо, P90 — плохой сценарий.
+public struct QueueForecast: Codable, Sendable, Hashable {
+    public var portCode: String
+    public var position: Int
+    public var perDay: Double
+    public var weatherHours: Double
+    public var p50Hours: Double
+    public var p90Hours: Double
+    /// weather_ban | ferry_wait — что держит очередь.
+    public var basisCode: String
+}
+
+/// Часы демо (`/api/v1/demo/clock`, только мок с DEMO_CONTROL).
+public struct DemoClockState: Codable, Sendable, Hashable {
+    public var now: Date
+    public var offsetHours: Double
+    public var storyStart: Date
+    public var storyRef: String
+
+    public init(now: Date, offsetHours: Double, storyStart: Date, storyRef: String) {
+        self.now = now
+        self.offsetHours = offsetHours
+        self.storyStart = storyStart
+        self.storyRef = storyRef
+    }
 }
 
 public struct NewsSummary: Codable, Sendable, Hashable, Identifiable {
@@ -146,5 +196,6 @@ public struct MapSnapshot: Codable, Sendable, Hashable {
     public var nodes: [NodeStatus]
     public var shipments: [Shipment]
     public var news: [NewsSummary]
+    public var thresholds: Thresholds?
     public var summary: WeekSummary?
 }

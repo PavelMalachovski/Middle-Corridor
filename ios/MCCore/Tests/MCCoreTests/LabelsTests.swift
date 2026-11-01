@@ -79,4 +79,41 @@ final class LabelsTests: XCTestCase {
         XCTAssertEqual(text.title, "На пароме «Barda»")
         XCTAssertTrue(text.confirmed)
     }
+
+    private func queue(p50: Double, p90: Double) -> QueueForecast {
+        QueueForecast(
+            portCode: "AKTAU", position: 4, perDay: 8, weatherHours: 0, p50Hours: p50, p90Hours: p90,
+            basisCode: "ferry_wait")
+    }
+
+    func test_queueLabels_days() throws {
+        let q = queue(p50: 60, p90: 120)
+        XCTAssertEqual(try labels(.ru).queue(q).main, "2–3 дня")
+        XCTAssertEqual(try labels(.ru).queue(q).worst, "до 5 дней")
+        XCTAssertEqual(try labels(.en).queue(q).main, "2–3 days")
+        XCTAssertEqual(try labels(.en).queue(q).worst, "up to 5 days")
+    }
+
+    func test_queueLabels_hours() throws {
+        let q = queue(p50: 12, p90: 24)
+        XCTAssertEqual(try labels(.ru).queue(q).main, "≈ 12 ч")
+        XCTAssertEqual(try labels(.ru).queue(q).worst, "до 1 дня")
+        XCTAssertEqual(try labels(.en).queue(q).main, "≈ 12 h")
+        XCTAssertEqual(try labels(.en).queue(q).worst, "up to 1 day")
+    }
+
+    func test_queueLabels_exactDays_andPlurals() throws {
+        XCTAssertEqual(try labels(.ru).queue(queue(p50: 48, p90: 100)).main, "2 дня")
+        XCTAssertEqual(try labels(.ru).queue(queue(p50: 100, p90: 130)).main, "4–5 дней")
+        XCTAssertEqual(try labels(.ru).queue(queue(p50: 20, p90: 20)).worst, "до 20 ч")
+        XCTAssertEqual(try labels(.ru).queue(queue(p50: 24, p90: 48)).main, "1 день")
+        XCTAssertEqual(try labels(.en).queue(queue(p50: 24, p90: 48)).main, "1 day")
+    }
+
+    func test_relative_usesGivenNow() throws {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let ago = now.addingTimeInterval(-3 * 3600)
+        XCTAssertEqual(try labels(.ru).relative(ago, to: now), "3 часа назад")
+        XCTAssertEqual(try labels(.en).relative(ago, to: now), "3 hours ago")
+    }
 }

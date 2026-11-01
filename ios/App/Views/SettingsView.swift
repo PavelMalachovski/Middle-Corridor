@@ -49,8 +49,18 @@ struct SettingsView: View {
                     .labelsHidden()
                 }
 
+                if model.demo.isActive {
+                    DemoSection(demo: model.demo)
+                }
+
                 Section {
                     LabeledContent(l("settings.version"), value: version)
+                        .contentShape(Rectangle())
+                        .onLongPressGesture(minimumDuration: 1) {
+                            model.demo.isEnabled.toggle()
+                            Task { await model.demo.probe() }
+                        }
+                        .accessibilityIdentifier("settings.version")
                 }
             }
             .navigationTitle(l("settings.title"))
@@ -64,6 +74,7 @@ struct SettingsView: View {
                 }
             }
             .onAppear { server = model.serverURL }
+            .task { await model.demo.probe() }
             .onChange(of: server) { probe = nil }
         }
     }

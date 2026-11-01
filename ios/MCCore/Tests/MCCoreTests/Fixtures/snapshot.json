@@ -3061,7 +3061,16 @@
      28.65,
      44.17
     ]
-   ]
+   ],
+   "queue": {
+    "port_code": "AKTAU",
+    "position": 4,
+    "per_day": 8.0,
+    "weather_hours": 48.0,
+    "p50_hours": 60.0,
+    "p90_hours": 120.0,
+    "basis_code": "weather_ban"
+   }
   },
   {
    "ref": "MC-26-0322",

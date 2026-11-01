@@ -32,6 +32,7 @@ from app.integrations.llm.claude import ClaudeNewsTranslator
 from app.integrations.mock.clock import MockClock
 from app.integrations.mock.corridor import MockNewsSource, MockNodeSource, MockReportSource
 from app.integrations.mock.fleet import MockFleetSource, MockShipmentSource
+from app.integrations.mock.story import DemoControl, DemoStory
 from app.integrations.mock.wind import MockWindField
 from app.integrations.news.composite import CompositeNewsProvider
 from app.integrations.news.middlecorridor import MiddleCorridorScraper
@@ -79,10 +80,11 @@ def build_map_service(
     )
     if settings.mock_data:
         clock = MockClock(settings.mock_time_scale)
+        story = DemoStory(lambda: clock.story_start) if settings.demo_control else None
         return MapSnapshotService(
-            nodes=MockNodeSource(clock.now, thresholds),
+            nodes=MockNodeSource(clock.now, thresholds, story=story),
             vessels=MockFleetSource(clock.now),
-            shipments=MockShipmentSource(clock.now),
+            shipments=MockShipmentSource(clock.now, story=story),
             wind=MockWindField(clock.now),
             news=MockNewsSource(clock.now),
             reports=MockReportSource(clock.now),
@@ -90,6 +92,7 @@ def build_map_service(
             mock=True,
             clock=clock.now,
             live=live,
+            demo=DemoControl(clock, story) if story is not None else None,
         )
     if session_factory is None:
         raise ValueError("без MOCK_DATA карте нужна БД (session_factory)")

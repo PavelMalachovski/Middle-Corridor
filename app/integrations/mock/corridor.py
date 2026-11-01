@@ -2,13 +2,16 @@
 
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.integrations.mock.wind import wind_at
 from app.services.corridor import NODES, NodeKind
 from app.services.map_snapshot import NewsSummary, NodeStatus, WindHour
 from app.services.status_aggregator import ReportStatus
 from app.services.weather_predictor import WindThresholds, evaluate_level
+
+if TYPE_CHECKING:
+    from app.integrations.mock.story import DemoStory
 
 
 def _floor_minutes(ts: datetime, minutes: int) -> datetime:
@@ -26,13 +29,29 @@ FORECAST_FUTURE_H = 48
 class MockNodeSource:
     """Узлы справочника; портам — ветер из поля и уровень по боевым порогам."""
 
-    def __init__(self, clock: Callable[[], datetime], thresholds: WindThresholds) -> None:
+    def __init__(
+        self,
+        clock: Callable[[], datetime],
+        thresholds: WindThresholds,
+        story: "DemoStory | None" = None,
+    ) -> None:
         self._clock = clock
         self._thresholds = thresholds
+        self._story = story  # демо-история: ветер Актау подогнан под 0398
         self._hour_cache: dict[tuple[str, datetime], WindHour] = {}
+
+    def _story_wind(self, code: str, ts: datetime) -> tuple[float, float] | None:
+        if self._story is None or code != "AKTAU":
+            return None
+        return self._story.aktau_wind(ts)
 
     def _hour(self, code: str, lat: float, lon: float, ts: datetime) -> WindHour:
         """Ветер и уровень в узле на начало часа; поле детерминировано — кэшируем."""
+        story_wind = self._story_wind(code, ts)
+        if story_wind is not None:  # история меняется при сбросе — не кэшируем
+            speed, gust = story_wind
+            level = evaluate_level(speed, gust, self._thresholds)
+            return WindHour(ts=ts, speed=speed, gust=gust, level=level)
         key = (code, ts)
         cached = self._hour_cache.get(key)
         if cached is not None:
@@ -90,6 +109,9 @@ class MockNodeSource:
             )
             if node.kind == NodeKind.port:
                 speed, gust, direction = wind_at(node.lat, node.lon, weather_ts)
+                story_wind = self._story_wind(node.code, weather_ts)
+                if story_wind is not None:
+                    speed, gust = story_wind
                 level = evaluate_level(speed, gust, self._thresholds)
                 status = status.model_copy(
                     update={

@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.db.models import AlertLevel, CorridorLeg
 from app.db.repositories.news import NewsRepository
 from app.services.corridor import NODES, SEGMENTS, NodeKind, TransportMode, segment
+from app.services.demo_clock import DemoClockControl
 from app.services.status_aggregator import CorridorStatus, ReportStatus
 from app.services.tracking import (
     EventKind,
@@ -202,11 +203,13 @@ class MapSnapshotService:
         news_limit: int = 20,
         clock: Callable[[], datetime] | None = None,
         live: LiveInfo | None = None,
+        demo: DemoClockControl | None = None,
     ) -> None:
         self._nodes = nodes
         self._vessels = vessels
         self._shipments = shipments
         self._wind = wind
+        self.demo = demo  # пульт демо (мок + DEMO_CONTROL), иначе None
         self._news = news
         self._reports = reports
         self._thresholds = thresholds

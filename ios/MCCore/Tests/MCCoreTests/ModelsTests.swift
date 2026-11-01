@@ -60,4 +60,39 @@ final class ModelsTests: XCTestCase {
         let back = try APIDate.makeDecoder().decode(Shipment.self, from: data)
         XCTAssertEqual(back, s)
     }
+
+    func test_decodesQueue() throws {
+        let queue = try XCTUnwrap(Fixture.shipment("MC-26-0398").queue)
+        XCTAssertEqual(queue.p50Hours, 60)
+        XCTAssertEqual(queue.p90Hours, 120)
+        XCTAssertEqual(queue.basisCode, "weather_ban")
+        XCTAssertEqual(queue.portCode, "AKTAU")
+        let inSnapshot = try Fixture.snapshot().shipments.first { $0.ref == "MC-26-0398" }
+        XCTAssertEqual(inSnapshot?.queue, queue)
+    }
+
+    func test_decodesForecastAndThresholds() throws {
+        let snapshot = try Fixture.snapshot()
+        let aktau = try XCTUnwrap(snapshot.nodes.first { $0.code == "AKTAU" })
+        XCTAssertEqual(aktau.forecast?.count, 55)
+        XCTAssertEqual(aktau.forecast?.first?.level?.known, .critical)
+        XCTAssertNotNil(aktau.alertMessage)
+        XCTAssertEqual(snapshot.thresholds?.criticalWind, 17)
+        XCTAssertEqual(snapshot.thresholds?.warningWind, 13.8)
+    }
+
+    func test_oldPayloadWithoutNewFields() throws {
+        let s = try Fixture.shipment("MC-26-0412")
+        XCTAssertNil(s.queue)
+        let bare = #"{"generated_at":"2026-10-31T11:00:00Z","server_time":"2026-10-31T11:00:00Z","replay":false,"mock":true,"nodes":[],"shipments":[],"news":[]}"#
+        let snapshot = try APIDate.makeDecoder().decode(MapSnapshot.self, from: Data(bare.utf8))
+        XCTAssertNil(snapshot.thresholds)
+    }
+
+    func test_decodesDemoClock() throws {
+        let json = #"{"now":"2026-11-01T10:00:00Z","offset_hours":6,"story_start":"2026-11-01T04:00:00.123456Z","story_ref":"MC-26-0398"}"#
+        let state = try APIDate.makeDecoder().decode(DemoClockState.self, from: Data(json.utf8))
+        XCTAssertEqual(state.offsetHours, 6)
+        XCTAssertEqual(state.storyRef, "MC-26-0398")
+    }
 }

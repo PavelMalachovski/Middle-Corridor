@@ -9,7 +9,7 @@ struct MiddleCorridorApp: App {
     var body: some Scene {
         WindowGroup {
             let l10n = L10n(lang: (LangChoice(rawValue: langChoice) ?? .system).resolved())
-            MyShipmentsView(model: model)
+            RootView(model: model)
                 .environment(\.l10n, l10n)
                 .environment(\.locale, l10n.locale)
                 .onOpenURL { url in

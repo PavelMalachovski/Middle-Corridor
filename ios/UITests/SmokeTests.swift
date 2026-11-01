@@ -10,7 +10,8 @@ final class SmokeTests: XCTestCase {
     @MainActor
     private func launch(lang: String = "ru") -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["-mc-fake-api", "-mc.lang", lang]
+        // -mc.demo NO: пульт выключен при каждом запуске (UserDefaults симулятора живут между тестами)
+        app.launchArguments = ["-mc-fake-api", "-mc.lang", lang, "-mc.demo", "NO"]
         app.launch()
         return app
     }
@@ -83,7 +84,18 @@ final class SmokeTests: XCTestCase {
         let hold = element(app, "hold")
         XCTAssertTrue(hold.waitForExistence(timeout: 5))
         XCTAssertTrue(hold.label.contains("Погодный запрет"), hold.label)
+        XCTAssertTrue(element(app, "card.map").exists)
         shot(app, "05-deeplink-hold-ru")
+
+        let queue = element(app, "card.queue")
+        app.swipeUp()
+        XCTAssertTrue(queue.waitForExistence(timeout: 5))
+        XCTAssertTrue(queue.label.contains("2–3 дня"), queue.label)
+        let weather = element(app, "card.weather")
+        if !weather.exists { app.swipeUp() }
+        XCTAssertTrue(weather.waitForExistence(timeout: 5))
+        XCTAssertTrue(weather.label.contains("Актау"), weather.label)
+        shot(app, "09-card-weather-ru")
     }
 
     @MainActor
@@ -96,5 +108,44 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(event.waitForExistence(timeout: 5))
         XCTAssertTrue(event.label.contains("loaded onto ferry"), event.label)
         shot(app, "06-card-en")
+    }
+
+    @MainActor
+    func test_corridorTab() {
+        let app = launch()
+        let tab = app.tabBars.buttons["tab.corridor"]
+        XCTAssertTrue(tab.waitForExistence(timeout: 5))
+        tab.tap()
+        let aktau = element(app, "port.AKTAU")
+        XCTAssertTrue(aktau.waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "corridor.news").exists)
+        shot(app, "07-corridor-ru")
+        aktau.tap()
+        XCTAssertTrue(element(app, "wind.chart").waitForExistence(timeout: 5))
+        shot(app, "08-port-ru")
+    }
+
+    @MainActor
+    func test_demoPanel() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
+        app.buttons["settings"].tap()
+        let version = element(app, "settings.version")
+        if !version.waitForExistence(timeout: 3) { app.swipeUp() }  // строка версии — внизу формы
+        XCTAssertTrue(version.waitForExistence(timeout: 5))
+        XCTAssertFalse(element(app, "demo.section").exists)
+        version.press(forDuration: 1.2)
+        let section = element(app, "demo.section")
+        if !section.waitForExistence(timeout: 5) { app.swipeDown() }
+        XCTAssertTrue(section.waitForExistence(timeout: 5))
+        let advance = element(app, "demo.advance24")
+        XCTAssertTrue(advance.exists)
+        advance.tap()
+        let offset = element(app, "demo.offset")
+        XCTAssertTrue(offset.waitForExistence(timeout: 5))
+        let shifted = NSPredicate(format: "label CONTAINS %@", "24")
+        expectation(for: shifted, evaluatedWith: offset)
+        waitForExpectations(timeout: 5)
+        shot(app, "10-demo-ru")
     }
 }

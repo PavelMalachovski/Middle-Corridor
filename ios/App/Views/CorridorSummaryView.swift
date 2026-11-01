@@ -97,7 +97,7 @@ struct OfflineBanner: View {
 
     var body: some View {
         Label {
-            Text(updatedAt.map { l("list.offlineSince", ["value": l.relative($0)]) } ?? l("list.offline"))
+            Text(updatedAt.map { l("list.offlineSince", ["value": l.dateTime($0)]) } ?? l("list.offline"))
         } icon: {
             Image(systemName: "wifi.slash")
         }

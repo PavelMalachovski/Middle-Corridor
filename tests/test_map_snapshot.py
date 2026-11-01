@@ -439,3 +439,11 @@ async def test_adapter_hits_aggregator_once_per_snapshot() -> None:
     clock[0] += 2.5
     await adapter.list_vessels()
     assert status.calls == 2  # TTL истёк — свежий статус
+
+
+async def test_mock_0398_has_queue(mock_service: MapSnapshotService) -> None:
+    snap = await mock_service.snapshot()
+    hold = next(s for s in snap.shipments if s.ref == "MC-26-0398")
+    assert hold.queue is not None
+    assert hold.queue.p50_hours == 60.0
+    assert hold.queue.basis_code == "weather_ban"

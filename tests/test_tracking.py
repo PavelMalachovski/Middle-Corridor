@@ -1,11 +1,13 @@
 """Тесты геометрии коридора и проекции положения отправки."""
 
+import dataclasses
 from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from app.services.corridor import NODES, SEGMENTS, route_points, segment
 from app.services.geo import haversine_km, point_along, polyline_length_km
+from app.services.queue_forecast import QueueInput, forecast_queue
 from app.services.tracking import (
     CheckpointState,
     EventKind,
@@ -182,3 +184,51 @@ def test_delivered() -> None:
     assert shipment.eta == NOW - 16 * H
     assert all(cp.state == CheckpointState.done for cp in shipment.checkpoints)
     assert shipment.track[0] == [NODES["BEINEU"].lon, NODES["BEINEU"].lat]
+
+
+# --- прогноз выхода из очереди ------------------------------------------------
+
+
+def test_forecast_queue_formula() -> None:
+    queue = forecast_queue(QueueInput("AKTAU", 4, 8.0, 48.0, "weather_ban"))
+    assert queue.p50_hours == 60.0
+    assert queue.p90_hours == 120.0
+    assert queue.basis_code == "weather_ban"
+
+
+def test_forecast_queue_no_weather() -> None:
+    queue = forecast_queue(QueueInput("AKTAU", 4, 8.0, 0.0, "ferry_wait"))
+    assert queue.p50_hours == 12.0
+    assert queue.p90_hours == 24.0
+
+
+def test_queue_only_while_waiting() -> None:
+    base = _plan(
+        [
+            TrackingEvent(EventKind.departed, "BEINEU", NOW - 40 * H),
+            TrackingEvent(EventKind.arrived, "KURYK", NOW - 28 * H),
+            TrackingEvent(EventKind.departed, "KURYK", NOW - 4 * H),
+            TrackingEvent(EventKind.arrived, "BAKU_ALAT", NOW + 16 * H),
+        ]
+    )
+    plan = dataclasses.replace(base, queue=QueueInput("KURYK", 4, 8.0, 0.0, "ferry_wait"))
+    assert project_shipment(plan, NOW - 35 * H).queue is None  # в пути к Курыку
+    waiting = project_shipment(plan, NOW - 10 * H)
+    assert waiting.state == ShipmentState.waiting
+    assert waiting.queue is not None and waiting.queue.port_code == "KURYK"
+    assert project_shipment(plan, NOW + 20 * H).state == ShipmentState.delivered
+    assert project_shipment(plan, NOW + 20 * H).queue is None
+
+
+def test_queue_only_at_its_port() -> None:
+    """Очередь Курыка не показывается, когда груз ждёт в другом узле."""
+    base = _plan(
+        [
+            TrackingEvent(EventKind.departed, "BEINEU", NOW - 40 * H),
+            TrackingEvent(EventKind.arrived, "KURYK", NOW - 28 * H),
+        ]
+    )
+    plan = dataclasses.replace(base, queue=QueueInput("AKTAU", 4, 8.0, 0.0, "ferry_wait"))
+    waiting = project_shipment(plan, NOW - 10 * H)
+    assert waiting.state == ShipmentState.waiting
+    assert waiting.queue is None

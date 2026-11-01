@@ -96,4 +96,74 @@ final class CorridorAPITests: XCTestCase {
             XCTAssertEqual(error as? APIError, expected, line: line)
         }
     }
+
+    // MARK: часы демо
+
+    private static let clockJSON = Data(
+        #"{"now":"2026-11-01T10:00:00Z","offset_hours":6,"story_start":"2026-11-01T04:00:00Z","story_ref":"MC-26-0398"}"#.utf8)
+
+    private static func body(_ request: URLRequest) -> [String: Any]? {
+        var data = request.httpBody
+        if data == nil, let stream = request.httpBodyStream {
+            stream.open()
+            defer { stream.close() }
+            var buffer = [UInt8](repeating: 0, count: 4096)
+            var out = Data()
+            while stream.hasBytesAvailable {
+                let n = stream.read(&buffer, maxLength: buffer.count)
+                if n <= 0 { break }
+                out.append(buffer, count: n)
+            }
+            data = out
+        }
+        return data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+    }
+
+    func test_demoClock_get() async throws {
+        nonisolated(unsafe) var method: String?
+        StubProtocol.handler = { request in
+            method = request.httpMethod
+            return (200, Self.clockJSON)
+        }
+        let state = try await api().demoClock()
+        XCTAssertEqual(StubProtocol.lastPath, "/api/v1/demo/clock")
+        XCTAssertEqual(method, "GET")
+        XCTAssertEqual(state.offsetHours, 6)
+    }
+
+    func test_demo_advance_postsBody() async throws {
+        nonisolated(unsafe) var seen: URLRequest?
+        StubProtocol.handler = { request in
+            seen = request
+            return (200, Self.clockJSON)
+        }
+        _ = try await api().demo(.advance(hours: 6))
+        let request = try XCTUnwrap(seen)
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+        XCTAssertEqual(Self.body(request)?["action"] as? String, "advance")
+        XCTAssertEqual(Self.body(request)?["hours"] as? Double, 6)
+    }
+
+    func test_demo_nextBeat_body() async throws {
+        nonisolated(unsafe) var seen: URLRequest?
+        StubProtocol.handler = { request in
+            seen = request
+            return (200, Self.clockJSON)
+        }
+        _ = try await api().demo(.nextBeat)
+        let body = try XCTUnwrap(Self.body(try XCTUnwrap(seen)))
+        XCTAssertEqual(body["action"] as? String, "next_beat")
+        XCTAssertNil(body["hours"])
+    }
+
+    func test_demo_404_isNotFound() async {
+        StubProtocol.handler = { _ in (404, Data(#"{"detail":"demo clock is disabled"}"#.utf8)) }
+        do {
+            _ = try await api().demoClock()
+            XCTFail("ожидали notFound")
+        } catch {
+            XCTAssertEqual(APIError.from(error), .notFound)
+        }
+    }
 }

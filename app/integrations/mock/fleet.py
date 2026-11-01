@@ -14,11 +14,16 @@ import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 
 from app.services.corridor import NODES, NodeKind, segment
 from app.services.geo import point_along
 from app.services.map_snapshot import VesselMapStatus
+from app.services.queue_forecast import QueueInput
 from app.services.tracking import EventKind, PlannedLeg, ShipmentPlan, TrackingEvent
+
+if TYPE_CHECKING:
+    from app.integrations.mock.story import DemoStory
 
 _EPOCH = datetime(2026, 1, 1, tzinfo=UTC)
 CYCLE_H = 56.0
@@ -218,6 +223,7 @@ def build_plan(  # noqa: PLR0913 — сценарий описывается п�
     hold_vessel: str | None = None,
     pivot_note: str | None = None,
     pivot_note_code: str | None = None,
+    queue: QueueInput | None = None,
 ) -> ShipmentPlan:
     """План по типичным временам сегментов, «пришпиленный» к опорному событию.
 
@@ -300,12 +306,14 @@ def build_plan(  # noqa: PLR0913 — сценарий описывается п�
         hold_code=hold_code,
         hold_node=hold_node,
         hold_vessel=hold_vessel,
+        queue=queue,
     )
 
 
 class MockShipmentSource:
-    def __init__(self, clock: Callable[[], datetime]) -> None:
+    def __init__(self, clock: Callable[[], datetime], story: "DemoStory | None" = None) -> None:
         self._clock = clock
+        self._story = story  # демо-история 0398 (DEMO_CONTROL) вместо «вечного» сценария
 
     async def list_plans(self, at: datetime | None = None) -> list[ShipmentPlan]:
         now = at or self._clock()
@@ -339,6 +347,7 @@ class MockShipmentSource:
             hold_reason="Погодный запрет на швартовку: Актау — критический ветер",
             hold_code="weather_ban",
             hold_node="AKTAU",
+            queue=QueueInput("AKTAU", 4, 8.0, 48.0, "weather_ban"),
         )
 
         # 3. Рельсы в степи: Кызылорда → Бейнеу, 16 ч из 26 в пути
@@ -461,7 +470,7 @@ class MockShipmentSource:
 
         return [
             on_ferry,
-            weather_hold,
+            self._story.plan(now) if self._story is not None else weather_hold,
             steppe,
             customs,
             poti,

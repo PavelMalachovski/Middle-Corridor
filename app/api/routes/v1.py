@@ -6,6 +6,9 @@ GET /api/v1/wind?at=&step=    — поле ветра (step — шаг сетк�
 GET /api/v1/shipments/{ref}   — одна отправка по номеру
 GET /api/v1/stream            — SSE: событие snapshot каждые refresh_s секунд
 GET /api/v1/accuracy?days=    — точность предиктора: алерты против фактических остановок
+GET/POST /api/v1/demo/clock   — часы демо (только MOCK_DATA + DEMO_CONTROL, иначе 404):
+                                {"action": "advance", "hours": 6} | {"action": "next_beat"} |
+                                {"action": "reset"}
 
 Ответы не кешируются: фронт опрашивает snapshot каждые несколько секунд
 или держит поток.
@@ -23,6 +26,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.services.demo_clock import DemoClockAction, DemoClockControl, DemoClockState
 from app.services.map_snapshot import MapSnapshot, MapSnapshotService
 from app.services.predictor_accuracy import PredictorAccuracyService
 from app.services.tracking import Shipment
@@ -197,3 +201,24 @@ async def accuracy(
             for p in ports
         ],
     )
+
+
+def _demo(request: Request) -> DemoClockControl:
+    demo = _service(request).demo
+    if demo is None:
+        raise HTTPException(status_code=404, detail="demo clock is disabled")
+    return demo
+
+
+@router.get("/demo/clock", response_model=DemoClockState)
+async def demo_clock(request: Request, response: Response) -> DemoClockState:
+    response.headers["Cache-Control"] = "no-store"
+    return _demo(request).state()
+
+
+@router.post("/demo/clock", response_model=DemoClockState)
+async def demo_clock_apply(
+    action: DemoClockAction, request: Request, response: Response
+) -> DemoClockState:
+    response.headers["Cache-Control"] = "no-store"
+    return _demo(request).apply(action)

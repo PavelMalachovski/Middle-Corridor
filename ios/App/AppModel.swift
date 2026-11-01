@@ -10,8 +10,13 @@ final class AppModel {
     static let defaultServer = "http://localhost:8000"
 
     private(set) var store: TrackedShipments
+    /// Клиент текущего сервера (данные — через store, часы демо — через demo).
+    private(set) var api: any CorridorAPI
+    /// Пульт ведущего (скрыт; включается долгим нажатием на версию в настройках).
+    @ObservationIgnored lazy var demo = DemoController(model: self, defaults: defaults)
     private(set) var serverURL: String
     var path: [String] = []
+    var tab: AppTab = .shipments
     var linkError: AddError?
     var showLinkError: Bool {
         get { linkError != nil }
@@ -21,6 +26,7 @@ final class AppModel {
     /// UI-тесты и демо без бэкенда: `-mc-fake-api` (только Debug).
     let isFake: Bool
     private let storage: any RefStorage
+    private let cache: any ShipmentCache
     private let defaults: UserDefaults
 
     init(arguments: [String] = ProcessInfo.processInfo.arguments, defaults: UserDefaults = .standard) {
@@ -30,7 +36,10 @@ final class AppModel {
         let server = defaults.string(forKey: Self.serverKey) ?? Self.defaultServer
         serverURL = server
         storage = isFake ? MemoryRefStorage() : UserDefaultsRefStorage()
-        store = TrackedShipments(api: Self.makeAPI(fake: isFake, server: server), storage: storage)
+        cache = isFake ? MemoryShipmentCache() : FileShipmentCache(directory: Self.cacheDirectory)
+        let api = Self.makeAPI(fake: isFake, server: server)
+        self.api = api
+        store = TrackedShipments(api: api, storage: storage, cache: cache)
     }
 
     /// Меняет сервер: список номеров сохраняется, данные перезагрузятся с нового адреса.
@@ -39,7 +48,9 @@ final class AppModel {
         guard normalized != serverURL, URL(string: normalized) != nil else { return }
         serverURL = normalized
         defaults.set(normalized, forKey: Self.serverKey)
-        store = TrackedShipments(api: Self.makeAPI(fake: isFake, server: normalized), storage: storage)
+        api = Self.makeAPI(fake: isFake, server: normalized)
+        store = TrackedShipments(api: api, storage: storage, cache: cache)
+        Task { await demo.probe() }
     }
 
     /// Проверка адреса из настроек: число узлов коридора или ошибка.
@@ -57,12 +68,18 @@ final class AppModel {
         guard let ref = ShipmentRef.from(url: url) else { return }
         do {
             let added = try await store.add(ref)
+            tab = .shipments
             path = [added]
             // номер уже был в списке, но данных нет (старт без сети) — дозапросить
             if store.shipments[added] == nil { await store.refresh() }
         } catch {
             linkError = error  // add — typed throws(AddError)
         }
+    }
+
+    /// Офлайн-кэш: Application Support/cache (неделя 3 — контейнер App Group для виджета).
+    static var cacheDirectory: URL {
+        URL.applicationSupportDirectory.appending(path: "cache", directoryHint: .isDirectory)
     }
 
     static func normalize(_ input: String) -> String {

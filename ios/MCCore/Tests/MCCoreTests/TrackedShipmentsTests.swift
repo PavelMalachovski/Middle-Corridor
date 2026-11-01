@@ -162,4 +162,58 @@ final class TrackedShipmentsTests: XCTestCase {
         store.remove("MC-00-0000")
         XCTAssertEqual(store.missing, [])
     }
+
+    // MARK: офлайн-кэш
+
+    func test_startOffline_showsCachedData() async throws {
+        let api = try FakeAPI()
+        await api.setOffline(true)
+        let cached = try Fixture.shipment("MC-26-0412")
+        let cache = MemoryShipmentCache(
+            CachedState(shipments: [cached.ref: cached], snapshot: nil, updatedAt: Date(timeIntervalSince1970: 500)))
+        let store = TrackedShipments(
+            api: api, storage: MemoryRefStorage(["MC-26-0412"]), cache: cache,
+            now: { Date(timeIntervalSince1970: 1000) })
+        XCTAssertEqual(store.shipments["MC-26-0412"], cached)
+        XCTAssertEqual(store.updatedAt, Date(timeIntervalSince1970: 500))
+
+        await store.refresh()
+        XCTAssertEqual(store.shipments["MC-26-0412"], cached)
+        XCTAssertEqual(store.lastError, .offline)
+        XCTAssertEqual(store.updatedAt, Date(timeIntervalSince1970: 500))
+    }
+
+    func test_cacheIgnoresRefsNoLongerTracked() throws {
+        let cached = try Fixture.shipment("MC-26-0412")
+        let cache = MemoryShipmentCache(CachedState(shipments: [cached.ref: cached], snapshot: nil, updatedAt: nil))
+        let store = TrackedShipments(api: try FakeAPI(), storage: MemoryRefStorage(), cache: cache)
+        XCTAssertTrue(store.shipments.isEmpty)
+    }
+
+    func test_refreshWritesCache() async throws {
+        let cache = MemoryShipmentCache()
+        let store = TrackedShipments(
+            api: try FakeAPI(), storage: MemoryRefStorage(["MC-26-0398"]), cache: cache,
+            now: { Date(timeIntervalSince1970: 1000) })
+        await store.refresh()
+        let saved = try XCTUnwrap(cache.load())
+        XCTAssertEqual(Set(saved.shipments.keys), ["MC-26-0398"])
+        XCTAssertNotNil(saved.snapshot)
+        XCTAssertEqual(saved.updatedAt, Date(timeIntervalSince1970: 1000))
+    }
+
+    func test_addWritesCache() async throws {
+        let cache = MemoryShipmentCache()
+        let store = TrackedShipments(api: try FakeAPI(), storage: MemoryRefStorage(), cache: cache)
+        try await store.add("MC-26-0412")
+        XCTAssertNotNil(cache.load()?.shipments["MC-26-0412"])
+    }
+
+    func test_removeDropsFromCache() async throws {
+        let cache = MemoryShipmentCache()
+        let store = TrackedShipments(api: try FakeAPI(), storage: MemoryRefStorage(), cache: cache)
+        try await store.add("MC-26-0412")
+        store.remove("MC-26-0412")
+        XCTAssertNil(cache.load()?.shipments["MC-26-0412"])
+    }
 }

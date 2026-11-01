@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from app.services.corridor import NODES, TransportMode, route_points, segment
 from app.services.geo import LatLon, point_along, polyline_length_km
+from app.services.queue_forecast import QueueForecast, QueueInput, forecast_queue
 
 
 class EventKind(enum.StrEnum):
@@ -76,6 +77,7 @@ class ShipmentPlan:
     hold_node: str | None = None  # узел причины (порт, граница)
     hold_vessel: str | None = None  # судно причины
     cargo_en: str | None = None  # описание груза по-английски (для карты в EN)
+    queue: QueueInput | None = None  # очередь в порту (только пока ждём отправки)
 
     @property
     def route(self) -> list[str]:
@@ -128,6 +130,7 @@ class Shipment(BaseModel):
     last_event_at: datetime | None = None
     eta: datetime | None = None
     position: ShipmentPosition
+    queue: QueueForecast | None = None  # прогноз выхода из очереди (state == waiting)
     progress: float  # 0..1 по длине маршрута
     checkpoints: list[Checkpoint]
     track: list[list[float]]  # [lon, lat] — порядок GeoJSON
@@ -262,6 +265,13 @@ def project_shipment(  # noqa: PLR0912, PLR0915 — линейный разбо�
         last_event_at=last.ts if last else None,
         eta=eta,
         position=position,
+        queue=(  # очередь — только пока ждём в её порту
+            forecast_queue(plan.queue)
+            if plan.queue is not None
+            and state == ShipmentState.waiting
+            and current_code == plan.queue.port_code
+            else None
+        ),
         progress=round(progress, 4),
         checkpoints=checkpoints,
         track=[[lon, lat] for lat, lon in route_points(route)],
