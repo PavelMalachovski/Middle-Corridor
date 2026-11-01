@@ -214,4 +214,30 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(element(app, "preview.widget").exists)
         shot(app, "14-preview-ru")
     }
+
+    @MainActor
+    func test_darkAndLargeText() {
+        var app = XCUIApplication()
+        app.launchArguments = ["-mc-fake-api", "-mc.lang", "ru", "-mc.demo", "NO", "-mc-appearance", "dark"]
+        app.launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        shot(app, "15-dark-empty")
+        add(app, "MC-26-0398")
+        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
+        shot(app, "16-dark-card")
+        app.terminate()
+
+        app = XCUIApplication()
+        app.launchArguments = [
+            "-mc-fake-api", "-mc.lang", "ru", "-mc.demo", "NO",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL",
+        ]
+        app.launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0398")
+        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
+        shot(app, "17-large-card")
+        app.swipeUp()
+        shot(app, "18-large-card-queue")
+    }
 }

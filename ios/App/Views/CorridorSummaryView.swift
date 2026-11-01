@@ -18,6 +18,7 @@ struct CorridorSummaryView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(Theme.accentStrong)
                     .controlSize(.large)
                     .accessibilityIdentifier("empty.add")
                 }
