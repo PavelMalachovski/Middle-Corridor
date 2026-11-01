@@ -19,7 +19,7 @@ struct RouteMapView: View {
             }
             if parts.rest.count > 1 {
                 MapPolyline(coordinates: parts.rest.map(\.coordinate))
-                    .stroke(Color.gray, style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [6, 5]))
+                    .stroke(.secondary, style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [6, 5]))
             }
             Annotation("", coordinate: here) {
                 if shipment.position.confirmed {

@@ -16,7 +16,7 @@ struct WindChart: View {
                     .foregroundStyle(Theme.accent)
                     .interpolationMethod(.monotone)
                 LineMark(x: .value("t", hour.ts), y: .value(l("chart.gust"), hour.gust), series: .value("s", "gust"))
-                    .foregroundStyle(Color.gray)
+                    .foregroundStyle(.secondary)
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     .interpolationMethod(.monotone)
             }

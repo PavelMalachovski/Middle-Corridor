@@ -42,7 +42,7 @@ final class AppModel {
         AppGroup.defaults?.set(server, forKey: AppGroup.serverKey)
         let api = Self.makeAPI(fake: isFake, server: server)
         self.api = api
-        store = TrackedShipments(api: api, storage: storage, cache: cache)
+        store = TrackedShipments(api: api, storage: storage, cache: cache, server: server)
         observe(store)
     }
 
@@ -54,7 +54,7 @@ final class AppModel {
         defaults.set(normalized, forKey: Self.serverKey)
         AppGroup.defaults?.set(normalized, forKey: AppGroup.serverKey)
         api = Self.makeAPI(fake: isFake, server: normalized)
-        store = TrackedShipments(api: api, storage: storage, cache: cache)
+        store = TrackedShipments(api: api, storage: storage, cache: cache, server: normalized)
         observe(store)
         Task { await demo.probe() }
     }
@@ -72,9 +72,9 @@ final class AppModel {
     /// `mcstatus://s/<номер>` или `https://…/?s=<номер>` → груз в списке и открыт.
     func open(_ url: URL) async {
         guard let ref = ShipmentRef.from(url: url) else { return }
+        tab = .shipments  // ошибку ссылки показывает экран «Грузы» — он должен быть открыт
         do {
             let added = try await store.add(ref)
-            tab = .shipments
             path = [added]
             await notifier.requestAuthorizationIfNeeded()
             // номер уже был в списке, но данных нет (старт без сети) — дозапросить

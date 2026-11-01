@@ -26,6 +26,8 @@ struct CorridorView: View {
                 PortDetailView(code: code, store: store)
             }
             .refreshable { await store.refresh() }
+            // первый запуск: переключились сюда, пока шло первое обновление (оно отменилось)
+            .task { if store.snapshot == nil { await store.refresh() } }
         }
     }
 

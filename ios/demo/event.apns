@@ -2,7 +2,7 @@
   "Simulator Target Bundle": "com.malakhouski.mcstatus",
   "aps": {
     "alert": {
-      "title": "MC-26-0398: Отправление: Актау — погружен на паром «Azerbaijan»",
+      "title": "MC-26-0398: Отправление: Актау — погружен на паром «Turkestan»",
       "body": "Сиань → Констанца"
     },
     "sound": "default",

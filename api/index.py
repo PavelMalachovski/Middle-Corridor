@@ -23,7 +23,9 @@ from app.main import build_map_service  # noqa: E402
 from app.services.predictor_accuracy import PredictorAccuracyService  # noqa: E402
 from app.services.weather_predictor import WindThresholds  # noqa: E402
 
-settings = get_settings()
+# Пульт демо (/api/v1/demo/clock) на публичном деплое не включается никогда: кто угодно
+# сдвинул бы мок-время всем зрителям сайта.
+settings = get_settings().model_copy(update={"demo_control": False})
 engine = None if settings.mock_data else create_engine(settings.database_url)
 session_factory = create_session_factory(engine) if engine is not None else None
 

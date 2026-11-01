@@ -253,4 +253,33 @@ final class TrackedShipmentsTests: XCTestCase {
         try await store.add("MC-26-0412")
         XCTAssertEqual(count, 0)
     }
+
+    // MARK: кэш привязан к серверу
+
+    func test_cacheFromOtherServer_ignored() throws {
+        let cached = try Fixture.shipment("MC-26-0412")
+        let cache = MemoryShipmentCache(
+            CachedState(shipments: [cached.ref: cached], snapshot: nil, updatedAt: Date(), server: "http://a:8000"))
+        let store = TrackedShipments(
+            api: try FakeAPI(), storage: MemoryRefStorage(["MC-26-0412"]), cache: cache, server: "http://b:8000")
+        XCTAssertTrue(store.shipments.isEmpty)
+        XCTAssertNil(store.updatedAt)
+    }
+
+    func test_cacheFromSameServer_used() throws {
+        let cached = try Fixture.shipment("MC-26-0412")
+        let cache = MemoryShipmentCache(
+            CachedState(shipments: [cached.ref: cached], snapshot: nil, updatedAt: Date(), server: "http://a:8000"))
+        let store = TrackedShipments(
+            api: try FakeAPI(), storage: MemoryRefStorage(["MC-26-0412"]), cache: cache, server: "http://a:8000")
+        XCTAssertNotNil(store.shipments["MC-26-0412"])
+    }
+
+    func test_refreshSavesServer() async throws {
+        let cache = MemoryShipmentCache()
+        let store = TrackedShipments(
+            api: try FakeAPI(), storage: MemoryRefStorage(["MC-26-0398"]), cache: cache, server: "http://a:8000")
+        await store.refresh()
+        XCTAssertEqual(cache.load()?.server, "http://a:8000")
+    }
 }
