@@ -25,6 +25,7 @@ from datetime import datetime, timedelta
 from app.integrations.mock.clock import MockClock
 from app.integrations.mock.fleet import _DWELL_H, CARGO_EN, ROUTE_AKTAU
 from app.services.corridor import NODES, segment
+from app.services.delay_breakdown import DelayCause
 from app.services.demo_clock import DemoClockAction, DemoClockState
 from app.services.queue_forecast import QueueInput
 from app.services.tracking import EventKind, PlannedLeg, ShipmentPlan, TrackingEvent
@@ -199,6 +200,11 @@ class DemoStory:
             legs=legs,
             events=tuple(sorted(events, key=lambda e: e.ts)),
             queue=queue,
+            delay_causes=(  # почему опаздывает: паром, шторм, снова паром
+                DelayCause("ferry_wait", PORT, at(_PLAN_DEPART[PORT]), at(STORM_START_H)),
+                DelayCause("weather_ban", PORT, at(STORM_START_H), at(STORM_END_H)),
+                DelayCause("ferry_wait", PORT, at(STORM_END_H), at(DEPART_PORT_H)),
+            ),
             **hold,
         )
 
