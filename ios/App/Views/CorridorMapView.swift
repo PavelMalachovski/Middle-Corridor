@@ -90,15 +90,15 @@ private struct CorridorMap: View {
 
     var body: some View {
         let labels = Labels(lang: l.lang, nodes: snapshot.nodes)
-        let segments = snapshot.segments ?? []
+        let segments = (snapshot.segments ?? []).enumerated().map { SegmentItem(id: $0.offset, segment: $0.element) }
         Map(initialPosition: .rect(Self.rect(snapshot.nodes)), interactionModes: interactive ? .all : []) {
-            ForEach(Array(segments.enumerated()), id: \.offset) { item in
-                MapPolyline(coordinates: Self.coordinates(item.element))
+            ForEach(segments) { item in
+                MapPolyline(coordinates: Self.coordinates(item.segment))
                     .stroke(
                         .secondary,
                         style: StrokeStyle(
                             lineWidth: 2, lineCap: .round,
-                            dash: item.element.mode.known == .sea ? [5, 4] : []))
+                            dash: item.segment.mode.known == .sea ? [5, 4] : []))
             }
             ForEach(snapshot.nodes) { node in
                 Annotation(
@@ -144,6 +144,12 @@ private struct CorridorMap: View {
         let pad = max(rect.size.width, rect.size.height) * 0.05
         return rect.insetBy(dx: -pad, dy: -pad)
     }
+}
+
+/// Сегмент с порядковым номером: `ForEach` в `Map` — по `Identifiable`.
+private struct SegmentItem: Identifiable {
+    let id: Int
+    let segment: CorridorSegment
 }
 
 extension AlertLevel {

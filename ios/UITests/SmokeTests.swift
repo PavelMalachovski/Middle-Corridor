@@ -87,13 +87,15 @@ final class SmokeTests: XCTestCase {
         let hold = element(app, "hold")
         XCTAssertTrue(hold.waitForExistence(timeout: 5))
         XCTAssertTrue(hold.label.contains("Погодный запрет"), hold.label)
-        XCTAssertTrue(element(app, "card.map").exists)
-        shot(app, "05-deeplink-hold-ru")
-
+        // очередь — в первом блоке карточки, без прокрутки
         let queue = element(app, "card.queue")
-        app.swipeUp()
         XCTAssertTrue(queue.waitForExistence(timeout: 5))
         XCTAssertTrue(queue.label.contains("2–3 дня"), queue.label)
+        shot(app, "05-deeplink-hold-ru")
+
+        let map = element(app, "card.map")
+        for _ in 0..<2 where !map.exists { app.swipeUp() }
+        XCTAssertTrue(map.exists)
         let weather = element(app, "card.weather")
         if !weather.exists { app.swipeUp() }
         XCTAssertTrue(weather.waitForExistence(timeout: 5))
