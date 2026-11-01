@@ -48,6 +48,14 @@ public struct TrackedRow: Identifiable, Sendable, Hashable {
     public let shipment: Shipment?
 }
 
+/// Что было до обновления и что стало — для уведомлений и Live Activity.
+public struct StoreChange: Sendable {
+    public let oldShipments: [String: Shipment]
+    public let newShipments: [String: Shipment]
+    public let oldNodes: [NodeStatus]
+    public let newNodes: [NodeStatus]
+}
+
 /// «Мои грузы»: номера, последние данные по ним и снимок коридора.
 @MainActor
 @Observable
@@ -62,6 +70,9 @@ public final class TrackedShipments {
     public private(set) var isRefreshing = false
     /// Номера, которых сервер не знает (404 при последнем обновлении): «не найден», а не вечное «загружается».
     public private(set) var missing: Set<String> = []
+
+    /// Вызывается после каждого завершённого обновления (не при отмене и не при `add`).
+    @ObservationIgnored public var onChange: (@MainActor (StoreChange) -> Void)?
 
     private let api: any CorridorAPI
     private let storage: any RefStorage
@@ -150,6 +161,8 @@ public final class TrackedShipments {
 
         guard !Task.isCancelled else { return }
 
+        let oldShipments = shipments
+        let oldNodes = snapshot?.nodes ?? []
         var failure: APIError?
         switch snapshotLoaded {
         case .success(let snap): snapshot = snap
@@ -171,6 +184,10 @@ public final class TrackedShipments {
         lastError = failure
         if failure == nil { updatedAt = now() }
         persist()
+        onChange?(
+            StoreChange(
+                oldShipments: oldShipments, newShipments: shipments,
+                oldNodes: oldNodes, newNodes: snapshot?.nodes ?? []))
     }
 
     private nonisolated static func load<T: Sendable>(

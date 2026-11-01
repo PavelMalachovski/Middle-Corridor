@@ -216,4 +216,41 @@ final class TrackedShipmentsTests: XCTestCase {
         store.remove("MC-26-0412")
         XCTAssertNil(cache.load()?.shipments["MC-26-0412"])
     }
+
+    // MARK: изменения после обновления
+
+    func test_refreshReportsChange() async throws {
+        let api = try FakeAPI()
+        let store = TrackedShipments(api: api, storage: MemoryRefStorage(["MC-26-0398"]))
+        var changes: [StoreChange] = []
+        store.onChange = { changes.append($0) }
+        await store.refresh()
+        await store.refresh()
+        XCTAssertEqual(changes.count, 2)
+        XCTAssertTrue(changes[0].oldShipments.isEmpty)
+        XCTAssertEqual(changes[1].oldShipments["MC-26-0398"], changes[1].newShipments["MC-26-0398"])
+        XCTAssertFalse(changes[1].newNodes.isEmpty)
+        XCTAssertEqual(changes[1].oldNodes.count, changes[1].newNodes.count)
+    }
+
+    func test_cancelledRefresh_reportsNothing() async throws {
+        let api = try FakeAPI()
+        await api.setDelay(.milliseconds(300))
+        let store = TrackedShipments(api: api, storage: MemoryRefStorage(["MC-26-0398"]))
+        var count = 0
+        store.onChange = { _ in count += 1 }
+        let task = Task { await store.refresh() }
+        try await Task.sleep(for: .milliseconds(50))
+        task.cancel()
+        await task.value
+        XCTAssertEqual(count, 0)
+    }
+
+    func test_add_reportsNothing() async throws {
+        let store = TrackedShipments(api: try FakeAPI(), storage: MemoryRefStorage())
+        var count = 0
+        store.onChange = { _ in count += 1 }
+        try await store.add("MC-26-0412")
+        XCTAssertEqual(count, 0)
+    }
 }
