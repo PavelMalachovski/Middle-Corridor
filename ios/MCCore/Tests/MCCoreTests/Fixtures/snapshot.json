@@ -3070,7 +3070,15 @@
     "p50_hours": 60.0,
     "p90_hours": 120.0,
     "basis_code": "weather_ban"
-   }
+   },
+   "delay_breakdown": [
+    {
+     "code": "weather_ban",
+     "node_code": "AKTAU",
+     "hours": 18.0
+    }
+   ],
+   "eta_latest": "2026-11-09T05:08:54Z"
   },
   {
    "ref": "MC-26-0322",

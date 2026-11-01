@@ -166,4 +166,24 @@ final class CorridorAPITests: XCTestCase {
             XCTAssertEqual(APIError.from(error), .notFound)
         }
     }
+
+    // MARK: точность
+
+    func test_accuracy_get() async throws {
+        let data = try Fixture.data("accuracy")
+        StubProtocol.handler = { _ in (200, data) }
+        let report = try await api().accuracy(days: 90)
+        XCTAssertEqual(StubProtocol.lastPath, "/api/v1/accuracy")
+        XCTAssertEqual(report.demo, true)
+    }
+
+    func test_accuracy_503_isHttp() async {
+        StubProtocol.handler = { _ in (503, Data("{}".utf8)) }
+        do {
+            _ = try await api().accuracy(days: 90)
+            XCTFail("ожидали ошибку")
+        } catch {
+            XCTAssertEqual(APIError.from(error), .http(503))
+        }
+    }
 }

@@ -1,0 +1,80 @@
+{
+ "since": "2026-08-03T16:07:27.920416Z",
+ "until": "2026-11-01T16:07:27.920416Z",
+ "days": 90,
+ "ports": [
+  {
+   "code": "AKTAU",
+   "name": "Актау",
+   "closures": 6,
+   "hits": 6,
+   "alerts": 6,
+   "false_alarms": 1,
+   "pod": 1.0,
+   "far": 0.16666666666666666,
+   "csi": 0.8571428571428571,
+   "median_lead_h": 20.5
+  },
+  {
+   "code": "KURYK",
+   "name": "Курык",
+   "closures": 9,
+   "hits": 9,
+   "alerts": 8,
+   "false_alarms": 1,
+   "pod": 1.0,
+   "far": 0.125,
+   "csi": 0.9,
+   "median_lead_h": 17.0
+  },
+  {
+   "code": "BAKU_ALAT",
+   "name": "Баку (Алят)",
+   "closures": 8,
+   "hits": 7,
+   "alerts": 8,
+   "false_alarms": 2,
+   "pod": 0.875,
+   "far": 0.25,
+   "csi": 0.7,
+   "median_lead_h": 20.0
+  },
+  {
+   "code": "POTI",
+   "name": "Поти",
+   "closures": 7,
+   "hits": 6,
+   "alerts": 6,
+   "false_alarms": 0,
+   "pod": 0.8571428571428571,
+   "far": 0.0,
+   "csi": 0.8571428571428571,
+   "median_lead_h": 10.0
+  },
+  {
+   "code": "BATUMI",
+   "name": "Батуми",
+   "closures": 6,
+   "hits": 3,
+   "alerts": 4,
+   "false_alarms": 1,
+   "pod": 0.5,
+   "far": 0.25,
+   "csi": 0.42857142857142855,
+   "median_lead_h": 10.0
+  },
+  {
+   "code": "CONSTANTA",
+   "name": "Констанца",
+   "closures": 4,
+   "hits": 4,
+   "alerts": 4,
+   "false_alarms": 1,
+   "pod": 1.0,
+   "far": 0.25,
+   "csi": 0.8,
+   "median_lead_h": 17.0
+  }
+ ],
+ "demo": true
+}
