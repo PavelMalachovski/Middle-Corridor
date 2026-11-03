@@ -739,13 +739,13 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Симулятор — http://localhost:8000. iPhone — IP Мака в той же Wi‑Fi, например http://192.168.1.10:8000."
+            "value": "Пусто — демо-сервер middle-corridor-weld.vercel.app (без пульта демо). Свой бэкенд: симулятор — http://localhost:8000, iPhone — IP Мака в той же Wi‑Fi, например http://192.168.1.10:8000."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Simulator: http://localhost:8000. iPhone: your Mac's IP on the same Wi‑Fi, e.g. http://192.168.1.10:8000."
+            "value": "Empty — demo server middle-corridor-weld.vercel.app (no demo controls). Your own backend: Simulator — http://localhost:8000, iPhone — your Mac's IP on the same Wi‑Fi, e.g. http://192.168.1.10:8000."
           }
         }
       }
