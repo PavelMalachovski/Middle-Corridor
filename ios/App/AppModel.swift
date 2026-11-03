@@ -8,7 +8,7 @@ import WidgetKit
 @Observable
 final class AppModel {
     static let serverKey = "mc.server"
-    static let defaultServer = "http://localhost:8000"
+    static let defaultServer = AppGroup.defaultServer
 
     private(set) var store: TrackedShipments
     /// Клиент текущего сервера (данные — через store, часы демо — через demo).

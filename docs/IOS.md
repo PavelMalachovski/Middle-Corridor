@@ -68,7 +68,7 @@
 | Минимальная iOS | 17 (SwiftData, Observation, интерактивные виджеты, Live Activity) |
 | Проект | XcodeGen: `ios/project.yml` в git, `.xcodeproj` генерируется и в git не попадает |
 | Устройства | Симулятор + свой iPhone (бесплатный Apple ID: переподпись раз в 7 дней) |
-| Бэкенд демо | Локально на Маке, `MOCK_DATA=true`; симулятор — `localhost:8000`, iPhone — IP Мака в той же Wi‑Fi; адрес меняется в настройках приложения |
+| Бэкенд демо | По умолчанию — `https://middle-corridor-weld.vercel.app` (`MOCK_DATA`, без пульта демо). С пультом — локально на Маке: симулятор — `localhost:8000`, iPhone — IP Мака в той же Wi‑Fi; адрес меняется в скрытых настройках приложения |
 | Bundle ID | `com.malakhouski.mcstatus`, на экране — «Middle Corridor» |
 
 Риск: бесплатный Apple ID не даёт App Groups/Associated Domains на устройстве.

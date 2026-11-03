@@ -99,7 +99,8 @@ struct SettingsView: View {
         }
     }
 
-    /// Адрес бэкенда: симулятор — localhost, iPhone — IP Мака. Пользователю без пульта не виден.
+    /// Адрес бэкенда: по умолчанию — публичный демо-сервер; свой — localhost или IP Мака.
+    /// Пользователю без пульта не виден.
     private var serverSection: some View {
         Section {
             TextField(AppModel.defaultServer, text: $server)

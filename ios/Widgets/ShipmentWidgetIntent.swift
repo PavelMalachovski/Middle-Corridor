@@ -10,6 +10,8 @@ struct ShipmentWidgetIntent: WidgetConfigurationIntent {
     @Parameter(title: "Номер груза")
     var ref: String?
 
-    @Parameter(title: "Сервер", default: "http://localhost:8000")
+    // значение по умолчанию — литерал (метаданные App Intents собираются при компиляции);
+    // держать равным AppGroup.defaultServer
+    @Parameter(title: "Сервер", default: "https://middle-corridor-weld.vercel.app")
     var server: String?
 }

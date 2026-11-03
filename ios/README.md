@@ -39,10 +39,12 @@ open ios/MiddleCorridor.xcodeproj           # или Xcode → Run
 
 ```bash
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
-MOCK_DATA=true .venv/bin/python -m app.main     # слушает 0.0.0.0:8000
+MOCK_DATA=true DEMO_CONTROL=true .venv/bin/python -m app.main   # слушает 0.0.0.0:8000, с пультом демо
 ```
 
-Симулятор ходит на `http://localhost:8000` (по умолчанию). iPhone — на IP Мака
+По умолчанию приложение ходит на публичный демо-сервер `https://middle-corridor-weld.vercel.app`
+(тот же `MOCK_DATA`, но пульт демо там выключен) — Мак не нужен. Для пульта демо (мок-время,
+«Следующий шаг») — свой бэкенд с `MOCK_DATA=true DEMO_CONTROL=true`: симулятор — `http://localhost:8000`, iPhone — IP Мака
 в той же Wi‑Fi: `ipconfig getifaddr en0`. Адрес — в разделе для разработчика: Настройки →
 долгое нажатие на строку версии → секция «Сервер» (там же пульт демо; обычному пользователю
 этот раздел не виден). На запрос «Локальная сеть» ответить «Разрешить».

@@ -16,6 +16,9 @@ enum AppGroup {
     }
 
     static let serverKey = "mc.server"
+    /// Сервер по умолчанию — публичный демо-бэкенд на Vercel (MOCK_DATA, пульт демо выключен):
+    /// приложение работает без Мака. Свой бэкенд с пультом — в скрытом разделе настроек.
+    static let defaultServer = "https://middle-corridor-weld.vercel.app"
     static let refKey = "mc.widget.ref"
     static let langKey = "mc.widget.lang"
 }
