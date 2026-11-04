@@ -73,6 +73,8 @@ public final class TrackedShipments {
 
     /// Вызывается после каждого завершённого обновления (не при отмене и не при `add`).
     @ObservationIgnored public var onChange: (@MainActor (StoreChange) -> Void)?
+    /// Груз добавлен в список (номер, ссылка, «Отменить»): правило санкций не ждёт обновления.
+    @ObservationIgnored public var onAdded: (@MainActor (Shipment) -> Void)?
 
     private let api: any CorridorAPI
     private let storage: any RefStorage
@@ -132,6 +134,7 @@ public final class TrackedShipments {
         refs.insert(ref, at: 0)
         storage.save(refs)
         persist()
+        onAdded?(shipment)
         return ref
     }
 
