@@ -9,7 +9,7 @@ import csv
 import enum
 import json
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from functools import cache
 from pathlib import Path
 
@@ -90,3 +90,121 @@ def load_lists(directory: Path = DATA_DIR) -> SanctionsLists:
 @cache
 def default_lists() -> SanctionsLists:
     return load_lists()
+
+
+# --- Пакинг-лист и сверка -------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class PackingLine:
+    no: int
+    hs_code: str  # ТН ВЭД ЕАЭС, 10 цифр (пробелы и точки допустимы)
+    description: str
+    description_en: str | None = None
+    origin_country: str | None = None  # ISO-2
+
+
+@dataclass(frozen=True, slots=True)
+class PackingList:
+    received_at: datetime
+    lines: tuple[PackingLine, ...]
+    consignee_country: str | None = None  # ISO-2
+    destination_country: str | None = None  # ISO-2
+
+
+class SanctionsStatus(enum.StrEnum):
+    pending = "pending"  # листа нет, граница Казахстана впереди
+    missing = "missing"  # листа нет, а Хоргос пройден
+    clear = "clear"  # совпадений, требующих внимания, нет
+    review = "review"  # только слабые совпадения — проверить вручную
+    flagged = "flagged"  # код из списка + связь с РФ/РБ
+
+
+class SanctionsMatch(BaseModel):
+    line_no: int
+    hs_code: str
+    description: str
+    description_en: str | None = None
+    origin_country: str | None = None
+    list_id: str
+    list_code: str  # исходный код записи списка
+    ref: str
+    measure: Measure
+    strong: bool
+    reason_code: str  # origin_ru | consignee_ru | code_only | no_origin | no_consignee
+
+
+class SanctionsCheck(BaseModel):
+    status: SanctionsStatus
+    checked_at: datetime | None = None
+    lists: list[SanctionsListInfo]
+    matches: list[SanctionsMatch]
+
+
+def _strength(entry: SanctionsEntry, line: PackingLine, pl: PackingList) -> tuple[bool, str]:
+    if entry.measure == Measure.import_ban:
+        origin = (line.origin_country or "").upper()
+        if not origin:
+            return False, "no_origin"
+        return (True, "origin_ru") if origin in entry.countries else (False, "code_only")
+    parties = {c.upper() for c in (pl.consignee_country, pl.destination_country) if c}
+    if not parties:
+        return False, "no_consignee"
+    return (True, "consignee_ru") if parties & entry.countries else (False, "code_only")
+
+
+def _needs_review(m: SanctionsMatch) -> bool:
+    """Слабое совпадение, которое стоит проверить руками.
+
+    Запрет ввоза действует только на товар происхождения из списка: известное другое
+    происхождение — справка, не повод для «проверить вручную» (иначе прил. XXI
+    ставило бы review почти любому контейнеру с электроникой или пластиком).
+    """
+    return not m.strong and (m.measure == Measure.export_ban or m.reason_code != "code_only")
+
+
+def screen(
+    packing_list: PackingList | None,
+    *,
+    border_reached: bool,
+    at: datetime,
+    lists: SanctionsLists,
+) -> SanctionsCheck:
+    """Статус проверки и совпавшие позиции; остальные позиции листа наружу не идут."""
+    infos = list(lists.infos)
+    if packing_list is None or at < packing_list.received_at:
+        status = SanctionsStatus.missing if border_reached else SanctionsStatus.pending
+        return SanctionsCheck(status=status, lists=infos, matches=[])
+
+    matches: list[SanctionsMatch] = []
+    for line in sorted(packing_list.lines, key=lambda x: x.no):
+        code = _digits(line.hs_code)
+        for entry in lists.entries:
+            if not code.startswith(entry.code[:6]):
+                continue
+            strong, reason = _strength(entry, line, packing_list)
+            matches.append(
+                SanctionsMatch(
+                    line_no=line.no,
+                    hs_code=code,
+                    description=line.description,
+                    description_en=line.description_en,
+                    origin_country=line.origin_country,
+                    list_id=entry.list_id,
+                    list_code=entry.code,
+                    ref=entry.ref,
+                    measure=entry.measure,
+                    strong=strong,
+                    reason_code=reason,
+                )
+            )
+    matches.sort(key=lambda m: (not m.strong, m.line_no))  # сортировка устойчивая
+    if any(m.strong for m in matches):
+        status = SanctionsStatus.flagged
+    elif any(_needs_review(m) for m in matches):
+        status = SanctionsStatus.review
+    else:
+        status = SanctionsStatus.clear
+    return SanctionsCheck(
+        status=status, checked_at=packing_list.received_at, lists=infos, matches=matches
+    )
