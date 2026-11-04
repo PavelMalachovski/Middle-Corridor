@@ -10,6 +10,8 @@ struct ShipmentWidgetIntent: WidgetConfigurationIntent {
     @Parameter(title: "Номер груза")
     var ref: String?
 
-    @Parameter(title: "Сервер", default: "http://localhost:8000")
+    /// Без значения по умолчанию: пустое поле — адрес из приложения (App Group) или сборки
+    /// (`BackendConfig`); с литералом виджет всегда ходил бы на него, мимо настроек приложения.
+    @Parameter(title: "Сервер")
     var server: String?
 }

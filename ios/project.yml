@@ -15,6 +15,13 @@ settings:
     CODE_SIGN_STYLE: Automatic
     # Personal Team (бесплатный Apple ID) выбирается в Xcode → Signing & Capabilities
     DEVELOPMENT_TEAM: ""
+  # Сервер по умолчанию (Info.plist `MCAPIBaseURL` → Shared/BackendConfig.swift) у приложения и виджета.
+  # Debug (Run из Xcode, UI-тесты) — демо-бэкенд на Маке; Release (Archive, TestFlight) — боевой API.
+  configs:
+    Debug:
+      MC_API_BASE_URL: http://localhost:8000
+    Release:
+      MC_API_BASE_URL: https://middle-corridor-weld.vercel.app
 packages:
   MCCore:
     path: MCCore
@@ -49,12 +56,13 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: com.malakhouski.mcstatus
             CFBundleURLSchemes: [mcstatus]
-        # Демо-бэкенд — http на Маке: localhost (симулятор) или IP в Wi‑Fi (iPhone)
+        # Демо-бэкенд в Debug — http на Маке: localhost (симулятор) или IP в Wi‑Fi (iPhone)
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         NSLocalNetworkUsageDescription: Приложение берёт данные с сервера Middle Corridor в вашей локальной сети.
         # «Поделиться» отдаёт https-ссылку на веб-карту (?s=<номер>), а не mcstatus:// — см. App/AppLinks.swift
         MCShareBaseURL: $(MC_SHARE_BASE_URL)
+        MCAPIBaseURL: $(MC_API_BASE_URL)
     settings:
       base:
         # адрес веб-карты для ссылок «Поделиться» (сайт открывает груз по ?s=<номер>)
@@ -85,6 +93,7 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        MCAPIBaseURL: $(MC_API_BASE_URL)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.malakhouski.mcstatus.widgets

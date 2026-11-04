@@ -42,7 +42,13 @@ python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
 MOCK_DATA=true .venv/bin/python -m app.main     # слушает 0.0.0.0:8000
 ```
 
-Симулятор ходит на `http://localhost:8000` (по умолчанию). iPhone — на IP Мака
+Сервер по умолчанию зависит от конфигурации сборки (ключ `MC_API_BASE_URL` в `project.yml`):
+**Debug** (Run из Xcode, UI-тесты) — `http://localhost:8000`, то есть этот бэкенд: не запущен —
+в приложении «Нет связи с сервером»; **Release** (Archive, TestFlight) — боевой API
+`https://middle-corridor-weld.vercel.app` (без пульта демо: `/demo/clock` там нет). Виджет берёт
+адрес из приложения, а без App Group — тот же ключ сборки.
+
+iPhone с Debug-сборкой — на IP Мака
 в той же Wi‑Fi: `ipconfig getifaddr en0`. Адрес — в разделе для разработчика: Настройки →
 долгое нажатие на строку версии → секция «Сервер» (там же пульт демо; обычному пользователю
 этот раздел не виден). На запрос «Локальная сеть» ответить «Разрешить».

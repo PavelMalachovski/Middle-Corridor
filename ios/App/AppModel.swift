@@ -8,7 +8,8 @@ import WidgetKit
 @Observable
 final class AppModel {
     static let serverKey = "mc.server"
-    static let defaultServer = "http://localhost:8000"
+    /// Debug — демо-бэкенд на Маке, Release — боевой API (ключ сборки `MC_API_BASE_URL`).
+    static let defaultServer = BackendConfig.defaultServer
 
     private(set) var store: TrackedShipments
     /// Клиент текущего сервера (данные — через store, часы демо — через demo).

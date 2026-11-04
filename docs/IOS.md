@@ -68,7 +68,7 @@
 | Минимальная iOS | 17 (SwiftData, Observation, интерактивные виджеты, Live Activity) |
 | Проект | XcodeGen: `ios/project.yml` в git, `.xcodeproj` генерируется и в git не попадает |
 | Устройства | Симулятор + свой iPhone (бесплатный Apple ID: переподпись раз в 7 дней) |
-| Бэкенд демо | Локально на Маке, `MOCK_DATA=true`; симулятор — `localhost:8000`, iPhone — IP Мака в той же Wi‑Fi; адрес меняется в настройках приложения |
+| Бэкенд | Debug — демо локально на Маке, `MOCK_DATA=true`; симулятор — `localhost:8000`, iPhone — IP Мака в той же Wi‑Fi. Release — боевой API на Vercel. Ключ сборки `MC_API_BASE_URL`; адрес меняется в настройках приложения |
 | Bundle ID | `com.malakhouski.mcstatus`, на экране — «Middle Corridor» |
 
 Риск: бесплатный Apple ID не даёт App Groups/Associated Domains на устройстве.

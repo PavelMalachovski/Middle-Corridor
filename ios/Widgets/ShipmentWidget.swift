@@ -42,7 +42,7 @@ struct ShipmentProvider: AppIntentTimelineProvider {
             return ShipmentEntry(date: .now, status: nil, message: Labels(lang: lang, nodes: []).text("widget.choose"), lang: lang)
         }
         let server = configuration.server?.trimmingCharacters(in: .whitespaces).nilIfEmpty
-            ?? shared?.string(forKey: AppGroup.serverKey) ?? "http://localhost:8000"
+            ?? shared?.string(forKey: AppGroup.serverKey) ?? BackendConfig.defaultServer
         var nodes = cache?.snapshot?.nodes ?? []
         if let url = URL(string: server) {
             let api = HTTPCorridorAPI(baseURL: url, timeout: 8)
