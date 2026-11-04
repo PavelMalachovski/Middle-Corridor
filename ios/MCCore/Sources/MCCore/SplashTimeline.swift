@@ -27,12 +27,14 @@ public enum SplashTimeline {
     public static let duration = 1.75
     /// Тап по заставке — быстрое растворение.
     public static let skipFade = 0.2
+    /// Всё нарисовано, затухание ещё не началось: на этом кадре заставка замирает в UI-тестах.
+    public static let fullFrameAt = 1.45
 
     private static let rails = (start: 0.0, end: 0.45)
     private static let ferry = (start: 0.35, end: 1.15)
     private static let ferryAppear = (start: 0.35, end: 0.45)
     private static let wordmark = (start: 0.8, end: 1.15)
-    private static let fadeOut = (start: 1.45, end: duration)
+    private static let fadeOut = (start: fullFrameAt, end: duration)
 
     /// `skippedAt` — когда тапнули: затухание за `skipFade` от текущего кадра, без скачка яркости.
     public static func frame(at t: Double, skippedAt: Double? = nil) -> SplashFrame {

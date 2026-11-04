@@ -45,6 +45,13 @@ final class SplashTimelineTests: XCTestCase {
         XCTAssertTrue(SplashTimeline.isFinished(at: 1.75, skippedAt: nil))
     }
 
+    func test_fullFrame_everythingDrawnBeforeFade() {
+        XCTAssertEqual(
+            SplashTimeline.frame(at: SplashTimeline.fullFrameAt),
+            SplashFrame(rails: 1, ferry: 1, ferryOpacity: 1, wordmark: 1, opacity: 1))
+        XCTAssertLessThan(SplashTimeline.frame(at: SplashTimeline.fullFrameAt + 0.01).opacity, 1)
+    }
+
     func test_outOfRange_isClamped() {
         XCTAssertEqual(SplashTimeline.frame(at: -1), SplashTimeline.frame(at: 0))
         XCTAssertEqual(SplashTimeline.frame(at: 10), SplashTimeline.frame(at: SplashTimeline.duration))

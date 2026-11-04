@@ -10,6 +10,11 @@ struct RootView: View {
     @Bindable var model: AppModel
     @Environment(\.l10n) private var l
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
+
+    /// «Уменьшение движения» и VoiceOver — без анимации: после экрана запуска сразу приложение.
+    private var splashVisible: Bool { model.showSplash && !reduceMotion && !voiceOver }
 
     var body: some View {
         TabView(selection: $model.tab) {
@@ -30,6 +35,19 @@ struct RootView: View {
                 guard model.demo.isActive else { return }
                 Task { await model.demo.perform(.nextBeat) }
             }
+        }
+        .overlay {
+            ZStack {
+                if splashVisible {
+                    SplashView(hold: model.splashHold) { model.showSplash = false }
+                        .transition(.opacity)
+                }
+            }
+            .animation(.easeOut(duration: SplashTimeline.skipFade), value: splashVisible)
+        }
+        .onAppear {
+            // включат «Уменьшение движения» позже — заставка посреди работы не всплывёт
+            if reduceMotion || voiceOver { model.showSplash = false }
         }
         .task { await model.demo.probe() }
         .task {

@@ -46,8 +46,9 @@ targets:
         UILaunchScreen:
           UIColorName: LaunchBackground
           UIImageName: LaunchEmblem
-        # статус-бар скрыт на экране запуска и в заставке: тёмный текст светлой темы на тёмно-зелёном не читается
-        UIStatusBarHidden: true
+        # светлый статус-бар на тёмно-зелёном экране запуска; дальше iOS сама подбирает цвет текста
+        # по фону (скрывать нельзя: SwiftUI прячет его только после первого кадра — он мелькал)
+        UIStatusBarStyle: UIStatusBarStyleLightContent
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         ITSAppUsesNonExemptEncryption: false
         # Live Activity груза на экране блокировки (обновляет приложение, без APNs)
