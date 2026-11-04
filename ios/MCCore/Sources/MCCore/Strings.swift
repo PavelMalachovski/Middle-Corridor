@@ -57,6 +57,21 @@ enum Strings {
         "card.onVessel": "на судне «{vessel}»",
         "card.atSea": "в море",
         "card.byRail": "по железной дороге",
+        "sanctions.status.pending": "Ждём пакинг-лист",
+        "sanctions.status.missing": "Нет пакинг-листа — проверить нельзя",
+        "sanctions.status.clear": "Совпадений нет",
+        "sanctions.status.review": "Проверить вручную",
+        "sanctions.status.flagged": "Возможна санкционка",
+        "sanctions.list.chpl": "CHPL",
+        "sanctions.list.eu_833_2014": "ЕС 833/2014",
+        "sanctions.annex": "прил. {n}",
+        "sanctions.match": "{list} ({ref}): поз. {no}, код {code} — {reason}",
+        "sanctions.reason.origin_ru": "происхождение {origin}",
+        "sanctions.reason.consignee_ru": "получатель или назначение — РФ/РБ",
+        "sanctions.reason.no_origin": "происхождение не указано",
+        "sanctions.reason.no_consignee": "получатель не указан",
+        "sanctions.reason.code_only.export_ban": "связи с РФ/РБ в листе нет",
+        "sanctions.reason.code_only.import_ban": "происхождение {origin}, запрет касается товаров из РФ",
     ]
 
     static let en: [String: String] = [
@@ -110,6 +125,21 @@ enum Strings {
         "card.onVessel": "on vessel “{vessel}”",
         "card.atSea": "at sea",
         "card.byRail": "by rail",
+        "sanctions.status.pending": "Waiting for the packing list",
+        "sanctions.status.missing": "No packing list — cannot check",
+        "sanctions.status.clear": "No matches",
+        "sanctions.status.review": "Check manually",
+        "sanctions.status.flagged": "Possible sanctioned goods",
+        "sanctions.list.chpl": "CHPL",
+        "sanctions.list.eu_833_2014": "EU 833/2014",
+        "sanctions.annex": "Annex {n}",
+        "sanctions.match": "{list} ({ref}): item {no}, code {code} — {reason}",
+        "sanctions.reason.origin_ru": "origin {origin}",
+        "sanctions.reason.consignee_ru": "consignee or destination — RU/BY",
+        "sanctions.reason.no_origin": "origin not stated",
+        "sanctions.reason.no_consignee": "consignee not stated",
+        "sanctions.reason.code_only.export_ban": "no RU/BY link in the packing list",
+        "sanctions.reason.code_only.import_ban": "origin {origin}, the ban covers Russian goods",
     ]
 
     static func t(_ lang: Lang, _ key: String, _ params: [String: String] = [:]) -> String {

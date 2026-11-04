@@ -242,3 +242,49 @@ public struct Labels: Sendable {
         Strings.t(lang, key, params)
     }
 }
+
+// MARK: - Санкции
+
+extension Labels {
+    /// «Возможна санкционка», «Проверить вручную»…; неизвестный код — как есть.
+    public func sanctionsStatus(_ check: SanctionsCheck) -> String {
+        guard let status = check.status.known else { return check.status.raw }
+        return t("sanctions.status.\(status.rawValue)")
+    }
+
+    /// Название списка на языке подписей.
+    public func listName(_ info: SanctionsListInfo) -> String {
+        lang == .en ? (info.nameEn ?? info.name) : info.name
+    }
+
+    /// «ЕС 833/2014 (прил. XVII): поз. 3, код 7208 51 100 0 — происхождение RU».
+    public func sanctionsMatch(_ m: SanctionsMatch, lists: [SanctionsListInfo]) -> String {
+        let shortKey = "sanctions.list.\(m.listId)"
+        var list = t(shortKey)
+        if list == shortKey { list = lists.first { $0.code == m.listId }.map(listName) ?? m.listId }
+        let ref = m.ref.hasPrefix("Annex ") ? t("sanctions.annex", ["n": String(m.ref.dropFirst(6))]) : m.ref
+        let origin = m.originCountry ?? "—"
+        let reasonKey = m.reasonCode == "code_only"
+            ? "sanctions.reason.code_only.\(m.measure)" : "sanctions.reason.\(m.reasonCode)"
+        var reason = t(reasonKey, ["origin": origin])
+        if reason == reasonKey { reason = m.reasonCode }
+        return t("sanctions.match", [
+            "list": list, "ref": ref, "no": String(m.lineNo), "code": Self.hsCode(m.hsCode), "reason": reason,
+        ])
+    }
+
+    /// 10 знаков ТН ВЭД по группам: «7208 51 100 0».
+    static func hsCode(_ code: String) -> String {
+        let digits = Array(code)
+        guard digits.count > 4 else { return code }
+        var parts = [String(digits[0..<4])]
+        var i = 4
+        for size in [2, 3, 1] where i < digits.count {
+            let end = min(i + size, digits.count)
+            parts.append(String(digits[i..<end]))
+            i = end
+        }
+        if i < digits.count { parts.append(String(digits[i...])) }
+        return parts.joined(separator: " ")
+    }
+}

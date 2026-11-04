@@ -2739,7 +2739,81 @@
      19.05,
      47.5
     ]
-   ]
+   ],
+   "sanctions": {
+    "status": "review",
+    "checked_at": "2026-10-25T11:08:54.312620Z",
+    "lists": [
+     {
+      "code": "chpl",
+      "name": "CHPL — общий список приоритетных товаров (прил. XL к 833/2014)",
+      "name_en": "Common High Priority List (Annex XL to Regulation 833/2014)",
+      "as_of": "2026-07-24",
+      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
+     },
+     {
+      "code": "eu_833_2014",
+      "name": "ЕС 833/2014 — запреты ввоза из РФ (прил. XVII, XXI)",
+      "name_en": "EU Regulation 833/2014 — import bans on Russian goods (Annexes XVII, XXI)",
+      "as_of": "2026-07-24",
+      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
+     }
+    ],
+    "matches": [
+     {
+      "line_no": 1,
+      "hs_code": "8542310001",
+      "description": "Микросхемы-процессоры",
+      "description_en": "Processor integrated circuits",
+      "origin_country": "CN",
+      "list_id": "chpl",
+      "list_code": "854231",
+      "ref": "Tier 1",
+      "measure": "export_ban",
+      "strong": false,
+      "reason_code": "code_only"
+     },
+     {
+      "line_no": 1,
+      "hs_code": "8542310001",
+      "description": "Микросхемы-процессоры",
+      "description_en": "Processor integrated circuits",
+      "origin_country": "CN",
+      "list_id": "eu_833_2014",
+      "list_code": "8542",
+      "ref": "Annex XXI",
+      "measure": "import_ban",
+      "strong": false,
+      "reason_code": "code_only"
+     },
+     {
+      "line_no": 2,
+      "hs_code": "8471300000",
+      "description": "Ноутбуки",
+      "description_en": "Laptops",
+      "origin_country": "CN",
+      "list_id": "eu_833_2014",
+      "list_code": "8471",
+      "ref": "Annex XXI",
+      "measure": "import_ban",
+      "strong": false,
+      "reason_code": "code_only"
+     },
+     {
+      "line_no": 3,
+      "hs_code": "8517130000",
+      "description": "Смартфоны",
+      "description_en": "Smartphones",
+      "origin_country": "CN",
+      "list_id": "eu_833_2014",
+      "list_code": "8517",
+      "ref": "Annex XXI",
+      "measure": "import_ban",
+      "strong": false,
+      "reason_code": "code_only"
+     }
+    ]
+   }
   },
   {
    "ref": "MC-26-0398",
@@ -3078,7 +3152,42 @@
      "hours": 18.0
     }
    ],
-   "eta_latest": "2026-11-09T05:08:54Z"
+   "eta_latest": "2026-11-09T05:08:54Z",
+   "sanctions": {
+    "status": "clear",
+    "checked_at": "2026-10-26T11:08:54.312620Z",
+    "lists": [
+     {
+      "code": "chpl",
+      "name": "CHPL — общий список приоритетных товаров (прил. XL к 833/2014)",
+      "name_en": "Common High Priority List (Annex XL to Regulation 833/2014)",
+      "as_of": "2026-07-24",
+      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
+     },
+     {
+      "code": "eu_833_2014",
+      "name": "ЕС 833/2014 — запреты ввоза из РФ (прил. XVII, XXI)",
+      "name_en": "EU Regulation 833/2014 — import bans on Russian goods (Annexes XVII, XXI)",
+      "as_of": "2026-07-24",
+      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
+     }
+    ],
+    "matches": [
+     {
+      "line_no": 1,
+      "hs_code": "3902100000",
+      "description": "Полипропилен в гранулах",
+      "description_en": "Polypropylene granules",
+      "origin_country": "KZ",
+      "list_id": "eu_833_2014",
+      "list_code": "3902",
+      "ref": "Annex XXI",
+      "measure": "import_ban",
+      "strong": false,
+      "reason_code": "code_only"
+     }
+    ]
+   }
   },
   {
    "ref": "MC-26-0322",
@@ -3259,6 +3368,468 @@
      "planned_at": "2026-10-30T05:08:54.315320Z",
      "actual_at": "2026-10-30T05:08:54.315320Z",
      "state": "done"
+    }
+   ],
+   "track": [
+    [
+     108.94,
+     34.34
+    ],
+    [
+     103.83,
+     36.06
+    ],
+    [
+     98.5,
+     39.75
+    ],
+    [
+     93.5,
+     42.83
+    ],
+    [
+     87.62,
+     43.83
+    ],
+    [
+     82.9,
+     44.6
+    ],
+    [
+     80.1,
+     44.19
+    ],
+    [
+     79.0,
+     44.15
+    ],
+    [
+     76.95,
+     43.24
+    ],
+    [
+     73.75,
+     43.6
+    ],
+    [
+     71.4,
+     42.9
+    ],
+    [
+     69.6,
+     42.32
+    ],
+    [
+     68.25,
+     43.3
+    ],
+    [
+     65.51,
+     44.85
+    ],
+    [
+     61.66,
+     46.78
+    ],
+    [
+     58.0,
+     46.3
+    ],
+    [
+     55.19,
+     45.32
+    ],
+    [
+     52.1,
+     44.17
+    ],
+    [
+     51.9,
+     43.55
+    ],
+    [
+     51.65,
+     43.19
+    ],
+    [
+     51.4,
+     42.3
+    ],
+    [
+     51.1,
+     41.0
+    ],
+    [
+     50.9,
+     40.45
+    ],
+    [
+     50.1,
+     40.05
+    ],
+    [
+     49.41,
+     39.93
+    ],
+    [
+     48.15,
+     40.34
+    ],
+    [
+     47.15,
+     40.62
+    ],
+    [
+     46.36,
+     40.68
+    ],
+    [
+     45.63,
+     40.99
+    ],
+    [
+     45.1,
+     41.44
+    ],
+    [
+     45.09,
+     41.46
+    ],
+    [
+     44.8,
+     41.72
+    ],
+    [
+     44.11,
+     41.98
+    ],
+    [
+     43.6,
+     41.99
+    ],
+    [
+     43.05,
+     42.11
+    ],
+    [
+     42.34,
+     42.16
+    ],
+    [
+     41.65,
+     42.15
+    ],
+    [
+     38.0,
+     43.2
+    ],
+    [
+     33.0,
+     43.6
+    ],
+    [
+     28.65,
+     44.17
+    ],
+    [
+     26.1,
+     44.43
+    ],
+    [
+     25.6,
+     45.66
+    ],
+    [
+     23.6,
+     46.77
+    ],
+    [
+     21.93,
+     47.07
+    ],
+    [
+     19.05,
+     47.5
+    ]
+   ],
+   "sanctions": {
+    "status": "clear",
+    "checked_at": "2026-10-19T11:08:54.312620Z",
+    "lists": [
+     {
+      "code": "chpl",
+      "name": "CHPL — общий список приоритетных товаров (прил. XL к 833/2014)",
+      "name_en": "Common High Priority List (Annex XL to Regulation 833/2014)",
+      "as_of": "2026-07-24",
+      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
+     },
+     {
+      "code": "eu_833_2014",
+      "name": "ЕС 833/2014 — запреты ввоза из РФ (прил. XVII, XXI)",
+      "name_en": "EU Regulation 833/2014 — import bans on Russian goods (Annexes XVII, XXI)",
+      "as_of": "2026-07-24",
+      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
+     }
+    ],
+    "matches": []
+   }
+  },
+  {
+   "ref": "MC-26-0431",
+   "client": "Nomad Express",
+   "cargo": "1 × 40' HC, автозапчасти",
+   "cargo_en": "1 × 40' HC, auto parts",
+   "origin": "Сиань",
+   "destination": "Будапешт",
+   "origin_code": "XIAN",
+   "destination_code": "BUDAPEST",
+   "state": "in_transit",
+   "hold_reason": null,
+   "hold_code": null,
+   "hold_node": null,
+   "hold_vessel": null,
+   "delay_hours": 0.0,
+   "last_event": "Отправление: Кызылорда",
+   "last_event_kind": "departed",
+   "last_event_node": "KYZYLORDA",
+   "last_event_note_code": null,
+   "last_event_note_vessel": null,
+   "last_event_at": "2026-10-30T19:08:54.312620Z",
+   "eta": "2026-11-10T07:08:54.312620Z",
+   "eta_latest": "2026-11-11T06:44:54.312620Z",
+   "delay_breakdown": [],
+   "position": {
+    "lat": 46.47025942755473,
+    "lon": 59.2982281351048,
+    "heading": 260.53749858104334,
+    "confirmed": false,
+    "source": "projection",
+    "on_vessel": null,
+    "mode": "rail",
+    "from_code": "KYZYLORDA",
+    "to_code": "BEINEU",
+    "leg_progress": 0.6153846153846154
+   },
+   "queue": null,
+   "sanctions": {
+    "status": "flagged",
+    "checked_at": "2026-10-30T15:08:54.312620Z",
+    "lists": [
+     {
+      "code": "chpl",
+      "name": "CHPL — общий список приоритетных товаров (прил. XL к 833/2014)",
+      "name_en": "Common High Priority List (Annex XL to Regulation 833/2014)",
+      "as_of": "2026-07-24",
+      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
+     },
+     {
+      "code": "eu_833_2014",
+      "name": "ЕС 833/2014 — запреты ввоза из РФ (прил. XVII, XXI)",
+      "name_en": "EU Regulation 833/2014 — import bans on Russian goods (Annexes XVII, XXI)",
+      "as_of": "2026-07-24",
+      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
+     }
+    ],
+    "matches": [
+     {
+      "line_no": 3,
+      "hs_code": "7208511000",
+      "description": "Прокат плоский горячекатаный",
+      "description_en": "Hot-rolled flat steel",
+      "origin_country": "RU",
+      "list_id": "eu_833_2014",
+      "list_code": "7208",
+      "ref": "Annex XVII",
+      "measure": "import_ban",
+      "strong": true,
+      "reason_code": "origin_ru"
+     },
+     {
+      "line_no": 1,
+      "hs_code": "8708301000",
+      "description": "Тормозные колодки",
+      "description_en": "Brake pads",
+      "origin_country": "CN",
+      "list_id": "eu_833_2014",
+      "list_code": "8708",
+      "ref": "Annex XXI",
+      "measure": "import_ban",
+      "strong": false,
+      "reason_code": "code_only"
+     },
+     {
+      "line_no": 2,
+      "hs_code": "8708809900",
+      "description": "Амортизаторы",
+      "description_en": "Shock absorbers",
+      "origin_country": "CN",
+      "list_id": "eu_833_2014",
+      "list_code": "8708",
+      "ref": "Annex XXI",
+      "measure": "import_ban",
+      "strong": false,
+      "reason_code": "code_only"
+     },
+     {
+      "line_no": 4,
+      "hs_code": "4011100003",
+      "description": "Шины легковые",
+      "description_en": "Passenger car tyres",
+      "origin_country": "CN",
+      "list_id": "eu_833_2014",
+      "list_code": "4011",
+      "ref": "Annex XXI",
+      "measure": "import_ban",
+      "strong": false,
+      "reason_code": "code_only"
+     }
+    ]
+   },
+   "progress": 0.5451,
+   "checkpoints": [
+    {
+     "code": "XIAN",
+     "name": "Сиань",
+     "lat": 34.34,
+     "lon": 108.94,
+     "planned_at": "2026-10-24T09:08:54.312620Z",
+     "actual_at": "2026-10-24T10:08:54.312620Z",
+     "state": "done"
+    },
+    {
+     "code": "URUMQI",
+     "name": "Урумчи",
+     "lat": 43.83,
+     "lon": 87.62,
+     "planned_at": "2026-10-26T21:08:54.312620Z",
+     "actual_at": "2026-10-26T19:38:54.312620Z",
+     "state": "done"
+    },
+    {
+     "code": "KHORGOS",
+     "name": "Хоргос / Алтынколь",
+     "lat": 44.19,
+     "lon": 80.1,
+     "planned_at": "2026-10-27T17:08:54.312620Z",
+     "actual_at": "2026-10-27T16:08:54.312620Z",
+     "state": "done"
+    },
+    {
+     "code": "ALMATY",
+     "name": "Алматы",
+     "lat": 43.24,
+     "lon": 76.95,
+     "planned_at": "2026-10-28T23:08:54.312620Z",
+     "actual_at": "2026-10-28T22:38:54.312620Z",
+     "state": "done"
+    },
+    {
+     "code": "SHYMKENT",
+     "name": "Шымкент",
+     "lat": 42.32,
+     "lon": 69.6,
+     "planned_at": "2026-10-29T19:08:54.312620Z",
+     "actual_at": "2026-10-29T17:38:54.312620Z",
+     "state": "done"
+    },
+    {
+     "code": "KYZYLORDA",
+     "name": "Кызылорда",
+     "lat": 44.85,
+     "lon": 65.51,
+     "planned_at": "2026-10-30T13:08:54.312620Z",
+     "actual_at": "2026-10-30T12:38:54.312620Z",
+     "state": "done"
+    },
+    {
+     "code": "BEINEU",
+     "name": "Бейнеу",
+     "lat": 45.32,
+     "lon": 55.19,
+     "planned_at": "2026-10-31T21:08:54.312620Z",
+     "actual_at": null,
+     "state": "current"
+    },
+    {
+     "code": "KURYK",
+     "name": "Курык",
+     "lat": 43.19,
+     "lon": 51.65,
+     "planned_at": "2026-11-01T15:08:54.312620Z",
+     "actual_at": null,
+     "state": "planned"
+    },
+    {
+     "code": "BAKU_ALAT",
+     "name": "Баку (Алят)",
+     "lat": 39.93,
+     "lon": 49.41,
+     "planned_at": "2026-11-02T23:08:54.312620Z",
+     "actual_at": null,
+     "state": "planned"
+    },
+    {
+     "code": "GANJA",
+     "name": "Гянджа",
+     "lat": 40.68,
+     "lon": 46.36,
+     "planned_at": "2026-11-03T19:08:54.312620Z",
+     "actual_at": null,
+     "state": "planned"
+    },
+    {
+     "code": "BOYUK_KASIK",
+     "name": "Бёюк-Кясик / Гардабани",
+     "lat": 41.44,
+     "lon": 45.1,
+     "planned_at": "2026-11-04T06:08:54.312620Z",
+     "actual_at": null,
+     "state": "planned"
+    },
+    {
+     "code": "TBILISI",
+     "name": "Тбилиси",
+     "lat": 41.72,
+     "lon": 44.8,
+     "planned_at": "2026-11-05T03:08:54.312620Z",
+     "actual_at": null,
+     "state": "planned"
+    },
+    {
+     "code": "POTI",
+     "name": "Поти",
+     "lat": 42.15,
+     "lon": 41.65,
+     "planned_at": "2026-11-05T19:08:54.312620Z",
+     "actual_at": null,
+     "state": "planned"
+    },
+    {
+     "code": "CONSTANTA",
+     "name": "Констанца",
+     "lat": 44.17,
+     "lon": 28.65,
+     "planned_at": "2026-11-08T07:08:54.312620Z",
+     "actual_at": null,
+     "state": "planned"
+    },
+    {
+     "code": "BUCHAREST",
+     "name": "Бухарест",
+     "lat": 44.43,
+     "lon": 26.1,
+     "planned_at": "2026-11-09T01:08:54.312620Z",
+     "actual_at": null,
+     "state": "planned"
+    },
+    {
+     "code": "BUDAPEST",
+     "name": "Будапешт",
+     "lat": 47.5,
+     "lon": 19.05,
+     "planned_at": "2026-11-10T07:08:54.312620Z",
+     "actual_at": null,
+     "state": "planned"
     }
    ],
    "track": [
