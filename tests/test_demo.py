@@ -306,3 +306,13 @@ def test_story_storm_beat_shows_weather_in_breakdown() -> None:
     parts = {p.code: p.hours for p in s.delay_breakdown}
     assert parts["ferry_wait"] == 24.0
     assert parts["weather_ban"] == pytest.approx(6.0, abs=0.1)
+
+
+async def test_story_packing_list_clear_on_every_beat() -> None:
+    story = _story()
+    source = MockShipmentSource(lambda: T0, story=story)
+    for hours in (0, 30, 71, 150, 230):
+        now = T0 + timedelta(hours=hours)
+        plan = next(p for p in await source.list_plans(now) if p.ref == "MC-26-0398")
+        sanctions = project_shipment(plan, now).sanctions
+        assert sanctions is not None and sanctions.status == "clear", hours

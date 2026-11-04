@@ -447,3 +447,52 @@ async def test_mock_0398_has_queue(mock_service: MapSnapshotService) -> None:
     assert hold.queue is not None
     assert hold.queue.p50_hours == 60.0
     assert hold.queue.basis_code == "weather_ban"
+
+
+# --- санкции: пакинг-листы демо-грузов -------------------------------------------
+
+SANCTIONS_EXPECTED = {
+    "MC-26-0431": "flagged",
+    "MC-26-0412": "review",
+    "MC-26-0447": "missing",
+    "MC-26-0455": "pending",
+}
+
+
+async def test_mock_sanctions_statuses(mock_service: MapSnapshotService) -> None:
+    snap = await mock_service.snapshot()
+    statuses = {s.ref: s.sanctions.status for s in snap.shipments if s.sanctions}
+    assert len(statuses) == len(snap.shipments) == 10
+    for ref, status in statuses.items():
+        assert status == SANCTIONS_EXPECTED.get(ref, "clear"), ref
+
+
+async def test_mock_packing_codes_exist_in_lists(mock_service: MapSnapshotService) -> None:
+    from app.services.sanctions import default_lists
+
+    known = {(e.list_id, e.code) for e in default_lists().entries}
+    snap = await mock_service.snapshot()
+    matches = [m for s in snap.shipments if s.sanctions for m in s.sanctions.matches]
+    assert matches  # демо показывает совпадения, а не только «чисто»
+    assert all((m.list_id, m.list_code) in known for m in matches)
+
+
+async def test_api_shipment_sanctions_without_packing_list(
+    mock_service: MapSnapshotService,
+) -> None:
+    from app.integrations.mock.packing import DEMO_PACKING
+
+    app = create_app(settings=_settings(), map_service=mock_service)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        body = (await client.get("/api/v1/shipments/MC-26-0431")).json()
+    sanctions = body["sanctions"]
+    assert sanctions["status"] == "flagged"
+    first = sanctions["matches"][0]
+    assert (
+        first["strong"]
+        and first["reason_code"] == "origin_ru"
+        and first["list_id"] == "eu_833_2014"
+    )
+    assert "packing_list" not in body and "lines" not in sanctions
+    assert len({m["line_no"] for m in sanctions["matches"]}) < len(DEMO_PACKING["MC-26-0431"].lines)
