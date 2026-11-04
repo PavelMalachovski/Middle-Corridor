@@ -38,7 +38,8 @@ struct ShipmentDetailView: View {
                 DelaySection(parts: parts, labels: labels)
             }
 
-            if let check = s.sanctions {
+            // санкции, требующие внимания, — сразу под главным; «чисто» и «ждём лист» — внизу
+            if let check = s.sanctions, SanctionsSection.needsAttention(check) {
                 SanctionsSection(check: check, labels: labels)
             }
 
@@ -61,6 +62,10 @@ struct ShipmentDetailView: View {
             }
 
             CheckpointTimelineSection(shipment: s, labels: labels)
+
+            if let check = s.sanctions, !SanctionsSection.needsAttention(check) {
+                SanctionsSection(check: check, labels: labels)
+            }
 
             Section(l("card.details")) {
                 LabeledContent(l("card.cargo"), value: labels.cargo(s))

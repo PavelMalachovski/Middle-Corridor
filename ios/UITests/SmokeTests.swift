@@ -197,10 +197,14 @@ final class SmokeTests: XCTestCase {
         XCTAssertFalse(element(app, "demo.section").exists)
         version.press(forDuration: 1.2)
         let section = element(app, "demo.section")
-        if !section.waitForExistence(timeout: 5) { app.swipeDown() }
+        // пульт появляется между «Языком» и «О приложении» (под секцией сервера); где он окажется
+        // относительно экрана, зависит от длины формы (с переключателем санкций она длиннее) —
+        // ищем сначала ниже, потом выше
+        for _ in 0..<3 where !section.waitForExistence(timeout: 2) { app.swipeUp() }
+        for _ in 0..<4 where !section.exists { app.swipeDown() }
         XCTAssertTrue(section.waitForExistence(timeout: 5))
         let advance = element(app, "demo.advance24")
-        if !advance.waitForExistence(timeout: 2) { app.swipeUp() }  // пульт — под секцией уведомлений
+        for _ in 0..<3 where !advance.waitForExistence(timeout: 2) { app.swipeUp() }
         XCTAssertTrue(advance.waitForExistence(timeout: 5))
         advance.tap()
         let offset = element(app, "demo.offset")

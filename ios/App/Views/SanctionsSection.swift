@@ -53,6 +53,14 @@ struct SanctionsSection: View {
         }
     }
 
+    /// Возможна санкционка, нет листа после границы или «проверить вручную» — блок наверху карточки.
+    static func needsAttention(_ check: SanctionsCheck) -> Bool {
+        switch check.status.known {
+        case .flagged, .missing, .review: true
+        case .clear, .pending, nil: false
+        }
+    }
+
     /// «2026-07-24» → «24.07.2026».
     static func date(_ iso: String) -> String {
         iso.split(separator: "-").reversed().joined(separator: ".")
