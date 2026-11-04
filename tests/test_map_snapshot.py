@@ -496,3 +496,18 @@ async def test_api_shipment_sanctions_without_packing_list(
     )
     assert "packing_list" not in body and "lines" not in sanctions
     assert len({m["line_no"] for m in sanctions["matches"]}) < len(DEMO_PACKING["MC-26-0431"].lines)
+
+
+async def test_api_exposes_only_status_driving_lines(mock_service: MapSnapshotService) -> None:
+    """Наружу — только позиции, из-за которых статус: справочные совпадения не раскрывают лист."""
+    snap = await mock_service.snapshot()
+    by_ref = {s.ref: s.sanctions for s in snap.shipments if s.sanctions}
+    assert [m.line_no for m in by_ref["MC-26-0412"].matches] == [1]  # процессоры CHPL
+    assert [m.line_no for m in by_ref["MC-26-0431"].matches] == [3]  # сталь RU
+    for ref, check in by_ref.items():
+        if check.status == "clear":
+            assert check.matches == [], ref
+        assert all(
+            m.strong or m.reason_code != "code_only" or m.measure == "export_ban"
+            for m in check.matches
+        ), ref

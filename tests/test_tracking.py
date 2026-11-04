@@ -350,3 +350,21 @@ def test_sanctions_field_not_leaking_packing_list() -> None:
     dumped = project_shipment(plan, NOW).model_dump(mode="json")
     assert "packing_list" not in dumped and "lines" not in dumped["sanctions"]
     assert dumped["sanctions"]["matches"] == [] and dumped["sanctions"]["status"] == "clear"
+
+
+def test_sanctions_pending_after_leaving_urumqi() -> None:
+    """Груз ушёл из Урумчи к границе — Хоргос ещё впереди, «без листа» рано."""
+    shipment = project_shipment(_kz_plan(EventKind.departed, "URUMQI"), NOW)
+    assert shipment.sanctions is not None and shipment.sanctions.status == "pending"
+
+
+def test_sanctions_lists_unavailable_degrade_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Нет файлов списков (например, не попали в сборку) — API работает, блока sanctions нет."""
+    import app.services.tracking as tracking
+
+    def broken():
+        raise FileNotFoundError("lists.json")
+
+    monkeypatch.setattr(tracking, "default_lists", broken)
+    shipment = project_shipment(_kz_plan(EventKind.arrived, "ALMATY"), NOW)
+    assert shipment.sanctions is None and shipment.ref == "T-S"

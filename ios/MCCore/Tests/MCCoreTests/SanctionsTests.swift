@@ -70,13 +70,46 @@ final class SanctionsTests: XCTestCase {
 
     func test_weakMatchTexts() throws {
         let check = try XCTUnwrap(try Fixture.shipment("MC-26-0412").sanctions)
-        let chpl = try XCTUnwrap(check.matches.first { $0.listId == "chpl" })
+        XCTAssertEqual(check.matches.map(\.listId), ["chpl"])  // справочные совпадения наружу не идут
+        let chpl = try XCTUnwrap(check.matches.first)
         XCTAssertEqual(
             try labels(.ru).sanctionsMatch(chpl, lists: check.lists),
             "CHPL (Tier 1): поз. 1, код 8542 31 000 1 — связи с РФ/РБ в листе нет")
-        let eu = try XCTUnwrap(check.matches.first { $0.listId == "eu_833_2014" })
+    }
+
+    func test_steelInputsText() throws {
+        let check = try XCTUnwrap(try flagged().sanctions)
+        var steel = try XCTUnwrap(check.strongMatches.first)
+        steel.strong = false
+        steel.originCountry = "CN"
+        steel.reasonCode = "steel_inputs"
         XCTAssertTrue(
-            try labels(.ru).sanctionsMatch(eu, lists: check.lists).hasSuffix("происхождение CN, запрет касается товаров из РФ"))
+            try labels(.ru).sanctionsMatch(steel, lists: check.lists)
+                .hasSuffix("происхождение CN — запросите происхождение стали (ст. 3g(1)(d))"))
+        XCTAssertTrue(
+            try labels(.en).sanctionsMatch(steel, lists: check.lists)
+                .hasSuffix("origin CN — request proof of the steel inputs (Art. 3g(1)(d))"))
+    }
+
+    func test_clearFixture_hasNoMatches() throws {
+        let check = try XCTUnwrap(try Fixture.shipment("MC-26-0398").sanctions)
+        XCTAssertEqual(check.status.known, .clear)
+        XCTAssertTrue(check.matches.isEmpty)
+    }
+
+    // MARK: набор отправленных
+
+    func test_sentNotices_recordLoadReset() throws {
+        let suite = "mc.test.sent.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let sent = SentNotices(defaults)
+        XCTAssertTrue(sent.load().isEmpty)
+        sent.record(["a", "b"])
+        sent.record(["b", "c"])
+        XCTAssertEqual(sent.load(), ["a", "b", "c"])
+        sent.reset()  // сброс демо: флаг снова придёт на живом показе
+        XCTAssertTrue(sent.load().isEmpty)
     }
 
     func test_listName_byLanguage() throws {

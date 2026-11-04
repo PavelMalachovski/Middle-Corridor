@@ -2772,45 +2772,6 @@
       "measure": "export_ban",
       "strong": false,
       "reason_code": "code_only"
-     },
-     {
-      "line_no": 1,
-      "hs_code": "8542310001",
-      "description": "Микросхемы-процессоры",
-      "description_en": "Processor integrated circuits",
-      "origin_country": "CN",
-      "list_id": "eu_833_2014",
-      "list_code": "8542",
-      "ref": "Annex XXI",
-      "measure": "import_ban",
-      "strong": false,
-      "reason_code": "code_only"
-     },
-     {
-      "line_no": 2,
-      "hs_code": "8471300000",
-      "description": "Ноутбуки",
-      "description_en": "Laptops",
-      "origin_country": "CN",
-      "list_id": "eu_833_2014",
-      "list_code": "8471",
-      "ref": "Annex XXI",
-      "measure": "import_ban",
-      "strong": false,
-      "reason_code": "code_only"
-     },
-     {
-      "line_no": 3,
-      "hs_code": "8517130000",
-      "description": "Смартфоны",
-      "description_en": "Smartphones",
-      "origin_country": "CN",
-      "list_id": "eu_833_2014",
-      "list_code": "8517",
-      "ref": "Annex XXI",
-      "measure": "import_ban",
-      "strong": false,
-      "reason_code": "code_only"
      }
     ]
    }
@@ -3172,21 +3133,7 @@
       "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
      }
     ],
-    "matches": [
-     {
-      "line_no": 1,
-      "hs_code": "3902100000",
-      "description": "Полипропилен в гранулах",
-      "description_en": "Polypropylene granules",
-      "origin_country": "KZ",
-      "list_id": "eu_833_2014",
-      "list_code": "3902",
-      "ref": "Annex XXI",
-      "measure": "import_ban",
-      "strong": false,
-      "reason_code": "code_only"
-     }
-    ]
+    "matches": []
    }
   },
   {
@@ -3643,45 +3590,6 @@
       "measure": "import_ban",
       "strong": true,
       "reason_code": "origin_ru"
-     },
-     {
-      "line_no": 1,
-      "hs_code": "8708301000",
-      "description": "Тормозные колодки",
-      "description_en": "Brake pads",
-      "origin_country": "CN",
-      "list_id": "eu_833_2014",
-      "list_code": "8708",
-      "ref": "Annex XXI",
-      "measure": "import_ban",
-      "strong": false,
-      "reason_code": "code_only"
-     },
-     {
-      "line_no": 2,
-      "hs_code": "8708809900",
-      "description": "Амортизаторы",
-      "description_en": "Shock absorbers",
-      "origin_country": "CN",
-      "list_id": "eu_833_2014",
-      "list_code": "8708",
-      "ref": "Annex XXI",
-      "measure": "import_ban",
-      "strong": false,
-      "reason_code": "code_only"
-     },
-     {
-      "line_no": 4,
-      "hs_code": "4011100003",
-      "description": "Шины легковые",
-      "description_en": "Passenger car tyres",
-      "origin_country": "CN",
-      "list_id": "eu_833_2014",
-      "list_code": "4011",
-      "ref": "Annex XXI",
-      "measure": "import_ban",
-      "strong": false,
-      "reason_code": "code_only"
      }
     ]
    },

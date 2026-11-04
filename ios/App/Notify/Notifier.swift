@@ -80,16 +80,8 @@ enum NotifyPrefs {
             storm: on(.storm), event: on(.event), delay: on(.delay), queue: on(.queue), sanctions: on(.sanctions))
     }
 
-    /// Санкционные уведомления, которые уже ушли (`id`): правило работает по состоянию, и без
-    /// этого набора флаг приходил бы после каждого перезапуска или смены сервера.
-    static let sentKey = "mc.notify.sanctions.sent"
+    /// Отправленные санкционные уведомления — `SentNotices` (MCCore).
+    static func loadSent(_ defaults: UserDefaults = .standard) -> Set<String> { SentNotices(defaults).load() }
 
-    static func loadSent(_ defaults: UserDefaults = .standard) -> Set<String> {
-        Set(defaults.stringArray(forKey: sentKey) ?? [])
-    }
-
-    static func recordSent(_ ids: [String], _ defaults: UserDefaults = .standard) {
-        guard !ids.isEmpty else { return }
-        defaults.set(loadSent(defaults).union(ids).sorted(), forKey: sentKey)
-    }
+    static func recordSent(_ ids: [String], _ defaults: UserDefaults = .standard) { SentNotices(defaults).record(ids) }
 }

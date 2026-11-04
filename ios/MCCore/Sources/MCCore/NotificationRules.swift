@@ -217,3 +217,23 @@ public enum NotificationRules {
         return out
     }
 }
+
+/// Санкционные уведомления, которые уже ушли (`id`): правило работает по состоянию, и без
+/// этого набора флаг приходил бы после каждого перезапуска или смены сервера. Сброс демо
+/// очищает набор — на живом показе после репетиции флаг придёт снова.
+public struct SentNotices {
+    public static let key = "mc.notify.sanctions.sent"
+    private let defaults: UserDefaults
+
+    public init(_ defaults: UserDefaults) { self.defaults = defaults }
+
+    public func load() -> Set<String> { Set(defaults.stringArray(forKey: Self.key) ?? []) }
+
+    public func record(_ ids: [String]) {
+        guard !ids.isEmpty else { return }
+        defaults.set(load().union(ids).sorted(), forKey: Self.key)
+    }
+
+    public func reset() { defaults.removeObject(forKey: Self.key) }
+}
+

@@ -355,20 +355,6 @@
     "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
    }
   ],
-  "matches": [
-   {
-    "line_no": 1,
-    "hs_code": "3902100000",
-    "description": "Полипропилен в гранулах",
-    "description_en": "Polypropylene granules",
-    "origin_country": "KZ",
-    "list_id": "eu_833_2014",
-    "list_code": "3902",
-    "ref": "Annex XXI",
-    "measure": "import_ban",
-    "strong": false,
-    "reason_code": "code_only"
-   }
-  ]
+  "matches": []
  }
 }

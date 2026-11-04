@@ -4,6 +4,11 @@
   "installCommand": "cd web 2>/dev/null || true; npm ci --no-audit --no-fund",
   "buildCommand": "cd web 2>/dev/null || true; npm run build && rm -rf ../dist && cp -R dist ../dist",
   "outputDirectory": "dist",
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "app/data/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",

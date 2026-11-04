@@ -103,8 +103,8 @@ def test_import_ban_strong_only_for_listed_origin() -> None:
 
     ru = one("RU")
     assert ru.strong and ru.reason_code == "origin_ru" and ru.measure == Measure.import_ban
-    cn = one("CN")
-    assert not cn.strong and cn.reason_code == "code_only"
+    cn = one("CN")  # сталь прил. XVII из третьей страны — ст. 3g(1)(d): происхождение заготовок
+    assert not cn.strong and cn.reason_code == "steel_inputs"
     unknown = one(None)
     assert not unknown.strong and unknown.reason_code == "no_origin"
 
@@ -128,12 +128,20 @@ def test_status_review_vs_flagged() -> None:
     assert _screen(_list(chips_eu, steel_ru)).status == SanctionsStatus.flagged
 
 
-def test_import_ban_with_known_other_origin_is_info_only() -> None:
-    """Ruling: запрет ввоза «по происхождению» — известное не-РФ происхождение не ставит review."""
+def test_import_ban_with_known_other_origin_is_not_exposed() -> None:
+    """Прил. XXI: известное не-РФ происхождение — не совпадение; позиция наружу не уходит."""
+    plastic = SanctionsEntry("eu", "3902", "PP", "Annex XXI", Measure.import_ban, frozenset({"RU"}))
+    line = PackingLine(1, "3902100000", "Полипропилен", origin_country="CN")
+    check = _screen(_list(line), lists=SanctionsLists(INFOS, (plastic,)))
+    assert check.status == SanctionsStatus.clear and check.matches == []
+
+
+def test_steel_from_third_country_needs_review() -> None:
+    """Прил. XVII: сталь из третьей страны могла быть сделана из российских заготовок."""
     steel_cn = PackingLine(1, "7208519800", "Прокат", origin_country="CN")
     check = _screen(_list(steel_cn))
-    assert check.status == SanctionsStatus.clear
-    assert len(check.matches) == 1 and check.matches[0].reason_code == "code_only"
+    assert check.status == SanctionsStatus.review
+    assert [m.reason_code for m in check.matches] == ["steel_inputs"]
 
 
 def test_unknown_origin_on_import_ban_needs_review() -> None:

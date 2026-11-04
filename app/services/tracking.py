@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Protocol
 
+import structlog
 from pydantic import BaseModel
 
 from app.services.corridor import NODES, TransportMode, route_points, segment
@@ -22,6 +23,8 @@ from app.services.delay_breakdown import HOLD_TO_CAUSE, DelayCause, DelayPart, b
 from app.services.geo import LatLon, point_along, polyline_length_km
 from app.services.queue_forecast import QueueForecast, QueueInput, forecast_queue
 from app.services.sanctions import PackingList, SanctionsCheck, default_lists, screen
+
+logger = structlog.get_logger(__name__)
 
 
 class EventKind(enum.StrEnum):
@@ -292,12 +295,7 @@ def project_shipment(  # noqa: PLR0912, PLR0915 — линейный разбо�
         queue=queue,
         progress=round(progress, 4),
         checkpoints=checkpoints,
-        sanctions=screen(
-            plan.packing_list,
-            border_reached=_border_reached(checkpoints),
-            at=now,
-            lists=default_lists(),
-        ),
+        sanctions=_sanctions(plan, checkpoints, now),
         track=[[lon, lat] for lat, lon in route_points(route)],
     )
 
@@ -306,8 +304,22 @@ SANCTIONS_BORDER = "KHORGOS"  # въезд в Казахстан: без пак�
 
 
 def _border_reached(checkpoints: list[Checkpoint]) -> bool:
-    reached = (CheckpointState.done, CheckpointState.current)
-    return any(cp.code == SANCTIONS_BORDER and cp.state in reached for cp in checkpoints)
+    """Прибыл в Хоргос (факт). `current` не годится: так помечен и следующий узел после отхода."""
+    return any(cp.code == SANCTIONS_BORDER and cp.actual_at is not None for cp in checkpoints)
+
+
+def _sanctions(
+    plan: ShipmentPlan, checkpoints: list[Checkpoint], now: datetime
+) -> SanctionsCheck | None:
+    """Проверка санкций; без файлов списков — None, а не 500 на всех эндпоинтах груза."""
+    try:
+        lists = default_lists()
+    except (OSError, ValueError):
+        logger.exception("sanctions_lists_unavailable")
+        return None
+    return screen(
+        plan.packing_list, border_reached=_border_reached(checkpoints), at=now, lists=lists
+    )
 
 
 SPREAD_SHARE = 0.10  # вилка без очереди — 10 % оставшегося пути

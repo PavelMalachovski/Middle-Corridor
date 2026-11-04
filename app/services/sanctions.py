@@ -131,7 +131,8 @@ class SanctionsMatch(BaseModel):
     ref: str
     measure: Measure
     strong: bool
-    reason_code: str  # origin_ru | consignee_ru | code_only | no_origin | no_consignee
+    # origin_ru | consignee_ru | code_only (export_ban) | steel_inputs | no_origin | no_consignee
+    reason_code: str
 
 
 class SanctionsCheck(BaseModel):
@@ -141,26 +142,33 @@ class SanctionsCheck(BaseModel):
     matches: list[SanctionsMatch]
 
 
+# Прил. XVII: запрет ввоза распространяется и на сталь, обработанную в третьей стране из
+# российских заготовок (ст. 3g(1)(d)) — известное не-РФ происхождение не снимает вопрос.
+_PROCESSED_INPUT_REFS = frozenset({"Annex XVII"})
+
+
 def _strength(entry: SanctionsEntry, line: PackingLine, pl: PackingList) -> tuple[bool, str]:
     if entry.measure == Measure.import_ban:
         origin = (line.origin_country or "").upper()
         if not origin:
             return False, "no_origin"
-        return (True, "origin_ru") if origin in entry.countries else (False, "code_only")
+        if origin in entry.countries:
+            return True, "origin_ru"
+        return False, "steel_inputs" if entry.ref in _PROCESSED_INPUT_REFS else "code_only"
     parties = {c.upper() for c in (pl.consignee_country, pl.destination_country) if c}
     if not parties:
         return False, "no_consignee"
     return (True, "consignee_ru") if parties & entry.countries else (False, "code_only")
 
 
-def _needs_review(m: SanctionsMatch) -> bool:
-    """Слабое совпадение, которое стоит проверить руками.
+def _relevant(m: SanctionsMatch) -> bool:
+    """Совпадение, из-за которого есть статус: сильное или «проверить вручную».
 
-    Запрет ввоза действует только на товар происхождения из списка: известное другое
-    происхождение — справка, не повод для «проверить вручную» (иначе прил. XXI
-    ставило бы review почти любому контейнеру с электроникой или пластиком).
+    Запрет ввоза по прил. XXI действует только на товар происхождения из списка: известное
+    другое происхождение — не совпадение. Такие позиции наружу не отдаём: прил. XXI покрывает
+    почти любую электронику, пластик и автозапчасти, и ответ раскрыл бы весь пакинг-лист.
     """
-    return not m.strong and (m.measure == Measure.export_ban or m.reason_code != "code_only")
+    return m.strong or m.measure == Measure.export_ban or m.reason_code != "code_only"
 
 
 def screen(
@@ -198,10 +206,11 @@ def screen(
                     reason_code=reason,
                 )
             )
+    matches = [m for m in matches if _relevant(m)]
     matches.sort(key=lambda m: (not m.strong, m.line_no))  # сортировка устойчивая
     if any(m.strong for m in matches):
         status = SanctionsStatus.flagged
-    elif any(_needs_review(m) for m in matches):
+    elif matches:
         status = SanctionsStatus.review
     else:
         status = SanctionsStatus.clear
