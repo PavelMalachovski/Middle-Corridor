@@ -1,0 +1,20 @@
+[
+  {
+    "code": "chpl",
+    "name": "CHPL — общий список приоритетных товаров (прил. XL к 833/2014)",
+    "name_en": "Common High Priority List (Annex XL to Regulation 833/2014)",
+    "as_of": "2026-07-24",
+    "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
+    "file": "chpl.csv",
+    "notes": "Коды и описания — прил. XL консолидированного 833/2014 от 24.07.2026. Уровни (Tier) — страница BIS https://www.bis.gov/licensing/country-guidance/common-high-priority-items-list-chpl (23.02.2024), те же 50 кодов. Мера — запрет экспорта/реэкспорта в РФ и РБ."
+  },
+  {
+    "code": "eu_833_2014",
+    "name": "ЕС 833/2014 — запреты ввоза из РФ (прил. XVII, XXI)",
+    "name_en": "EU Regulation 833/2014 — import bans on Russian goods (Annexes XVII, XXI)",
+    "as_of": "2026-07-24",
+    "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
+    "file": "eu_833_2014.csv",
+    "notes": "Прил. XVII (чугун и сталь, ст. 3g) и XXI (ст. 3i) — только записи с кодом КН; «ex»-позиции записаны кодом без «ex», пометка в описании. Описания XXI сокращены, полный текст — по ссылке. Беларусь регулирует отдельный регламент 765/2006 — здесь не учтён."
+  }
+]
