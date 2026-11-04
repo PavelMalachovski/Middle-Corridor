@@ -41,7 +41,13 @@ targets:
         CFBundleLocalizations: [ru, en]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        UILaunchScreen: {}
+        # экран запуска — фон и эмблема «Каспий» (картинку рендерит ios/scripts/make_launch из
+        # App/Splash/CaspianEmblem.swift); дальше её «оживляет» SplashView
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchEmblem
+        # статус-бар скрыт на экране запуска и в заставке: тёмный текст светлой темы на тёмно-зелёном не читается
+        UIStatusBarHidden: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         ITSAppUsesNonExemptEncryption: false
         # Live Activity груза на экране блокировки (обновляет приложение, без APNs)
