@@ -21,6 +21,7 @@ from app.services.corridor import NODES, TransportMode, route_points, segment
 from app.services.delay_breakdown import HOLD_TO_CAUSE, DelayCause, DelayPart, breakdown
 from app.services.geo import LatLon, point_along, polyline_length_km
 from app.services.queue_forecast import QueueForecast, QueueInput, forecast_queue
+from app.services.sanctions import PackingList, SanctionsCheck, default_lists, screen
 
 
 class EventKind(enum.StrEnum):
@@ -81,6 +82,8 @@ class ShipmentPlan:
     queue: QueueInput | None = None  # очередь в порту (только пока ждём отправки)
     # интервалы причин задержки (шторм, паром, таможня) — для разбора «почему опаздывает»
     delay_causes: tuple[DelayCause, ...] = ()
+    # пакинг-лист (коды ТН ВЭД) — в API целиком не уходит, только результат сверки
+    packing_list: PackingList | None = None
 
     @property
     def route(self) -> list[str]:
@@ -138,6 +141,8 @@ class Shipment(BaseModel):
     delay_breakdown: list[DelayPart] = []
     position: ShipmentPosition
     queue: QueueForecast | None = None  # прогноз выхода из очереди (state == waiting)
+    # проверка пакинг-листа по санкционным спискам (подсказка, не вердикт)
+    sanctions: SanctionsCheck | None = None
     progress: float  # 0..1 по длине маршрута
     checkpoints: list[Checkpoint]
     track: list[list[float]]  # [lon, lat] — порядок GeoJSON
@@ -287,8 +292,22 @@ def project_shipment(  # noqa: PLR0912, PLR0915 — линейный разбо�
         queue=queue,
         progress=round(progress, 4),
         checkpoints=checkpoints,
+        sanctions=screen(
+            plan.packing_list,
+            border_reached=_border_reached(checkpoints),
+            at=now,
+            lists=default_lists(),
+        ),
         track=[[lon, lat] for lat, lon in route_points(route)],
     )
+
+
+SANCTIONS_BORDER = "KHORGOS"  # въезд в Казахстан: без пакинг-листа дальше — «проверить нельзя»
+
+
+def _border_reached(checkpoints: list[Checkpoint]) -> bool:
+    reached = (CheckpointState.done, CheckpointState.current)
+    return any(cp.code == SANCTIONS_BORDER and cp.state in reached for cp in checkpoints)
 
 
 SPREAD_SHARE = 0.10  # вилка без очереди — 10 % оставшегося пути
