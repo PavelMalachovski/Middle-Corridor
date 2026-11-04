@@ -38,6 +38,10 @@ struct ShipmentDetailView: View {
                 DelaySection(parts: parts, labels: labels)
             }
 
+            if let check = s.sanctions {
+                SanctionsSection(check: check, labels: labels)
+            }
+
             if LiveActivities.enabled {
                 Section {
                     LiveActivityButton(shipment: s, labels: labels)

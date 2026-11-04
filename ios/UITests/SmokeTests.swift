@@ -211,6 +211,27 @@ final class SmokeTests: XCTestCase {
         shot(app, "10-demo-ru")
     }
 
+    /// Проверка санкций: 0431 — стальной прокат российского происхождения среди автозапчастей.
+    @MainActor
+    func test_sanctionsCardAndRow() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0431")
+        XCTAssertTrue(app.navigationBars["MC-26-0431"].waitForExistence(timeout: 5))
+        let block = element(app, "card.sanctions")
+        for _ in 0..<4 where !block.exists { app.swipeUp() }
+        XCTAssertTrue(block.waitForExistence(timeout: 5))
+        XCTAssertTrue(block.label.contains("Возможна санкционка"), block.label)
+        XCTAssertTrue(block.label.contains("подсказка"), block.label)
+        shot(app, "30-sanctions-card-ru")
+
+        app.navigationBars["MC-26-0431"].buttons.firstMatch.tap()
+        let row = element(app, "row.MC-26-0431")
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertTrue(row.label.contains("Санкции?"), row.label)
+        shot(app, "31-sanctions-row-ru")
+    }
+
     @MainActor
     func test_notificationSettings() {
         let app = launch()
@@ -219,8 +240,9 @@ final class SmokeTests: XCTestCase {
         let storm = app.switches["notify.storm"]
         if !storm.waitForExistence(timeout: 3) { app.swipeUp() }
         XCTAssertTrue(storm.waitForExistence(timeout: 5))
-        for id in ["notify.storm", "notify.event", "notify.delay", "notify.queue"] {
+        for id in ["notify.storm", "notify.event", "notify.delay", "notify.queue", "notify.sanctions"] {
             let toggle = app.switches[id]
+            if !toggle.exists { app.swipeUp() }
             XCTAssertTrue(toggle.exists, id)
             XCTAssertEqual(toggle.value as? String, "1", id)
         }

@@ -17,6 +17,16 @@ struct ShipmentRow: View {
                 Text(row.ref)
                     .font(compact ? .body.monospacedDigit() : .headline.monospacedDigit())
                 Spacer()
+                if let status = row.shipment?.sanctions?.status.known, status == .flagged || status == .missing {
+                    // возможна санкционка или прошёл границу без пакинг-листа — видно в списке
+                    Text(l("row.sanctions"))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.critical)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Theme.critical.opacity(0.12), in: Capsule())
+                        .accessibilityIdentifier("row.sanctions")
+                }
                 if let shipment = row.shipment {
                     StatusPill(shipment: shipment, labels: labels)
                 }

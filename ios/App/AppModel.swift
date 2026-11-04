@@ -114,16 +114,21 @@ final class AppModel {
     /// После каждого обновления: что изменилось → уведомления и Live Activity.
     private func observe(_ store: TrackedShipments) {
         store.onChange = { [weak self] change in self?.handle(change) }
+        store.onAdded = { [weak self] shipment in self?.handleAdded(shipment) }
     }
 
     private func handle(_ change: StoreChange) {
         let lang = (LangChoice(rawValue: defaults.string(forKey: LangChoice.key) ?? "") ?? .system).resolved()
         let labels = Labels(lang: lang, nodes: change.newNodes)
-        let notices = NotificationRules.merge(NotificationRules.diff(
+        let settings = NotifyPrefs.load(defaults)
+        let sanctions = NotificationRules.sanctions(
+            Array(change.newShipments.values), sent: NotifyPrefs.loadSent(defaults), settings: settings, labels: labels)
+        let notices = NotificationRules.merge(sanctions + NotificationRules.diff(
             old: change.oldShipments, new: change.newShipments,
             oldNodes: change.oldNodes, newNodes: change.newNodes,
-            settings: NotifyPrefs.load(defaults), labels: labels))
-        notifier.deliver(notices, after: demo.isActive ? TimeInterval(demo.notifyDelay) : 0)
+            settings: settings, labels: labels))
+        notifier.deliver(notices, after: notifyDelay)
+        recordSent(sanctions)
         Task { await LiveActivities.update(change.newShipments, labels: labels) }
         if let shared = AppGroup.defaults {  // виджет на симуляторе: язык и груз по умолчанию
             shared.set(lang.rawValue, forKey: AppGroup.langKey)
@@ -132,6 +137,29 @@ final class AppModel {
             }
         }
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Груз только что добавили: флаг санкций — сразу, не дожидаясь обновления по таймеру.
+    private func handleAdded(_ shipment: Shipment) {
+        let lang = (LangChoice(rawValue: defaults.string(forKey: LangChoice.key) ?? "") ?? .system).resolved()
+        let labels = Labels(lang: lang, nodes: store.snapshot?.nodes ?? [])
+        let notices = NotificationRules.sanctions(
+            [shipment], sent: NotifyPrefs.loadSent(defaults), settings: NotifyPrefs.load(defaults), labels: labels)
+        notifier.deliver(notices, after: notifyDelay)
+        recordSent(notices)
+    }
+
+    private var notifyDelay: TimeInterval { demo.isActive ? TimeInterval(demo.notifyDelay) : 0 }
+
+    /// Отправленным помечаем, только если iOS разрешает уведомления: пока висит системный запрос
+    /// (первый добавленный груз), баннер не показан — придёт на следующем обновлении.
+    private func recordSent(_ notices: [AppNotice]) {
+        guard !notices.isEmpty else { return }
+        let ids = notices.map(\.id)
+        let defaults = self.defaults
+        Task { [notifier] in
+            if await notifier.isAuthorized() { NotifyPrefs.recordSent(ids, defaults) }
+        }
     }
 
     /// Офлайн-кэш: в контейнере App Group (его читает виджет), а без него — Application Support.
