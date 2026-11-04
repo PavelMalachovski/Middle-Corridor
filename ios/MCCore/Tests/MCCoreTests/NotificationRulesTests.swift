@@ -42,11 +42,32 @@ final class NotificationRulesTests: XCTestCase {
     }
 
     func test_eventChanged_notifies() throws {
+        // было «Прибытие: Курык» часом раньше → стало «Отправление: Курык — погружен на паром»
         var old = s0412!
         old.lastEventAt = old.lastEventAt?.addingTimeInterval(-3600)
+        old.lastEventKind = Coded(.arrived)
+        old.lastEventNoteCode = nil
+        old.lastEvent = "Прибытие: Курык"
         let notices = diff(old: [old], new: [s0412])
         XCTAssertEqual(notices.map(\.kind), [.event])
         XCTAssertTrue(notices[0].title.hasPrefix("MC-26-0412: Отправление: Курык"), notices[0].title)
+    }
+
+    /// Демо-сервер считает время событий от «сейчас»: у того же события оно растёт с каждым
+    /// запросом. Это не новое событие — иначе баннер на каждый груз раз в минуту.
+    func test_sameEventLaterTime_isSilent() {
+        var old = s0398!
+        old.lastEventAt = old.lastEventAt?.addingTimeInterval(-60)
+        XCTAssertTrue(diff(old: [old], new: [s0398]).filter { $0.kind == .event }.isEmpty)
+    }
+
+    func test_sameKindAndNode_newNote_notifies() {
+        // тот же узел и вид, но новое примечание (например, «погружен на паром») — новость
+        var old = s0412!
+        old.lastEventAt = old.lastEventAt?.addingTimeInterval(-3600)
+        old.lastEventNoteCode = nil
+        old.lastEvent = "Отправление: Курык"
+        XCTAssertEqual(diff(old: [old], new: [s0412]).map(\.kind), [.event])
     }
 
     func test_delayGrew3h_notifies() {
@@ -184,10 +205,15 @@ final class NotificationRulesTests: XCTestCase {
     }
 
     func test_merge_keepsShipmentsApart() {
-        var a = s0398!, b = s0412!
-        a.lastEventAt = a.lastEventAt?.addingTimeInterval(-3600)
-        b.lastEventAt = b.lastEventAt?.addingTimeInterval(-3600)
-        let merged = NotificationRules.merge(diff(old: [a, b], new: [s0398, s0412]))
+        // у обоих грузов прежнее событие — часом раньше и в другом узле
+        func previous(_ s: Shipment) -> Shipment {
+            var old = s
+            old.lastEventAt = old.lastEventAt?.addingTimeInterval(-3600)
+            old.lastEventNode = "PREV"
+            old.lastEvent = "Прежнее событие"
+            return old
+        }
+        let merged = NotificationRules.merge(diff(old: [previous(s0398), previous(s0412)], new: [s0398, s0412]))
         XCTAssertEqual(Set(merged.map(\.ref)), ["MC-26-0398", "MC-26-0412"])
     }
 }

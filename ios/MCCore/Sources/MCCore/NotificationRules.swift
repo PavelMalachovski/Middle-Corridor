@@ -64,7 +64,7 @@ public enum NotificationRules {
             if settings.storm, !oldNodes.isEmpty {
                 notices += storms(now, oldLevels: oldLevels, newNodes: newByCode, labels: labels)
             }
-            if settings.event, isNewer(now.lastEventAt, than: before.lastEventAt) {
+            if settings.event, isNewEvent(now, than: before) {
                 let stamp = Int(now.lastEventAt?.timeIntervalSince1970 ?? 0)
                 notices.append(
                     AppNotice(
@@ -122,6 +122,15 @@ public enum NotificationRules {
         case .delay: 2
         case .event: 3
         }
+    }
+
+    /// Новое событие — другое по сути (вид, узел, примечание, текст) и не раньше прежнего.
+    /// Одного времени мало: демо-сервер считает время событий от «сейчас», и у того же события
+    /// оно растёт с каждым запросом — баннер на каждый груз приходил бы при каждом обновлении.
+    private static func isNewEvent(_ now: Shipment, than before: Shipment) -> Bool {
+        guard isNewer(now.lastEventAt, than: before.lastEventAt) else { return false }
+        return now.lastEventKind != before.lastEventKind || now.lastEventNode != before.lastEventNode
+            || now.lastEventNoteCode != before.lastEventNoteCode || now.lastEvent != before.lastEvent
     }
 
     /// Событие новее прежнего; назад во времени (сброс истории демо) — не новость.
