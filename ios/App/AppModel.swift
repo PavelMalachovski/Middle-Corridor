@@ -8,6 +8,7 @@ import WidgetKit
 @Observable
 final class AppModel {
     static let serverKey = "mc.server"
+    static let splashKey = "mc.splash"
     static let defaultServer = AppGroup.defaultServer
 
     private(set) var store: TrackedShipments
@@ -27,6 +28,11 @@ final class AppModel {
         set { if !newValue { linkError = nil } }
     }
 
+    /// Заставка «Переправа» — только при холодном старте (живёт, пока жив процесс).
+    /// `-mc.splash NO` — без неё (UI-тесты); открытие груза по ссылке/уведомлению её снимает.
+    var showSplash: Bool
+    /// `-mc.splash hold` (только Debug): заставка замирает на полном кадре до тапа.
+    let splashHold: Bool
     /// UI-тесты и демо без бэкенда: `-mc-fake-api` (только Debug).
     let isFake: Bool
     private let storage: any RefStorage
@@ -36,6 +42,13 @@ final class AppModel {
     init(arguments: [String] = ProcessInfo.processInfo.arguments, defaults: UserDefaults = .standard) {
         self.defaults = defaults
         isFake = arguments.contains("-mc-fake-api")
+        let splash = defaults.string(forKey: Self.splashKey)?.lowercased() ?? ""
+        showSplash = !["no", "false", "0"].contains(splash)
+        #if DEBUG
+            splashHold = splash == "hold"
+        #else
+            splashHold = false
+        #endif
         // serverURL под @Observable — вычисляемое свойство: читать его до инициализации store нельзя
         let server = defaults.string(forKey: Self.serverKey) ?? Self.defaultServer
         serverURL = server
@@ -76,6 +89,7 @@ final class AppModel {
     /// `mcstatus://s/<номер>` или `https://…/?s=<номер>` → груз в списке и открыт.
     func open(_ url: URL) async {
         guard let ref = ShipmentRef.from(url: url) else { return }
+        showSplash = false  // открыли груз — сразу к нему, без заставки
         tab = .shipments  // ошибку ссылки показывает экран «Грузы» — он должен быть открыт
         do {
             let added = try await store.add(ref)
@@ -103,6 +117,7 @@ final class AppModel {
 
     /// Нажатие на уведомление, виджет или Live Activity: карточка этого груза.
     func show(_ ref: String) {
+        showSplash = false
         tab = .shipments
         if store.refs.contains(ref) {
             path = [ref]
