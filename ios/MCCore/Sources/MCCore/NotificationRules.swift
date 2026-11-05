@@ -2,7 +2,7 @@ import Foundation
 
 /// Виды уведомлений; у каждого — свой переключатель в настройках.
 public enum NoticeKind: String, CaseIterable, Sendable {
-    case storm, event, delay, queue
+    case storm, event, delay, queue, sanctions
 }
 
 public struct NotifySettings: Sendable, Equatable {
@@ -10,15 +10,17 @@ public struct NotifySettings: Sendable, Equatable {
     public var event: Bool
     public var delay: Bool
     public var queue: Bool
+    public var sanctions: Bool
 
-    public init(storm: Bool, event: Bool, delay: Bool, queue: Bool) {
+    public init(storm: Bool, event: Bool, delay: Bool, queue: Bool, sanctions: Bool = true) {
         self.storm = storm
         self.event = event
         self.delay = delay
         self.queue = queue
+        self.sanctions = sanctions
     }
 
-    public static let all = NotifySettings(storm: true, event: true, delay: true, queue: true)
+    public static let all = NotifySettings(storm: true, event: true, delay: true, queue: true, sanctions: true)
 
     public func allows(_ kind: NoticeKind) -> Bool {
         switch kind {
@@ -26,6 +28,7 @@ public struct NotifySettings: Sendable, Equatable {
         case .event: event
         case .delay: delay
         case .queue: queue
+        case .sanctions: sanctions
         }
     }
 }
@@ -93,6 +96,42 @@ public enum NotificationRules {
         return notices
     }
 
+    /// Санкции — по текущему состоянию, а не по разнице «было → стало»: груз `flagged` или
+    /// `missing` даёт уведомление, если его `id` нет в `sent` (набор хранит приложение). Так
+    /// флаг приходит и для только что добавленного груза, и не повторяется после перезапуска,
+    /// смены сервера или потери кэша; новое сильное совпадение — новый `id`.
+    public static func sanctions(
+        _ shipments: [Shipment], sent: Set<String>, settings: NotifySettings, labels: Labels
+    ) -> [AppNotice] {
+        guard settings.sanctions else { return [] }
+        return shipments.compactMap { s -> AppNotice? in
+            guard let check = s.sanctions, let status = check.status.known else { return nil }
+            let notice: AppNotice
+            switch status {
+            case .flagged:
+                let strong = check.strongMatches
+                guard let first = strong.first else { return nil }
+                let key = strong.map { "\($0.listId):\($0.hsCode)" }.sorted().joined(separator: ",")
+                let more = strong.count > 1
+                    ? labels.text("notice.sanctions.more", ["n": String(strong.count - 1)]) : ""
+                notice = AppNotice(
+                    id: "sanctions-\(s.ref)-flagged-\(key)", kind: .sanctions, ref: s.ref,
+                    title: labels.text("notice.sanctions.flagged.title", ["ref": s.ref]),
+                    body: labels.text(
+                        "notice.sanctions.flagged.body",
+                        ["match": labels.sanctionsMatch(first, lists: check.lists), "more": more]))
+            case .missing:
+                notice = AppNotice(
+                    id: "sanctions-\(s.ref)-missing", kind: .sanctions, ref: s.ref,
+                    title: labels.text("notice.sanctions.missing.title", ["ref": s.ref]),
+                    body: labels.text("notice.sanctions.missing.body"))
+            case .pending, .clear, .review:
+                return nil
+            }
+            return sent.contains(notice.id) ? nil : notice
+        }
+    }
+
     /// Одно уведомление на груз за обновление: сверху самое важное (шторм → очередь → задержка
     /// → событие), остальное — строками текста. Иначе на шаге «шторм» три баннера разом, и
     /// сверху оказывается последний («Задержка»), а не шторм.
@@ -117,10 +156,11 @@ public enum NotificationRules {
 
     private static func priority(_ kind: NoticeKind) -> Int {
         switch kind {
-        case .storm: 0
-        case .queue: 1
-        case .delay: 2
-        case .event: 3
+        case .sanctions: 0
+        case .storm: 1
+        case .queue: 2
+        case .delay: 3
+        case .event: 4
         }
     }
 
@@ -177,3 +217,23 @@ public enum NotificationRules {
         return out
     }
 }
+
+/// Санкционные уведомления, которые уже ушли (`id`): правило работает по состоянию, и без
+/// этого набора флаг приходил бы после каждого перезапуска или смены сервера. Сброс демо
+/// очищает набор — на живом показе после репетиции флаг придёт снова.
+public struct SentNotices {
+    public static let key = "mc.notify.sanctions.sent"
+    private let defaults: UserDefaults
+
+    public init(_ defaults: UserDefaults) { self.defaults = defaults }
+
+    public func load() -> Set<String> { Set(defaults.stringArray(forKey: Self.key) ?? []) }
+
+    public func record(_ ids: [String]) {
+        guard !ids.isEmpty else { return }
+        defaults.set(load().union(ids).sorted(), forKey: Self.key)
+    }
+
+    public func reset() { defaults.removeObject(forKey: Self.key) }
+}
+

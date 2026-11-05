@@ -360,5 +360,40 @@
    19.05,
    47.5
   ]
- ]
+ ],
+ "sanctions": {
+  "status": "review",
+  "checked_at": "2026-10-25T11:08:54.312620Z",
+  "lists": [
+   {
+    "code": "chpl",
+    "name": "CHPL — общий список приоритетных товаров (прил. XL к 833/2014)",
+    "name_en": "Common High Priority List (Annex XL to Regulation 833/2014)",
+    "as_of": "2026-07-24",
+    "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
+   },
+   {
+    "code": "eu_833_2014",
+    "name": "ЕС 833/2014 — запреты ввоза из РФ (прил. XVII, XXI)",
+    "name_en": "EU Regulation 833/2014 — import bans on Russian goods (Annexes XVII, XXI)",
+    "as_of": "2026-07-24",
+    "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
+   }
+  ],
+  "matches": [
+   {
+    "line_no": 1,
+    "hs_code": "8542310001",
+    "description": "Микросхемы-процессоры",
+    "description_en": "Processor integrated circuits",
+    "origin_country": "CN",
+    "list_id": "chpl",
+    "list_code": "854231",
+    "ref": "Tier 1",
+    "measure": "export_ban",
+    "strong": false,
+    "reason_code": "code_only"
+   }
+  ]
+ }
 }

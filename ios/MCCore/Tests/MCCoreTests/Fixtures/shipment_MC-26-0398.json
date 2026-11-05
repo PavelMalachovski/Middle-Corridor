@@ -335,5 +335,26 @@
    "hours": 18.0
   }
  ],
- "eta_latest": "2026-11-09T05:08:54Z"
+ "eta_latest": "2026-11-09T05:08:54Z",
+ "sanctions": {
+  "status": "clear",
+  "checked_at": "2026-10-26T11:08:54.312620Z",
+  "lists": [
+   {
+    "code": "chpl",
+    "name": "CHPL — общий список приоритетных товаров (прил. XL к 833/2014)",
+    "name_en": "Common High Priority List (Annex XL to Regulation 833/2014)",
+    "as_of": "2026-07-24",
+    "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
+   },
+   {
+    "code": "eu_833_2014",
+    "name": "ЕС 833/2014 — запреты ввоза из РФ (прил. XVII, XXI)",
+    "name_en": "EU Regulation 833/2014 — import bans on Russian goods (Annexes XVII, XXI)",
+    "as_of": "2026-07-24",
+    "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
+   }
+  ],
+  "matches": []
+ }
 }

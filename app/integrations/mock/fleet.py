@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
+from app.integrations.mock.packing import with_packing
 from app.services.corridor import NODES, NodeKind, segment
 from app.services.geo import point_along
 from app.services.map_snapshot import VesselMapStatus
@@ -468,7 +469,7 @@ class MockShipmentSource:
                 hold_vessel=az.spec.name,
             )
 
-        return [
+        plans = [
             on_ferry,
             self._story.plan(now) if self._story is not None else weather_hold,
             steppe,
@@ -480,3 +481,4 @@ class MockShipmentSource:
             china,
             no_ais,
         ]
+        return [with_packing(p, now) for p in plans]

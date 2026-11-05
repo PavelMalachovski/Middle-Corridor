@@ -70,6 +70,7 @@ final class DemoController {
             if action == .reset {  // репетиция окончена: чистый экран блокировки и уведомлений
                 await LiveActivities.stopAll()
                 model.notifier.clearDelivered()
+                SentNotices(defaults).reset()  // на живом показе флаг санкций придёт снова
             }
             await model.store.refresh()
             feedback.notificationOccurred(.success)

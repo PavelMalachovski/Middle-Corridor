@@ -107,6 +107,49 @@ public struct Shipment: Codable, Sendable, Hashable, Identifiable {
     public var progress: Double
     public var checkpoints: [Checkpoint]
     public var track: [[Double]]  // [lon, lat] — порядок GeoJSON
+    /// Проверка пакинг-листа по санкционным спискам (подсказка, не вердикт). Старый бэкенд — nil.
+    public var sanctions: SanctionsCheck?
+}
+
+/// pending — ждём пакинг-лист; missing — Хоргос пройден без листа; clear — нечего проверять;
+/// review — проверить вручную; flagged — код из списка и связь с РФ/РБ.
+public enum SanctionsStatus: String, Sendable { case pending, missing, clear, review, flagged }
+
+public struct SanctionsListInfo: Codable, Sendable, Hashable {
+    public var code: String
+    public var name: String
+    public var nameEn: String?
+    /// Дата редакции списка, «2026-07-24».
+    public var asOf: String
+    public var sourceUrl: String?
+}
+
+/// Совпавшая позиция пакинг-листа; остальные позиции бэкенд не отдаёт.
+public struct SanctionsMatch: Codable, Sendable, Hashable {
+    public var lineNo: Int
+    public var hsCode: String
+    public var description: String
+    public var descriptionEn: String?
+    public var originCountry: String?
+    public var listId: String
+    /// Исходный код записи списка (4–8 цифр).
+    public var listCode: String
+    /// «Tier 1» для CHPL, «Annex XVII» для ЕС.
+    public var ref: String
+    /// export_ban | import_ban
+    public var measure: String
+    public var strong: Bool
+    /// origin_ru | consignee_ru | code_only | no_origin | no_consignee
+    public var reasonCode: String
+}
+
+public struct SanctionsCheck: Codable, Sendable, Hashable {
+    public var status: Coded<SanctionsStatus>
+    public var checkedAt: Date?
+    public var lists: [SanctionsListInfo]
+    public var matches: [SanctionsMatch]
+
+    public var strongMatches: [SanctionsMatch] { matches.filter(\.strong) }
 }
 
 public struct NodeStatus: Codable, Sendable, Hashable, Identifiable {

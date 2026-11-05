@@ -21,6 +21,13 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
     }
 
+    /// Уведомления разрешены: только тогда санкционное помечается отправленным (иначе оно
+    /// потерялось бы, пока висит системный запрос, и больше не пришло бы).
+    func isAuthorized() async -> Bool {
+        let status = await center.notificationSettings().authorizationStatus
+        return status == .authorized || status == .provisional || status == .ephemeral
+    }
+
     /// Пользователь запретил уведомления в iOS: тумблеры в настройках ничего не решают.
     func isDenied() async -> Bool {
         let settings = await center.notificationSettings()
@@ -69,6 +76,12 @@ enum NotifyPrefs {
 
     static func load(_ defaults: UserDefaults = .standard) -> NotifySettings {
         func on(_ kind: NoticeKind) -> Bool { defaults.object(forKey: key(kind)) as? Bool ?? true }
-        return NotifySettings(storm: on(.storm), event: on(.event), delay: on(.delay), queue: on(.queue))
+        return NotifySettings(
+            storm: on(.storm), event: on(.event), delay: on(.delay), queue: on(.queue), sanctions: on(.sanctions))
     }
+
+    /// Отправленные санкционные уведомления — `SentNotices` (MCCore).
+    static func loadSent(_ defaults: UserDefaults = .standard) -> Set<String> { SentNotices(defaults).load() }
+
+    static func recordSent(_ ids: [String], _ defaults: UserDefaults = .standard) { SentNotices(defaults).record(ids) }
 }

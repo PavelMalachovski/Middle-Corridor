@@ -1,0 +1,51 @@
+code,item_en,ref,measure,countries
+854231,"Electronic integrated circuits: processors and controllers",Tier 1,export_ban,RU;BY
+854232,"Electronic integrated circuits: memories",Tier 1,export_ban,RU;BY
+854233,"Electronic integrated circuits: amplifiers",Tier 1,export_ban,RU;BY
+854239,"Electronic integrated circuits: other",Tier 1,export_ban,RU;BY
+851762,"Machines for the reception, conversion and transmission or regeneration of voice, images or other data, incl. switching and routing apparatus",Tier 2,export_ban,RU;BY
+852691,"Radio navigational aid apparatus",Tier 2,export_ban,RU;BY
+853221,"Other fixed capacitors: tantalum capacitors",Tier 2,export_ban,RU;BY
+853224,"Other fixed capacitors: ceramic dielectric, multilayer",Tier 2,export_ban,RU;BY
+854800,"Electrical parts of machinery or apparatus, n.e.s. in chapter 85",Tier 2,export_ban,RU;BY
+847150,"Processing units other than those of subheading 8471 41 or 8471 49",Tier 3.A,export_ban,RU;BY
+850440,"Static converters",Tier 3.A,export_ban,RU;BY
+851769,"Other apparatus for the transmission or reception of voice, images or other data",Tier 3.A,export_ban,RU;BY
+852589,"Other television cameras, digital cameras and video camera recorders",Tier 3.A,export_ban,RU;BY
+852910,"Aerials and aerial reflectors of all kinds; parts suitable for use therewith",Tier 3.A,export_ban,RU;BY
+852990,"Other parts suitable for use solely or principally with the apparatus of headings 8524 to 8528",Tier 3.A,export_ban,RU;BY
+853669,"Plugs and sockets for a voltage not exceeding 1 000 V",Tier 3.A,export_ban,RU;BY
+853690,"Electrical apparatus for switching or making connections to or in electrical circuits, <= 1 000 V, n.e.s.",Tier 3.A,export_ban,RU;BY
+854110,"Diodes, other than photosensitive or light-emitting diodes (LED)",Tier 3.A,export_ban,RU;BY
+854121,"Transistors, other than photosensitive, with a dissipation rate of less than 1 W",Tier 3.A,export_ban,RU;BY
+854129,"Other transistors, other than photosensitive transistors",Tier 3.A,export_ban,RU;BY
+854130,"Thyristors, diacs and triacs (excl. photosensitive semiconductor devices)",Tier 3.A,export_ban,RU;BY
+854149,"Photosensitive semiconductor devices (excl. photovoltaic generators and cells)",Tier 3.A,export_ban,RU;BY
+854151,"Other semiconductor devices: semiconductor-based transducers",Tier 3.A,export_ban,RU;BY
+854159,"Other semiconductor devices",Tier 3.A,export_ban,RU;BY
+854160,"Mounted piezo-electric crystals",Tier 3.A,export_ban,RU;BY
+848210,"Ball bearings",Tier 3.B,export_ban,RU;BY
+848220,"Tapered roller bearings, incl. cone and tapered roller assemblies",Tier 3.B,export_ban,RU;BY
+848230,"Spherical roller bearings",Tier 3.B,export_ban,RU;BY
+848250,"Other cylindrical roller bearings, incl. cage and roller assemblies",Tier 3.B,export_ban,RU;BY
+880730,"Other parts of aeroplanes, helicopters or unmanned aircraft",Tier 3.B,export_ban,RU;BY
+901310,"Telescopic sights for fitting to arms; periscopes; telescopes designed to form parts of machines or instruments",Tier 3.B,export_ban,RU;BY
+901380,"Other optical devices, appliances and instruments",Tier 3.B,export_ban,RU;BY
+901420,"Instruments and appliances for aeronautical or space navigation (other than compasses)",Tier 3.B,export_ban,RU;BY
+901480,"Other navigational instruments and appliances",Tier 3.B,export_ban,RU;BY
+847180,"Units for automatic data-processing machines (excl. processing, input or output and storage units)",Tier 4.A,export_ban,RU;BY
+848610,"Machines and apparatus for the manufacture of boules or wafers",Tier 4.A,export_ban,RU;BY
+848620,"Machines and apparatus for the manufacture of semiconductor devices or of electronic integrated circuits",Tier 4.A,export_ban,RU;BY
+848640,"Machines and apparatus specified in note 11(C) to chapter 84",Tier 4.A,export_ban,RU;BY
+853400,"Printed circuits",Tier 4.A,export_ban,RU;BY
+854320,"Signal generators",Tier 4.A,export_ban,RU;BY
+902750,"Other instruments and apparatus using optical radiations (ultraviolet, visible, infrared)",Tier 4.A,export_ban,RU;BY
+903020,"Oscilloscopes and oscillographs",Tier 4.A,export_ban,RU;BY
+903032,"Multimeters with recording device",Tier 4.A,export_ban,RU;BY
+903039,"Instruments and apparatus for measuring or checking voltage, current, resistance or electrical power, with recording device",Tier 4.A,export_ban,RU;BY
+903082,"Instruments and apparatus for measuring or checking semiconductor wafers or devices",Tier 4.A,export_ban,RU;BY
+845710,"Machining centres for working metal",Tier 4.B,export_ban,RU;BY
+845811,"Horizontal lathes, incl. turning centres, for removing metal, numerically controlled",Tier 4.B,export_ban,RU;BY
+845891,"Lathes (incl. turning centres) for removing metal, numerically controlled (excl. horizontal lathes)",Tier 4.B,export_ban,RU;BY
+845961,"Milling machines for metals, numerically controlled (excl. knee-type and other listed types)",Tier 4.B,export_ban,RU;BY
+846693,"Parts and accessories for the machines of headings 8456 to 8461, n.e.s.",Tier 4.B,export_ban,RU;BY

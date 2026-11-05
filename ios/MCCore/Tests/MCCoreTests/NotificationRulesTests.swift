@@ -216,4 +216,92 @@ final class NotificationRulesTests: XCTestCase {
         let merged = NotificationRules.merge(diff(old: [previous(s0398), previous(s0412)], new: [s0398, s0412]))
         XCTAssertEqual(Set(merged.map(\.ref)), ["MC-26-0398", "MC-26-0412"])
     }
+
+    // MARK: санкции — по состоянию и набору отправленных
+
+    private func flagged() throws -> Shipment {
+        try XCTUnwrap(try Fixture.snapshot().shipments.first { $0.ref == "MC-26-0431" })
+    }
+
+    private func sanctions(
+        _ shipments: [Shipment], sent: Set<String> = [], settings: NotifySettings = .all, lang: Lang = .ru
+    ) -> [AppNotice] {
+        NotificationRules.sanctions(shipments, sent: sent, settings: settings, labels: Labels(lang: lang, nodes: nodes))
+    }
+
+    /// Ещё одно сильное совпадение у 0431: поз. 9, код 7210 (прил. XVII), происхождение RU.
+    private func withExtraStrong(_ s: Shipment) throws -> Shipment {
+        var s = s
+        var extra = try XCTUnwrap(s.sanctions?.matches.first)
+        extra.lineNo = 9
+        extra.hsCode = "7210490000"
+        extra.listCode = "7210"
+        s.sanctions?.matches.insert(extra, at: 1)
+        return s
+    }
+
+    func test_sanctions_flagged_notifies_withoutOldState() throws {
+        let notices = sanctions([try flagged()])
+        XCTAssertEqual(notices.map(\.kind), [.sanctions])
+        XCTAssertEqual(notices[0].title, "MC-26-0431: возможна санкционка")
+        XCTAssertTrue(notices[0].body.hasPrefix("По списку ЕС 833/2014 (прил. XVII): поз. 3"), notices[0].body)
+        XCTAssertTrue(notices[0].body.hasSuffix("Проверьте вручную."), notices[0].body)
+    }
+
+    func test_sanctions_sentSet_blocksRepeat_withoutOldState() throws {
+        let s = try flagged()
+        let first = sanctions([s])
+        XCTAssertEqual(first.count, 1)
+        XCTAssertTrue(sanctions([s], sent: Set(first.map(\.id))).isEmpty)
+    }
+
+    func test_sanctions_newStrongMatch_newId() throws {
+        let s = try flagged()
+        let first = sanctions([s])
+        let again = sanctions([try withExtraStrong(s)], sent: Set(first.map(\.id)))
+        XCTAssertEqual(again.count, 1)
+        XCTAssertNotEqual(again.first?.id, first.first?.id)
+    }
+
+    func test_sanctions_review_and_clear_silent() throws {
+        XCTAssertEqual(s0412.sanctions?.status.known, .review)
+        XCTAssertEqual(s0398.sanctions?.status.known, .clear)
+        XCTAssertTrue(sanctions([s0412, s0398]).isEmpty)
+    }
+
+    func test_sanctions_missing_notifies() throws {
+        var s = s0412!
+        s.sanctions?.status = Coded(.missing)
+        s.sanctions?.matches = []
+        let notices = sanctions([s])
+        XCTAssertEqual(notices.map(\.title), ["MC-26-0412: прошёл границу Казахстана без пакинг-листа"])
+        XCTAssertEqual(notices.first?.body, "Проверить на санкции нельзя — запросите пакинг-лист до Актау.")
+    }
+
+    func test_sanctions_settingOff_silent() throws {
+        var off = NotifySettings.all
+        off.sanctions = false
+        XCTAssertTrue(sanctions([try flagged()], settings: off).isEmpty)
+    }
+
+    func test_sanctions_one_notice_per_shipment() throws {
+        let notices = sanctions([try withExtraStrong(try flagged())])
+        XCTAssertEqual(notices.count, 1)
+        XCTAssertTrue(notices[0].body.contains("и ещё 1"), notices[0].body)
+    }
+
+    func test_sanctions_english() throws {
+        let notices = sanctions([try flagged()], lang: .en)
+        XCTAssertEqual(notices.first?.title, "MC-26-0431: possible sanctioned goods")
+        XCTAssertTrue(notices.first?.body.hasSuffix("Check manually.") == true, notices.first?.body ?? "")
+    }
+
+    func test_merge_sanctionsOnTopOfStorm() {
+        let storm = AppNotice(id: "storm-x", kind: .storm, ref: "R", title: "Шторм", body: "b")
+        let sanc = AppNotice(id: "sanctions-x", kind: .sanctions, ref: "R", title: "Санкции", body: "s")
+        let merged = NotificationRules.merge([storm, sanc])
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(merged.first?.kind, .sanctions)
+        XCTAssertEqual(merged.first?.title, "Санкции")
+    }
 }

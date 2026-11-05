@@ -15,12 +15,16 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Protocol
 
+import structlog
 from pydantic import BaseModel
 
 from app.services.corridor import NODES, TransportMode, route_points, segment
 from app.services.delay_breakdown import HOLD_TO_CAUSE, DelayCause, DelayPart, breakdown
 from app.services.geo import LatLon, point_along, polyline_length_km
 from app.services.queue_forecast import QueueForecast, QueueInput, forecast_queue
+from app.services.sanctions import PackingList, SanctionsCheck, default_lists, screen
+
+logger = structlog.get_logger(__name__)
 
 
 class EventKind(enum.StrEnum):
@@ -81,6 +85,8 @@ class ShipmentPlan:
     queue: QueueInput | None = None  # очередь в порту (только пока ждём отправки)
     # интервалы причин задержки (шторм, паром, таможня) — для разбора «почему опаздывает»
     delay_causes: tuple[DelayCause, ...] = ()
+    # пакинг-лист (коды ТН ВЭД) — в API целиком не уходит, только результат сверки
+    packing_list: PackingList | None = None
 
     @property
     def route(self) -> list[str]:
@@ -138,6 +144,8 @@ class Shipment(BaseModel):
     delay_breakdown: list[DelayPart] = []
     position: ShipmentPosition
     queue: QueueForecast | None = None  # прогноз выхода из очереди (state == waiting)
+    # проверка пакинг-листа по санкционным спискам (подсказка, не вердикт)
+    sanctions: SanctionsCheck | None = None
     progress: float  # 0..1 по длине маршрута
     checkpoints: list[Checkpoint]
     track: list[list[float]]  # [lon, lat] — порядок GeoJSON
@@ -287,7 +295,30 @@ def project_shipment(  # noqa: PLR0912, PLR0915 — линейный разбо�
         queue=queue,
         progress=round(progress, 4),
         checkpoints=checkpoints,
+        sanctions=_sanctions(plan, checkpoints, now),
         track=[[lon, lat] for lat, lon in route_points(route)],
+    )
+
+
+SANCTIONS_BORDER = "KHORGOS"  # въезд в Казахстан: без пакинг-листа дальше — «проверить нельзя»
+
+
+def _border_reached(checkpoints: list[Checkpoint]) -> bool:
+    """Прибыл в Хоргос (факт). `current` не годится: так помечен и следующий узел после отхода."""
+    return any(cp.code == SANCTIONS_BORDER and cp.actual_at is not None for cp in checkpoints)
+
+
+def _sanctions(
+    plan: ShipmentPlan, checkpoints: list[Checkpoint], now: datetime
+) -> SanctionsCheck | None:
+    """Проверка санкций; без файлов списков — None, а не 500 на всех эндпоинтах груза."""
+    try:
+        lists = default_lists()
+    except (OSError, ValueError):
+        logger.exception("sanctions_lists_unavailable")
+        return None
+    return screen(
+        plan.packing_list, border_reached=_border_reached(checkpoints), at=now, lists=lists
     )
 
 

@@ -14,11 +14,11 @@ public enum ShipmentGroup: Int, CaseIterable, Sendable, Comparable {
 
     /// Секция груза. `nodes` — снимок коридора: шторм в порту на пути поднимает груз наверх.
     public static func of(_ s: Shipment, nodes: [String: NodeStatus]) -> ShipmentGroup {
-        switch s.state.known {
-        case .delivered: return .delivered
-        case .planned where !s.isDelayed && !hasStormAhead(s, nodes: nodes): return .planned
-        default: break
+        if s.state.known == .delivered { return .delivered }
+        if let status = s.sanctions?.status.known, status == .flagged || status == .missing {
+            return .attention  // возможна санкционка или прошёл границу без пакинг-листа
         }
+        if s.state.known == .planned, !s.isDelayed, !hasStormAhead(s, nodes: nodes) { return .planned }
         if s.isDelayed || s.holdCode != nil || s.holdReason != nil || hasStormAhead(s, nodes: nodes) {
             return .attention
         }

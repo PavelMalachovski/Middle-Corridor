@@ -63,6 +63,15 @@ final class TrackedShipmentsTests: XCTestCase {
         XCTAssertEqual(store.rows.first?.shipment?.ref, "MC-26-0412")
     }
 
+    func test_add_callsOnAdded() async throws {
+        let (store, _, _) = try make()
+        var added: [String] = []
+        store.onAdded = { added.append($0.ref) }
+        try await store.add("MC-26-0412")
+        try await store.add("mc-26-0412")  // уже в списке — второй раз не зовётся
+        XCTAssertEqual(added, ["MC-26-0412"])
+    }
+
     func test_addTwiceDifferentCase_keepsOne() async throws {
         let (store, api, _) = try make()
         try await store.add("MC-26-0412")

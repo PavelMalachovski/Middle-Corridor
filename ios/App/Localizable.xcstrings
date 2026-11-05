@@ -2415,6 +2415,91 @@
           }
         }
       }
+    },
+    "notify.sanctions": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Санкционные риски"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sanctions risks"
+          }
+        }
+      }
+    },
+    "card.sanctions": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверка санкций"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sanctions check"
+          }
+        }
+      }
+    },
+    "card.sanctions.asOf": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{list}: актуально на {date}"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{list}: as of {date}"
+          }
+        }
+      }
+    },
+    "card.sanctions.disclaimer": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это подсказка, а не юридическое заключение."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is a hint, not a legal opinion."
+          }
+        }
+      }
+    },
+    "row.sanctions": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Санкции?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sanctions?"
+          }
+        }
+      }
     }
   }
 }
