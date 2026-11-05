@@ -120,6 +120,18 @@ ios/scripts/record_demo.sh            # → ios/build/demo.mp4
   то же с `icon-dark-1024.png dark` и `icon-tinted-1024.png tinted`. PNG в репозитории отрисованы
   с той же геометрией вне Мака — после первого запуска скрипта сверить глазами.
 - Скриншоты тёмной темы в UI-тестах — аргумент запуска `-mc-appearance dark` (только Debug).
+- Заставка «Переправа»: экран запуска — эмблема `LaunchEmblem` на фоне `LaunchBackground`, дальше
+  её оживляет `App/Splash/SplashView` (рельсы к портам, паром Актау → Алят, подпись, ≈1,75 с; только
+  холодный старт; ссылка, тап, «Уменьшение движения» и VoiceOver — без анимации). Картинка запуска
+  рендерится из того же `CaspianEmblem.swift` — после правки эмблемы перегенерировать:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swiftc -O ios/App/Splash/CaspianEmblem.swift \
+  ios/scripts/make_launch/main.swift -o /tmp/make_launch && /tmp/make_launch ios/App/Assets.xcassets/LaunchEmblem.imageset
+```
+
+- UI-тесты запускают приложение с `-mc.splash NO` (без заставки); `-mc.splash hold` (Debug) — заставка
+  замирает на полном кадре до тапа, для скриншота и тестов пропуска.
 
 ## Настоящий iPhone: подключение и финальный прогон
 

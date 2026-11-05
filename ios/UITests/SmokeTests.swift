@@ -8,10 +8,11 @@ final class SmokeTests: XCTestCase {
     }
 
     @MainActor
-    private func launch(lang: String = "ru") -> XCUIApplication {
+    private func launch(lang: String = "ru", splash: [String] = ["-mc.splash", "NO"]) -> XCUIApplication {
         let app = XCUIApplication()
         // -mc.demo NO: пульт выключен при каждом запуске (UserDefaults симулятора живут между тестами)
-        app.launchArguments = ["-mc-fake-api", "-mc.lang", lang, "-mc.demo", "NO"]
+        // -mc.splash NO: без заставки при запуске — смоук не ждёт её 1,75 с
+        app.launchArguments = ["-mc-fake-api", "-mc.lang", lang, "-mc.demo", "NO"] + splash
         // система могла поднять приложение в фоне (Live Activity, виджет) без наших аргументов —
         // тогда launch() прицепился бы к нему
         app.terminate()
@@ -76,6 +77,39 @@ final class SmokeTests: XCTestCase {
         XCTAssertEqual(error.label, "Груз не найден")
         XCTAssertEqual(app.textFields["add.field"].value as? String, "MC-00-0000")
         shot(app, "04-add-error-ru")
+    }
+
+    /// Заставка при холодном старте играет сама и уступает место «Моим грузам».
+    @MainActor
+    func test_splash_playsThenHandsOver() {
+        let app = launch(splash: [])
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 10))
+        XCTAssertTrue(element(app, "splash").waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["empty.add"].isHittable)
+    }
+
+    /// `-mc.splash hold` — заставка замирает на полном кадре; тап её убирает.
+    @MainActor
+    func test_splash_tapSkips() {
+        let app = launch(splash: ["-mc.splash", "hold"])
+        let splash = element(app, "splash")
+        XCTAssertTrue(splash.waitForExistence(timeout: 10))
+        XCTAssertEqual(splash.label, "Middle Corridor")
+        shot(app, "00-splash")
+        splash.tap()
+        XCTAssertTrue(splash.waitForNonExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["empty.add"].isHittable)
+    }
+
+    /// Открыли по ссылке (виджет, Live Activity, сообщение) — заставка уходит сразу, виден груз.
+    @MainActor
+    func test_splash_deepLinkSkipsToCard() throws {
+        let app = launch(splash: ["-mc.splash", "hold"])
+        let splash = element(app, "splash")
+        XCTAssertTrue(splash.waitForExistence(timeout: 10))
+        app.open(try XCTUnwrap(URL(string: "mcstatus://s/MC-26-0412")))
+        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 10))
+        XCTAssertTrue(splash.waitForNonExistence(timeout: 3))
     }
 
     @MainActor
@@ -305,7 +339,7 @@ final class SmokeTests: XCTestCase {
     @MainActor
     func test_darkAndLargeText() {
         var app = XCUIApplication()
-        app.launchArguments = ["-mc-fake-api", "-mc.lang", "ru", "-mc.demo", "NO", "-mc-appearance", "dark"]
+        app.launchArguments = ["-mc-fake-api", "-mc.lang", "ru", "-mc.demo", "NO", "-mc.splash", "NO", "-mc-appearance", "dark"]
         app.launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
         shot(app, "15-dark-empty")
@@ -316,7 +350,7 @@ final class SmokeTests: XCTestCase {
 
         app = XCUIApplication()
         app.launchArguments = [
-            "-mc-fake-api", "-mc.lang", "ru", "-mc.demo", "NO",
+            "-mc-fake-api", "-mc.lang", "ru", "-mc.demo", "NO", "-mc.splash", "NO",
             "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL",
         ]
         app.launch()
