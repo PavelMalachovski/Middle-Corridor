@@ -45,9 +45,11 @@ struct RootView: View {
             }
             .animation(.easeOut(duration: SplashTimeline.skipFade), value: splashVisible)
         }
-        .onAppear {
-            // включат «Уменьшение движения» позже — заставка посреди работы не всплывёт
-            if reduceMotion || voiceOver { model.showSplash = false }
+        .onChange(of: splashVisible, initial: true) { _, visible in
+            // скрылась по любой причине (VoiceOver/«Уменьшение движения» — на старте или посреди
+            // анимации, ссылка, конец) — больше не покажется: иначе выключили настройку — и заставка
+            // проиграется заново поверх открытого экрана (её задача отменена, onFinish не вызван)
+            if !visible { model.showSplash = false }
         }
         .task { await model.demo.probe() }
         .task {
