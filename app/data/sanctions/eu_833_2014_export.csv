@@ -1,0 +1,515 @@
+code,item_en,ref,measure,countries
+0601,"Bulbs, tubers, tuberous roots, corms, cr…",Annex XXIII,export_ban,RU
+060230,"Rhododendrons and azaleas, grafted or not",Annex XXIII,export_ban,RU
+060240,"Roses, grafted or not",Annex XXIII,export_ban,RU
+060290,"Other live plants (including their roots…",Annex XXIII,export_ban,RU
+060420,"Foliage, branches and other parts of pla…",Annex XXIII,export_ban,RU
+2701,"Coal; briquettes, ovoids and similar sol…",Annex XXIII,export_ban,RU
+2702,"Lignite, whether or not agglomerated, ex…",Annex XXIII,export_ban,RU
+2703,"Peat (including peat litter), whether or…",Annex XXIII,export_ban,RU
+2704,"Coke and semi-coke of coal, of lignite o…",Annex XXIII,export_ban,RU
+2707,"Oils and other products of the distillat…",Annex XXIII,export_ban,RU
+2708,"Pitch and Pitch coke, obtained from coal…",Annex XXIII,export_ban,RU
+2710,"Petroleum oils and oils obtained from bi…",Annex XXIII,export_ban,RU
+2712,"Petroleum jelly, paraffin wax, micro- cr…",Annex XXIII,export_ban,RU
+2715,"Bituminous mastics, cut-backs and other…",Annex XXIII,export_ban,RU
+2801,"Fluorine, chlorine, bromine and iodine",Annex XXIII,export_ban,RU
+2802,"Sulphur, sublimed or precipitated; collo…",Annex XXIII,export_ban,RU
+2803,"Carbon (carbon blacks and other forms of…",Annex XXIII,export_ban,RU
+2804,"Hydrogen, rare gases and other non-metals",Annex XXIII,export_ban,RU
+2806,"Hydrogen chloride ‘hydrochloric acid’; c…",Annex XXIII,export_ban,RU
+2811,"Other inorganic acids and other inorgani…",Annex XXIII,export_ban,RU
+2813,"Sulphides of non-metals; commercial phos…",Annex XXIII,export_ban,RU
+2814,"Ammonia, anhydrous or in aqueous solution",Annex XXIII,export_ban,RU
+2815,"Sodium hydroxide (caustic soda), potassi…",Annex XXIII,export_ban,RU
+2817,"Zinc oxide; zinc peroxide",Annex XXIII,export_ban,RU
+281830,"aluminium hydroxide",Annex XXIII,export_ban,RU
+2819,"Chromium oxides and hydroxides",Annex XXIII,export_ban,RU
+2820,"Manganese oxides",Annex XXIII,export_ban,RU
+2821,"Iron oxides and hydroxides; earth colour…",Annex XXIII,export_ban,RU
+2822,"Cobalt oxides and hydroxides; commercial…",Annex XXIII,export_ban,RU
+2823,"Titanium oxides",Annex XXIII,export_ban,RU
+2825,"Hydrazine and hydroxylamine and their in…",Annex XXIII,export_ban,RU
+2827,"Chlorides, chloride oxides and chloride…",Annex XXIII,export_ban,RU
+2828,"Hypochlorites; commercial calcium hypoch…",Annex XXIII,export_ban,RU
+2829,"Chlorates and perchlorates; bromates and…",Annex XXIII,export_ban,RU
+283220,"Sulphites (excluding sodium)",Annex XXIII,export_ban,RU
+2833,"Sulphates; alums; peroxosulphates (persu…",Annex XXIII,export_ban,RU
+2834,"Nitrites; nitrates",Annex XXIII,export_ban,RU
+2835,"Phosphinates (hypophosphites), phosphona…",Annex XXIII,export_ban,RU
+2836,"Carbonates; peroxocarbonates (percarbona…",Annex XXIII,export_ban,RU
+2839,"Silicates; commercial alkali metal silic…",Annex XXIII,export_ban,RU
+2840,"Borates; Peroxoborates (perborates)",Annex XXIII,export_ban,RU
+2841,"Salts of oxometallic or peroxometallic a…",Annex XXIII,export_ban,RU
+2843,"Colloidal precious metals; inorganic or…",Annex XXIII,export_ban,RU
+2846,"Compounds, inorganic or organic, of rare…",Annex XXIII,export_ban,RU
+2847,"Hydrogen peroxide, whether or not solidi…",Annex XXIII,export_ban,RU
+2901,"Acyclic hydrocarbons",Annex XXIII,export_ban,RU
+2902,"Cyclic hydrocarbons",Annex XXIII,export_ban,RU
+2903,"Halogenated derivatives of hydrocarbons",Annex XXIII,export_ban,RU
+2904,"Sulphonated, nitrated or nitrosated deri…",Annex XXIII,export_ban,RU
+2905,"Acyclic alcohols and their halogenated…",Annex XXIII,export_ban,RU
+2906,"Cyclic alcohols and their halogenated, s…",Annex XXIII,export_ban,RU
+2907,"Phenols; phenol-alcohols",Annex XXIII,export_ban,RU
+2909,"Ethers, ether-alcohols, ether-phenols, e…",Annex XXIII,export_ban,RU
+2910,"Epoxides, epoxyalcohols, epoxyphenols an…",Annex XXIII,export_ban,RU
+2911,"Acetals and hemiacetals, whether or not…",Annex XXIII,export_ban,RU
+2912,"Aldehydes, whether or not with other oxy…",Annex XXIII,export_ban,RU
+2914,"Ketones and quinones, whether or not wit…",Annex XXIII,export_ban,RU
+2915,"Saturated acyclic monocarboxylic acids a…",Annex XXIII,export_ban,RU
+2916,"Unsaturated acyclic monocarboxylic acids…",Annex XXIII,export_ban,RU
+2917,"Polycarboxylic acids, their anhydrides…",Annex XXIII,export_ban,RU
+2918,"Carboxylic acids with additional oxygen…",Annex XXIII,export_ban,RU
+2920,"Esters of other inorganic acids of non-m…",Annex XXIII,export_ban,RU
+2921,"Amine-function compounds",Annex XXIII,export_ban,RU
+2922,"Oxygen-function amino-compounds",Annex XXIII,export_ban,RU
+2923,"Quaternary ammonium salts and hydroxides…",Annex XXIII,export_ban,RU
+2924,"Carboxyamide-function compounds; amide-f…",Annex XXIII,export_ban,RU
+2925,"Carboxyimide-function compounds (includi…",Annex XXIII,export_ban,RU
+2926,"Nitrile-function compounds",Annex XXIII,export_ban,RU
+2929,"Compounds with other nitrogen function",Annex XXIII,export_ban,RU
+2930,"Organo-sulphur compounds",Annex XXIII,export_ban,RU
+2931,"Other organo-inorganic compounds",Annex XXIII,export_ban,RU
+293329,"Heterocyclic compounds with nitrogen het…",Annex XXIII,export_ban,RU
+293354,"Other derivatives of malonylurea (barbit…",Annex XXIII,export_ban,RU
+293371,"6-Hexanelactam (epsilon-caprolactam)",Annex XXIII,export_ban,RU
+293379,"Lactams (excl. 6-hexanelactam ‘epsilon-c…",Annex XXIII,export_ban,RU
+293399,"Heterocyclic compounds with nitrogen het…",Annex XXIII,export_ban,RU
+2938,"Glycosides, natural or reproduced by syn…",Annex XXIII,export_ban,RU
+2940,"Sugars, chemically pure, other than sucr…",Annex XXIII,export_ban,RU
+3201,"Tanning extracts of vegetable origin; ta…",Annex XXIII,export_ban,RU
+3202,"Synthetic organic tanning substances; in…",Annex XXIII,export_ban,RU
+3203,"colouring matter of vegetable or animal…",Annex XXIII,export_ban,RU
+3204,"Synthetic organic colouring matter, whet…",Annex XXIII,export_ban,RU
+3205,"colour lakes (other than chinese or japa…",Annex XXIII,export_ban,RU
+3206,"Other colouring matter; preparations as…",Annex XXIII,export_ban,RU
+3207,"Prepared pigments, prepared opacifiers a…",Annex XXIII,export_ban,RU
+3208,"Paints and varnishes, incl. enamels and…",Annex XXIII,export_ban,RU
+3209,"Paints and varnishes, incl. enamels and…",Annex XXIII,export_ban,RU
+3210,"Other paints and varnishes (including en…",Annex XXIII,export_ban,RU
+3211,"Prepared driers",Annex XXIII,export_ban,RU
+321290,"Pigments (including metallic powders and…",Annex XXIII,export_ban,RU
+3214,"Glaziers’ putty, grafting putty, resin c…",Annex XXIII,export_ban,RU
+3215,"Printing ink, writing or drawing ink and…",Annex XXIII,export_ban,RU
+330290,"Mixtures of odoriferous substances and m…",Annex XXIII,export_ban,RU
+3402,"Organic surface-active agents (other tha…",Annex XXIII,export_ban,RU
+3403,"Lubricant preparations, incl. cutting-oi…",Annex XXIII,export_ban,RU
+3404,"Artificial waxes and prepared waxes",Annex XXIII,export_ban,RU
+3405,"Polishes and creams, for footwear, furni…",Annex XXIII,export_ban,RU
+350510,"Dextrins and other modified starches",Annex XXIII,export_ban,RU
+3506,"Prepared glues and other prepared adhesi…",Annex XXIII,export_ban,RU
+350790,"Enzymes and prepared enzymes, not elsewh…",Annex XXIII,export_ban,RU
+3603,"Safety fuses; detonating cords; percussi…",Annex XXIII,export_ban,RU
+3604,"Fireworks, signalling flares, rain rocke…",Annex XXIII,export_ban,RU
+3605,"Matches, other than pyrotechnic articles…",Annex XXIII,export_ban,RU
+3606,"Ferro-cerium and other pyrophoric alloys…",Annex XXIII,export_ban,RU
+3701,"Photographic plates and film in the flat…",Annex XXIII,export_ban,RU
+3702,"Photographic film in rolls, sensitised…",Annex XXIII,export_ban,RU
+3703,"Photographic paper, paperboard and texti…",Annex XXIII,export_ban,RU
+3705,"photographic plates and film, exposed an…",Annex XXIII,export_ban,RU
+3706,"cinematographic film, exposed and develo…",Annex XXIII,export_ban,RU
+3707,"Chemical preparations for photographic u…",Annex XXIII,export_ban,RU
+3801,"Artificial graphite; colloidal or semi-c…",Annex XXIII,export_ban,RU
+3802,"Activated carbon; activated natural mine…",Annex XXIII,export_ban,RU
+3806,"Rosin and resin acids, and derivatives t…",Annex XXIII,export_ban,RU
+3807,"wood tar; wood tar oils; wood creosote…",Annex XXIII,export_ban,RU
+380894,"Disinfectants, put up in forms or packin…",Annex XXIII,export_ban,RU
+3809,"Finishing agents, dye carriers to accele…",Annex XXIII,export_ban,RU
+3810,"Pickling preparations for metal surfaces…",Annex XXIII,export_ban,RU
+3811,"anti-knock preparations, oxidation inhib…",Annex XXIII,export_ban,RU
+3812,"prepared rubber accelerators; compound p…",Annex XXIII,export_ban,RU
+3813,"preparations and charges for fire-exting…",Annex XXIII,export_ban,RU
+3814,"organic composite solvents and thinners…",Annex XXIII,export_ban,RU
+3815,"Reaction initiators, reaction accelerato…",Annex XXIII,export_ban,RU
+3816,"Refractory cements, mortars, concretes a…",Annex XXIII,export_ban,RU
+3817,"mixed alkylbenzenes and mixed alkylnapht…",Annex XXIII,export_ban,RU
+3819,"hydraulic brake fluids and other prepare…",Annex XXIII,export_ban,RU
+3820,"anti-freezing preparations and prepared…",Annex XXIII,export_ban,RU
+3823,"Industrial monocarboxylic fatty acids; a…",Annex XXIII,export_ban,RU
+3824,"Prepared binders for foundry moulds or c…",Annex XXIII,export_ban,RU
+382590,"residual products of the chemical or all…",Annex XXIII,export_ban,RU
+3826,"biodiesel and mixtures thereof, not cont…",Annex XXIII,export_ban,RU
+382790,"Mixtures containing halogenated derivati…",Annex XXIII,export_ban,RU
+3901,"Polymers of ethylene, in primary forms",Annex XXIII,export_ban,RU
+3902,"Polymers of propylene or of other olefin…",Annex XXIII,export_ban,RU
+3903,"Polymers of styrene, in primary forms",Annex XXIII,export_ban,RU
+3904,"Polymers of vinyl chloride or of other h…",Annex XXIII,export_ban,RU
+3905,"Polymers of vinyl acetate or of other vi…",Annex XXIII,export_ban,RU
+3906,"Acrylic polymers, in primary forms",Annex XXIII,export_ban,RU
+3907,"Polyacetals, other polyethers and epoxid…",Annex XXIII,export_ban,RU
+3908,"Polyamides, in primary forms",Annex XXIII,export_ban,RU
+3909,"Amino-resins, phenolic resins and polyur…",Annex XXIII,export_ban,RU
+3910,"Silicones in primary forms",Annex XXIII,export_ban,RU
+3911,"Petroleum resins, coumarone-indene resin…",Annex XXIII,export_ban,RU
+3912,"Cellulose and its chemical derivatives…",Annex XXIII,export_ban,RU
+3913,"Natural polymers (for example, alginic a…",Annex XXIII,export_ban,RU
+3914,"Ion-exchangers based on polymers of head…",Annex XXIII,export_ban,RU
+3915,"Waste, parings and scrap, of plastics",Annex XXIII,export_ban,RU
+3916,"Monofilament of which any cross-sectiona…",Annex XXIII,export_ban,RU
+3917,"Tubes, pipes and hoses, and fittings the…",Annex XXIII,export_ban,RU
+3920,"Other plates, sheets, film, foil and str…",Annex XXIII,export_ban,RU
+3921,"Other plates, sheets, film, foil and str…",Annex XXIII,export_ban,RU
+392290,"Bidets, lavatory pans, flushing cisterns…",Annex XXIII,export_ban,RU
+3925,"Builders’ ware of plastics, not elsewher…",Annex XXIII,export_ban,RU
+392690,"Articles of plastics and articles of oth…",Annex XXIII,export_ban,RU
+4001,"Natural rubber, balata, gutta-percha, gu…",Annex XXIII,export_ban,RU
+4002,"Synthetic rubber and factice derived fro…",Annex XXIII,export_ban,RU
+4005,"Compounded rubber, unvulcanised, in prim…",Annex XXIII,export_ban,RU
+400610,"‘Camel-back’ strips of unvulcanised rubb…",Annex XXIII,export_ban,RU
+4007,"Vulcanised rubber thread and cord",Annex XXIII,export_ban,RU
+4008,"Plates, sheets, strip, rods and profile…",Annex XXIII,export_ban,RU
+4009,"Tubes, pipes and hoses, of vulcanised ru…",Annex XXIII,export_ban,RU
+4010,"Conveyor or transmission belts or beltin…",Annex XXIII,export_ban,RU
+4012,"Retreaded or used pneumatic tyres of rub…",Annex XXIII,export_ban,RU
+4013,"Inner tubes, of rubber",Annex XXIII,export_ban,RU
+4016,"Other articles of vulcanised rubber othe…",Annex XXIII,export_ban,RU
+4017,"Hard rubber (for example, ebonite) in al…",Annex XXIII,export_ban,RU
+4407,"Wood sawn or chipped lengthwise, sliced…",Annex XXIII,export_ban,RU
+440810,"Sheets for veneering, incl. those obtain…",Annex XXIII,export_ban,RU
+441113,"Medium density fibreboard ‘mdf’ of wood…",Annex XXIII,export_ban,RU
+441194,"Fibreboard of wood or other ligneous mat…",Annex XXIII,export_ban,RU
+4412,"Plywood, veneered panels and similar lam…",Annex XXIII,export_ban,RU
+4416,"Casks, barrels, vats, tubs and other coo…",Annex XXIII,export_ban,RU
+441840,"Wooden shuttering for concrete construct…",Annex XXIII,export_ban,RU
+441860,"Posts and beams, of wood",Annex XXIII,export_ban,RU
+441879,"Flooring panels, assembled, of wood othe…",Annex XXIII,export_ban,RU
+4503,"Articles of natural cork",Annex XXIII,export_ban,RU
+4504,"Agglomerated cork (with or without a bin…",Annex XXIII,export_ban,RU
+4701,"Mechanical wood pulp, not chemically tre…",Annex XXIII,export_ban,RU
+4703,"Chemical wood pulp, soda or sulphate (ex…",Annex XXIII,export_ban,RU
+4704,"Chemical wood pulp, sulphite (excl. diss…",Annex XXIII,export_ban,RU
+4705,"wood pulp obtained by a combination of m…",Annex XXIII,export_ban,RU
+4706,"Pulps of fibres derived from recovered (…",Annex XXIII,export_ban,RU
+4707,"Recovered (waste and scrap) paper or pap…",Annex XXIII,export_ban,RU
+480220,"paper and paperboard of a kind used as a…",Annex XXIII,export_ban,RU
+480240,"wallpaper base, uncoated",Annex XXIII,export_ban,RU
+480258,"uncoated paper and paperboard, of a kind…",Annex XXIII,export_ban,RU
+480261,"uncoated paper and paperboard, of a kind…",Annex XXIII,export_ban,RU
+4804,"Uncoated kraft paper and paperboard, in…",Annex XXIII,export_ban,RU
+4805,"Other paper and paperboard, uncoated, in…",Annex XXIII,export_ban,RU
+4806,"Vegetable parchment, greaseproof papers…",Annex XXIII,export_ban,RU
+4807,"Composite paper and paperboard ‘made by…",Annex XXIII,export_ban,RU
+4808,"Corrugated paper and paperboard ‘with or…",Annex XXIII,export_ban,RU
+4809,"Carbon paper, self-copy paper and other…",Annex XXIII,export_ban,RU
+4810,"Paper and paperboard, coated on one or b…",Annex XXIII,export_ban,RU
+4811,"Paper, paperboard, cellulose wadding and…",Annex XXIII,export_ban,RU
+481490,"wallpaper and similar wallcoverings of p…",Annex XXIII,export_ban,RU
+481920,"folding cartons, boxes and cases, of non…",Annex XXIII,export_ban,RU
+4822,"Bobbins, spools, cops and similar suppor…",Annex XXIII,export_ban,RU
+4823,"Paper, paperboard, cellulose wadding and…",Annex XXIII,export_ban,RU
+4906,"Plans and drawings for architectural, en…",Annex XXIII,export_ban,RU
+5105,"Wool and fine or coarse animal hair, car…",Annex XXIII,export_ban,RU
+5106,"Carded wool yarn (excl. that put up for…",Annex XXIII,export_ban,RU
+5107,"Yarn of combed wool (excl. that put up f…",Annex XXIII,export_ban,RU
+5112,"Woven fabrics of combed wool or of combe…",Annex XXIII,export_ban,RU
+5205,"Cotton yarn other than sewing thread, co…",Annex XXIII,export_ban,RU
+520642,"multiple ‘folded’ or cabled cotton yarn…",Annex XXIII,export_ban,RU
+520911,"plain woven fabrics of cotton, containin…",Annex XXIII,export_ban,RU
+5211,"Woven fabrics of cotton, containing pred…",Annex XXIII,export_ban,RU
+5308,"Yarn of other vegetable textile fibres…",Annex XXIII,export_ban,RU
+540263,"multiple ‘folded’ or cabled filament yar…",Annex XXIII,export_ban,RU
+5403,"Artificial filament yarn, incl. artifici…",Annex XXIII,export_ban,RU
+5404,"Synthetic monofilament of >= 67 decitex…",Annex XXIII,export_ban,RU
+540730,"woven fabrics of synthetic filament yarn…",Annex XXIII,export_ban,RU
+5501,"Synthetic filament tow as specified in n…",Annex XXIII,export_ban,RU
+5502,"Artificial filament tow as specified in…",Annex XXIII,export_ban,RU
+5503,"Synthetic staple fibres, not carded, com…",Annex XXIII,export_ban,RU
+550490,"artificial staple fibres, not carded, co…",Annex XXIII,export_ban,RU
+5506,"Synthetic staple fibres, carded, combed…",Annex XXIII,export_ban,RU
+5507,"Artificial staple fibres, carded, combed…",Annex XXIII,export_ban,RU
+551221,"woven fabrics containing >= 85 % acrylic…",Annex XXIII,export_ban,RU
+551299,"woven fabrics containing >= 85 % synthet…",Annex XXIII,export_ban,RU
+5516,"woven fabrics of artificial staple fibres",Annex XXIII,export_ban,RU
+560129,"wadding of textile materials and article…",Annex XXIII,export_ban,RU
+560130,"textile flock and dust and mill neps",Annex XXIII,export_ban,RU
+5604,"Textile-covered rubber thread and cord…",Annex XXIII,export_ban,RU
+5605,"Metallised yarn, whether or not gimped…",Annex XXIII,export_ban,RU
+560741,"binder or baler twine, of polyethylene o…",Annex XXIII,export_ban,RU
+580127,"warp pile fabrics, of cotton (excl. terr…",Annex XXIII,export_ban,RU
+5803,"Gauze (excl. narrow woven fabrics of hea…",Annex XXIII,export_ban,RU
+580640,"narrow fabrics consisting of warp withou…",Annex XXIII,export_ban,RU
+5901,"Textile fabrics coated with gum or amyla…",Annex XXIII,export_ban,RU
+5905,"Textile wallcoverings",Annex XXIII,export_ban,RU
+5908,"Textile wicks, woven, plaited or knitted…",Annex XXIII,export_ban,RU
+5910,"Transmission or conveyor belts or beltin…",Annex XXIII,export_ban,RU
+591110,"textile fabrics, felt and felt-lined wov…",Annex XXIII,export_ban,RU
+591131,"textile fabrics and felts, endless or fi…",Annex XXIII,export_ban,RU
+591132,"textile fabrics and felts, endless or fi…",Annex XXIII,export_ban,RU
+591140,"straining cloth of a kind used in oil-pr…",Annex XXIII,export_ban,RU
+600199,"pile fabrics, knitted or crocheted (excl…",Annex XXIII,export_ban,RU
+6003,"Knitted or crocheted fabrics, of a width…",Annex XXIII,export_ban,RU
+600536,"Unbleached or bleached warp knit fabrics…",Annex XXIII,export_ban,RU
+600544,"Printed warp knit fabrics of artificial…",Annex XXIII,export_ban,RU
+600610,"Fabrics, knitted or crocheted, of a widt…",Annex XXIII,export_ban,RU
+6309,"Worn clothing and clothing accessories…",Annex XXIII,export_ban,RU
+680292,"Calcareous stone, in any form (excl. mar…",Annex XXIII,export_ban,RU
+6804,"Millstones, grindstones, grinding wheels…",Annex XXIII,export_ban,RU
+6805,"Natural or artificial abrasive powder or…",Annex XXIII,export_ban,RU
+6806,"Slag-wool, rock-wool and similar mineral…",Annex XXIII,export_ban,RU
+6807,"Articles of asphalt or of similar materi…",Annex XXIII,export_ban,RU
+680919,"Boards, sheets, panels, tiles and simila…",Annex XXIII,export_ban,RU
+6810,"Articles of cement, of concrete or of ar…",Annex XXIII,export_ban,RU
+6811,"Articles of asbestos-cement, cellulose f…",Annex XXIII,export_ban,RU
+6813,"Friction material and articles thereof…",Annex XXIII,export_ban,RU
+6814,"Worked mica and articles of mica, includ…",Annex XXIII,export_ban,RU
+6815,"Articles of stone or of other mineral su…",Annex XXIII,export_ban,RU
+6901,"Bricks, blocks, tiles and other ceramic…",Annex XXIII,export_ban,RU
+6902,"Refractory bricks, blocks, tiles and sim…",Annex XXIII,export_ban,RU
+6903,"Other refractory ceramic goods (for exam…",Annex XXIII,export_ban,RU
+690410,"Building bricks (excl. those of siliceou…",Annex XXIII,export_ban,RU
+6905,"Roofing tiles, chimney pots, cowls, chim…",Annex XXIII,export_ban,RU
+690600,"Ceramic pipes, conduits, guttering and p…",Annex XXIII,export_ban,RU
+690722,"Ceramic flags and paving, hearth or wall…",Annex XXIII,export_ban,RU
+690740,"Finishing ceramics",Annex XXIII,export_ban,RU
+6909,"Ceramic wares for laboratory, chemical o…",Annex XXIII,export_ban,RU
+7002,"Glass in balls (other than microspheres…",Annex XXIII,export_ban,RU
+7003,"Cast glass and rolled glass, in sheets o…",Annex XXIII,export_ban,RU
+7004,"Sheets of glass, drawn or blown, whether…",Annex XXIII,export_ban,RU
+7005,"Float glass and surface ground or polish…",Annex XXIII,export_ban,RU
+7007,"Safety glass, consisting of toughened (t…",Annex XXIII,export_ban,RU
+701110,"glass envelopes, incl. bulbs and tubes…",Annex XXIII,export_ban,RU
+7301,"sheet piling of iron or steel, whether o…",Annex XXIII,export_ban,RU
+7302,"railway or tramway track construction ma…",Annex XXIII,export_ban,RU
+7303,"tubes, pipes and hollow profiles, of cas…",Annex XXIII,export_ban,RU
+7304,"tubes, pipes and hollow profiles, seamle…",Annex XXIII,export_ban,RU
+7305,"Tubes and pipes, n.e.s. (for example, we…",Annex XXIII,export_ban,RU
+7306,"tubes, pipes and hollow profiles n.e.s (…",Annex XXIII,export_ban,RU
+7307,"tube or pipe fittings (for example coupl…",Annex XXIII,export_ban,RU
+7308,"Structures and parts of structures (for…",Annex XXIII,export_ban,RU
+7309,"Reservoirs, tanks, vats and similar cont…",Annex XXIII,export_ban,RU
+7310,"Tanks, casks, drums, cans, boxes and sim…",Annex XXIII,export_ban,RU
+7311,"Containers of iron or steel, for compres…",Annex XXIII,export_ban,RU
+7312,"Stranded wire, ropes, cables, plaited ba…",Annex XXIII,export_ban,RU
+7313,"Barbed wire of iron or steel; twisted ho…",Annex XXIII,export_ban,RU
+7314,"Cloth (including endless bands), grill…",Annex XXIII,export_ban,RU
+7315,"Chain and parts thereof, of iron or steel:",Annex XXIII,export_ban,RU
+7318,"Screws, bolts, nuts, coach screws, screw…",Annex XXIII,export_ban,RU
+7320,"Springs and leaves for spring, of iron o…",Annex XXIII,export_ban,RU
+732290,"Air heaters and hot-air distributors, in…",Annex XXIII,export_ban,RU
+732429,"baths of steel sheet",Annex XXIII,export_ban,RU
+7325,"Other cast articles of iron or steel",Annex XXIII,export_ban,RU
+7326,"Other articles of iron or steel",Annex XXIII,export_ban,RU
+7505,"Nickel bars, rods, profiles and wire",Annex XXIII,export_ban,RU
+7506,"Nickel plates, sheets, strip and foil",Annex XXIII,export_ban,RU
+7507,"Tubes, pipes and tube or pipe fittings ‘…",Annex XXIII,export_ban,RU
+7508,"Other articles of nickel",Annex XXIII,export_ban,RU
+7804,"Lead plates, sheets, strip and foil; lea…",Annex XXIII,export_ban,RU
+7905,"zinc plates, sheets, strip and foil",Annex XXIII,export_ban,RU
+8001,"Unwrought tin",Annex XXIII,export_ban,RU
+8003,"Tin bars, rods, profiles and wire",Annex XXIII,export_ban,RU
+8007,"Articles of tin",Annex XXIII,export_ban,RU
+8101,"Tungsten (wolfram) and articles thereof…",Annex XXIII,export_ban,RU
+8102,"Molybdenum and articles thereof, includi…",Annex XXIII,export_ban,RU
+8105,"Cobalt mattes and other intermediate pro…",Annex XXIII,export_ban,RU
+8109,"Zirconium and articles thereof, includin…",Annex XXIII,export_ban,RU
+8111,"Manganese and articles thereof, includin…",Annex XXIII,export_ban,RU
+8202,"Handsaws; blades for saws of all kinds (…",Annex XXIII,export_ban,RU
+8203,"Files, rasps, pliers (including cutting…",Annex XXIII,export_ban,RU
+8204,"Hand-operated spanners and wrenches (inc…",Annex XXIII,export_ban,RU
+8207,"Interchangeable tools, for hand tools, w…",Annex XXIII,export_ban,RU
+820810,"Knives and cutting blades, for machines…",Annex XXIII,export_ban,RU
+820820,"Knives and cutting blades, for machines…",Annex XXIII,export_ban,RU
+820830,"Knives and cutting blades, for machines…",Annex XXIII,export_ban,RU
+820890,"Knives and cutting blades, for machines…",Annex XXIII,export_ban,RU
+8209,"Plates, sticks, tips and the like for to…",Annex XXIII,export_ban,RU
+830120,"Locks used for motor vehicles, of base m…",Annex XXIII,export_ban,RU
+830170,"Keys presented separately",Annex XXIII,export_ban,RU
+8302,"Base-metal mountings, fittings and simil…",Annex XXIII,export_ban,RU
+8307,"Flexible tubing of base metal, with or w…",Annex XXIII,export_ban,RU
+8309,"Stoppers, caps and lids, incl. crown cor…",Annex XXIII,export_ban,RU
+8311,"Wire, rods, tubes, plates, electrodes an…",Annex XXIII,export_ban,RU
+8402,"Steam or other vapour generating boilers…",Annex XXIII,export_ban,RU
+8404,"Auxiliary plant for use with boilers of…",Annex XXIII,export_ban,RU
+8405,"Producer gas or water gas generators, wi…",Annex XXIII,export_ban,RU
+8406,"Steam turbines and other vapour turbines…",Annex XXIII,export_ban,RU
+8407,"Spark-ignition reciprocating or rotary i…",Annex XXIII,export_ban,RU
+8408,"Compression-ignition internal combustion…",Annex XXIII,export_ban,RU
+8409,"Parts suitable for use solely or princip…",Annex XXIII,export_ban,RU
+8410,"Hydraulic turbines, water wheels, and re…",Annex XXIII,export_ban,RU
+8411,"Turbojets, turbopropellers and other gas…",Annex XXIII,export_ban,RU
+8412,"Engines and motors (excluding steam turb…",Annex XXIII,export_ban,RU
+8413,"Pumps for liquids, whether or not fitted…",Annex XXIII,export_ban,RU
+8414,"Air or vacuum pumps, air or other gas co…",Annex XXIII,export_ban,RU
+841583,"Other air-conditioning machines, compris…",Annex XXIII,export_ban,RU
+8416,"Furnace burners for liquid fuel, for pul…",Annex XXIII,export_ban,RU
+8417,"Industrial or laboratory furnaces and ov…",Annex XXIII,export_ban,RU
+841899,"Parts of refrigerating or freezing equip…",Annex XXIII,export_ban,RU
+841919,"instantaneous or storage water heaters…",Annex XXIII,export_ban,RU
+841939,"Dryers (excl. lyophilisation apparatus…",Annex XXIII,export_ban,RU
+841940,"Distilling or rectifying plant",Annex XXIII,export_ban,RU
+841950,"Heat-exchange units (excl. those used wi…",Annex XXIII,export_ban,RU
+841960,"Machinery for liquefying air or other ga…",Annex XXIII,export_ban,RU
+841989,"Machinery, plant or laboratory equipment…",Annex XXIII,export_ban,RU
+841990,"Parts of machinery, plant and laboratory…",Annex XXIII,export_ban,RU
+8420,"Calendering or other rolling machines, o…",Annex XXIII,export_ban,RU
+842220,"Machinery for cleaning or drying bottles…",Annex XXIII,export_ban,RU
+842230,"Machinery for filling, closing, sealing…",Annex XXIII,export_ban,RU
+8423,"Weighing machinery (excluding balances o…",Annex XXIII,export_ban,RU
+842420,"Spray guns and similar appliances",Annex XXIII,export_ban,RU
+842430,"Steam or sandblasting machines and simil…",Annex XXIII,export_ban,RU
+842489,"Mechanical appliances, whether or not ha…",Annex XXIII,export_ban,RU
+842490,"Parts of fire extinguishers, spray guns…",Annex XXIII,export_ban,RU
+8425,"Pulley tackle and hoists (other than ski…",Annex XXIII,export_ban,RU
+8426,"Ships’ derricks; cranes, including cable…",Annex XXIII,export_ban,RU
+8427,"Fork-lift trucks; other works trucks fit…",Annex XXIII,export_ban,RU
+8428,"Other lifting, handling, loading or unlo…",Annex XXIII,export_ban,RU
+8429,"Self-propelled bulldozers, angledozers…",Annex XXIII,export_ban,RU
+8430,"Moving, grading, levelling, scraping, ex…",Annex XXIII,export_ban,RU
+8431,"Parts suitable for use solely or princip…",Annex XXIII,export_ban,RU
+843910,"Machinery for making pulp of fibrous cel…",Annex XXIII,export_ban,RU
+843930,"Machinery for finishing paper or paperbo…",Annex XXIII,export_ban,RU
+843991,"Parts of machinery for making pulp of fi…",Annex XXIII,export_ban,RU
+844090,"Bookbinding machinery, including book-se…",Annex XXIII,export_ban,RU
+844130,"Machines for making cartons, boxes, case…",Annex XXIII,export_ban,RU
+844240,"Parts of the foregoing machinery, appara…",Annex XXIII,export_ban,RU
+844313,"Other offset printing machinery",Annex XXIII,export_ban,RU
+844315,"Letterpress printing machinery, other th…",Annex XXIII,export_ban,RU
+844316,"Flexographic printing machinery",Annex XXIII,export_ban,RU
+844317,"Gravure printing machinery",Annex XXIII,export_ban,RU
+844319,"Printing machinery used for printing by…",Annex XXIII,export_ban,RU
+844391,"Parts and accessories of printing machin…",Annex XXIII,export_ban,RU
+8444,"Machines for extruding, drawing, texturi…",Annex XXIII,export_ban,RU
+8448,"Auxiliary machinery for use with machine…",Annex XXIII,export_ban,RU
+845110,"Dry-cleaning machines",Annex XXIII,export_ban,RU
+845129,"Drying machines - Other",Annex XXIII,export_ban,RU
+845130,"Ironing machines and presses (including…",Annex XXIII,export_ban,RU
+845190,"Machinery (other than machines of headin…",Annex XXIII,export_ban,RU
+8453,"Machinery for preparing, tanning or work…",Annex XXIII,export_ban,RU
+8454,"Converters, ladles, ingot moulds and cas…",Annex XXIII,export_ban,RU
+8455,"Metal-rolling mills and rolls therefor",Annex XXIII,export_ban,RU
+8456,"Machine tools for working any material b…",Annex XXIII,export_ban,RU
+8457,"Machining centres, unit construction mac…",Annex XXIII,export_ban,RU
+8458,"Lathes (including turning centres) for r…",Annex XXIII,export_ban,RU
+8459,"Machine tools, incl. way-type unit head…",Annex XXIII,export_ban,RU
+8460,"Machine tools for deburring, sharpening…",Annex XXIII,export_ban,RU
+8461,"Machine tools for planing, shaping, slot…",Annex XXIII,export_ban,RU
+8462,"Machine tools (including presses) for wo…",Annex XXIII,export_ban,RU
+8463,"Machine tools for working metal, sintere…",Annex XXIII,export_ban,RU
+8464,"Machine tools for working stone, ceramic…",Annex XXIII,export_ban,RU
+8465,"Machine tools (including machines for na…",Annex XXIII,export_ban,RU
+8466,"Parts and accessories suitable for use s…",Annex XXIII,export_ban,RU
+8467,"Tools for working in the hand, pneumatic…",Annex XXIII,export_ban,RU
+8468,"Machinery and apparatus for soldering, b…",Annex XXIII,export_ban,RU
+8470,"Calculating machines and pocket-size dat…",Annex XXIII,export_ban,RU
+8472,"Other office machines (for example, hect…",Annex XXIII,export_ban,RU
+8473,"Parts and accessories (other than covers…",Annex XXIII,export_ban,RU
+8474,"Machinery for sorting, screening, separa…",Annex XXIII,export_ban,RU
+8475,"Machines for assembling electric or elec…",Annex XXIII,export_ban,RU
+8477,"Machinery for working rubber or plastics…",Annex XXIII,export_ban,RU
+8478,"Machinery for preparing or making up tob…",Annex XXIII,export_ban,RU
+8479,"Machines and mechanical appliances havin…",Annex XXIII,export_ban,RU
+8480,"Moulding boxes for metal foundry; mould…",Annex XXIII,export_ban,RU
+8481,"Taps, cocks, valves and similar applianc…",Annex XXIII,export_ban,RU
+8482,"Ball or roller bearings (excl. steel bal…",Annex XXIII,export_ban,RU
+8483,"Transmission shafts, incl. camshafts and…",Annex XXIII,export_ban,RU
+8484,"Gaskets and similar joints of metal shee…",Annex XXIII,export_ban,RU
+8485,"Machines for additive manufacturing",Annex XXIII,export_ban,RU
+8486,"Machines and apparatus of a kind used so…",Annex XXIII,export_ban,RU
+8487,"Machinery parts, not containing electric…",Annex XXIII,export_ban,RU
+8501,"Electric motors and generators (excludin…",Annex XXIII,export_ban,RU
+8502,"Electric generating sets and rotary conv…",Annex XXIII,export_ban,RU
+8503,"Parts suitable for use solely or princip…",Annex XXIII,export_ban,RU
+8504,"Electrical transformers, static converte…",Annex XXIII,export_ban,RU
+8505,"Electromagnets (excl. magnets for medica…",Annex XXIII,export_ban,RU
+8506,"Primary cells and primary batteries; par…",Annex XXIII,export_ban,RU
+8507,"Electric accumulators, including separat…",Annex XXIII,export_ban,RU
+8511,"Electrical ignition or starting equipmen…",Annex XXIII,export_ban,RU
+8512,"Electrical lighting or signalling equipm…",Annex XXIII,export_ban,RU
+8513,"Portable electric lamps designed to func…",Annex XXIII,export_ban,RU
+8515,"Electric (including electrically heated…",Annex XXIII,export_ban,RU
+851680,"Electric heating resistors (excl. those…",Annex XXIII,export_ban,RU
+8517,"Telephone sets, including smartphones an…",Annex XXIII,export_ban,RU
+8518,"Microphones and stands therefor; loudspe…",Annex XXIII,export_ban,RU
+8519,"Sound recording or sound reproducing app…",Annex XXIII,export_ban,RU
+8521,"Video recording or reproducing apparatus…",Annex XXIII,export_ban,RU
+8522,"Parts and accessories suitable for use s…",Annex XXIII,export_ban,RU
+8523,"Discs, tapes, solid-state non-volatile s…",Annex XXIII,export_ban,RU
+8524,"Flat panel display modules, whether or n…",Annex XXIII,export_ban,RU
+8525,"Transmission apparatus for radio-broadca…",Annex XXIII,export_ban,RU
+8526,"Radar apparatus, radio navigational aid…",Annex XXIII,export_ban,RU
+8527,"Reception apparatus for radio-broadcasti…",Annex XXIII,export_ban,RU
+8528,"Monitors and projectors, not incorporati…",Annex XXIII,export_ban,RU
+8530,"Electrical signalling, safety or traffic…",Annex XXIII,export_ban,RU
+8531,"Electric sound or visual signalling appa…",Annex XXIII,export_ban,RU
+8532,"Electrical capacitors, fixed, variable o…",Annex XXIII,export_ban,RU
+8533,"Electrical resistors (including rheostat…",Annex XXIII,export_ban,RU
+8534,"Printed circuits",Annex XXIII,export_ban,RU
+8535,"Electrical apparatus for switching or pr…",Annex XXIII,export_ban,RU
+8536,"Electrical apparatus for switching or pr…",Annex XXIII,export_ban,RU
+8537,"Boards, panels, consoles, desks, cabinet…",Annex XXIII,export_ban,RU
+8538,"Parts suitable for use solely or princip…",Annex XXIII,export_ban,RU
+8539,"Electric filament or discharge lamps, in…",Annex XXIII,export_ban,RU
+8540,"Thermionic, cold cathode or photo-cathod…",Annex XXIII,export_ban,RU
+8541,"Semiconductor devices (for example, diod…",Annex XXIII,export_ban,RU
+8543,"Electrical machines and apparatus, havin…",Annex XXIII,export_ban,RU
+8544,"Insulated (including enamelled or anodis…",Annex XXIII,export_ban,RU
+8545,"Carbon electrodes, carbon brushes, lamp…",Annex XXIII,export_ban,RU
+8546,"Electrical insulators of any material",Annex XXIII,export_ban,RU
+8547,"Insulating fittings for electrical machi…",Annex XXIII,export_ban,RU
+8549,"Electrical and electronic waste and scrap",Annex XXIII,export_ban,RU
+8602,"Rail locomotives (excl. those powered fr…",Annex XXIII,export_ban,RU
+8604,"Railway or tramway maintenance or servic…",Annex XXIII,export_ban,RU
+8606,"Railway or tramway goods vans and wagons…",Annex XXIII,export_ban,RU
+8607,"Parts of railway or tramway locomotives…",Annex XXIII,export_ban,RU
+8608,"Railway or tramway track fixtures and fi…",Annex XXIII,export_ban,RU
+870121,"Road tractors for semi-trailers - With o…",Annex XXIII,export_ban,RU
+870122,"Road tractors for semi-trailers - With b…",Annex XXIII,export_ban,RU
+870123,"Road tractors for semi-trailers - With b…",Annex XXIII,export_ban,RU
+870124,"Road tractors for semi-trailers - With o…",Annex XXIII,export_ban,RU
+870129,"Road tractors for semi-trailers - With o…",Annex XXIII,export_ban,RU
+870130,"Track-laying tractors (excluding pedestr…",Annex XXIII,export_ban,RU
+87019590,"Tractors (other than tractors of heading…",Annex XXIII,export_ban,RU
+870310,"Vehicles for the transport of <10 person…",Annex XXIII,export_ban,RU
+870340,"Motor cars and other motor vehicles prin…",Annex XXIII,export_ban,RU
+870350,"Motor cars and other motor vehicles prin…",Annex XXIII,export_ban,RU
+870360,"Motor cars and other motor vehicles prin…",Annex XXIII,export_ban,RU
+870370,"Motor cars and other motor vehicles prin…",Annex XXIII,export_ban,RU
+870380,"Motor cars and other motor vehicles prin…",Annex XXIII,export_ban,RU
+870390,"Motor cars and other vehicles principall…",Annex XXIII,export_ban,RU
+8705,"Special purpose motor vehicles (other th…",Annex XXIII,export_ban,RU
+870899,"Other parts and accessories of the motor…",Annex XXIII,export_ban,RU
+8709,"Works trucks, self-propelled, not fitted…",Annex XXIII,export_ban,RU
+8716,"Trailers and semi-trailers; other vehicl…",Annex XXIII,export_ban,RU
+8903,"Yachts and other vessels for pleasure or…",Annex XXIII,export_ban,RU
+8904,"tugs and pusher craft",Annex XXIII,export_ban,RU
+8905,"Light-vessels, fire-floats, dredgers, fl…",Annex XXIII,export_ban,RU
+900110,"Optical fibres, optical fibre bundles an…",Annex XXIII,export_ban,RU
+900211,"objective lenses for cameras, projectors…",Annex XXIII,export_ban,RU
+900219,"objective lenses (excl. for cameras, pro…",Annex XXIII,export_ban,RU
+9005,"Binoculars, monoculars, other optical te…",Annex XXIII,export_ban,RU
+9007,"Cinematographic cameras and projectors…",Annex XXIII,export_ban,RU
+9010,"Apparatus and equipment for photographic…",Annex XXIII,export_ban,RU
+9013,"Lasers, other than laser diodes; other o…",Annex XXIII,export_ban,RU
+9014,"Direction finding compasses; other navig…",Annex XXIII,export_ban,RU
+9015,"Surveying, incl. photogrammetrical surve…",Annex XXIII,export_ban,RU
+9016,"Balances of a sensitivity of 5 cg or bet…",Annex XXIII,export_ban,RU
+9017,"Drawing, marking-out or mathematical cal…",Annex XXIII,export_ban,RU
+9024,"Machines and appliances for testing the…",Annex XXIII,export_ban,RU
+9025,"Hydrometers and similar floating instrum…",Annex XXIII,export_ban,RU
+9026,"Instruments and apparatus for measuring…",Annex XXIII,export_ban,RU
+9027,"Instruments and apparatus for physical o…",Annex XXIII,export_ban,RU
+9028,"Gas, liquid or electricity supply or pro…",Annex XXIII,export_ban,RU
+9029,"Revolution counters, production counters…",Annex XXIII,export_ban,RU
+9030,"Oscilloscopes, spectrum analysers and ot…",Annex XXIII,export_ban,RU
+9031,"Measuring or checking instruments, appli…",Annex XXIII,export_ban,RU
+9032,"Automatic regulating or controlling inst…",Annex XXIII,export_ban,RU
+9033,"Parts and accessories (not specified or…",Annex XXIII,export_ban,RU
+940110,"Seats for aircraft",Annex XXIII,export_ban,RU
+940120,"Seats for motor vehicles",Annex XXIII,export_ban,RU
+940330,"Wooden furniture of a kind used in offices",Annex XXIII,export_ban,RU
+9406,"Prefabricated buildings",Annex XXIII,export_ban,RU
+95030075,"Plastic toys and models, incorporating a…",Annex XXIII,export_ban,RU
+95030079,"Toys and models not made of plastic, inc…",Annex XXIII,export_ban,RU
+9606,"Buttons, press-fasteners, snap-fasteners…",Annex XXIII,export_ban,RU
+960891,"Pen nibs and nib points",Annex XXIII,export_ban,RU
+9612,"Typewriter or similar ribbons, inked or…",Annex XXIII,export_ban,RU
+2931,"Other organo-inorganic compounds",Annex XXIII,export_ban,RU
+3603,"Safety fuses; detonating cords; percussi…",Annex XXIII,export_ban,RU
+4001,"Natural rubber, balata, gutta-percha, gu…",Annex XXIII,export_ban,RU
+4007,"Vulcanised rubber thread and cord",Annex XXIII,export_ban,RU
+4017,"Hard rubber (for example, ebonite) in al…",Annex XXIII,export_ban,RU
+6805,"Natural or artificial abrasive powder or…",Annex XXIII,export_ban,RU
+7325,"Other cast articles of iron or steel",Annex XXIII,export_ban,RU
+8209,"Plates, sticks, tips and the like for to…",Annex XXIII,export_ban,RU
+8311,"Wire, rods, tubes, plates, electrodes an…",Annex XXIII,export_ban,RU
+87019590,"Tractors (other than tractors of heading…",Annex XXIII,export_ban,RU

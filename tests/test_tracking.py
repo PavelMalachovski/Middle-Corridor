@@ -342,7 +342,7 @@ def test_sanctions_field_not_leaking_packing_list() -> None:
     from app.services.sanctions import PackingLine, PackingList
 
     lines = tuple(
-        PackingLine(i, f"9503{i:06d}", f"Игрушки {i}", origin_country="CN") for i in range(5)
+        PackingLine(i, f"6109{i:06d}", f"Футболки {i}", origin_country="CN") for i in range(5)
     )
     plan = dataclasses.replace(
         _kz_plan(EventKind.arrived, "ALMATY"), packing_list=PackingList(NOW - 2 * H, lines)
