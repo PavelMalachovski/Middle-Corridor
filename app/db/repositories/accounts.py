@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import (
@@ -100,6 +100,30 @@ class AccountsRepository:
         if row is None or aware(row.expires_at) <= now:
             return None
         return row
+
+    async def claim_attempt(self, code_id: int, max_attempts: int) -> bool:
+        """Атомарно занять попытку: счётчик растёт в SQL, гонки не дают лишних."""
+        result = await self._session.execute(
+            update(LoginCode)
+            .where(
+                LoginCode.id == code_id,
+                LoginCode.used_at.is_(None),
+                LoginCode.attempts < max_attempts,
+            )
+            .values(attempts=LoginCode.attempts + 1)
+            .execution_options(synchronize_session=False)
+        )
+        return result.rowcount == 1
+
+    async def mark_used(self, code_id: int, now: datetime) -> bool:
+        """Погасить код условным UPDATE: сессию получит только победитель."""
+        result = await self._session.execute(
+            update(LoginCode)
+            .where(LoginCode.id == code_id, LoginCode.used_at.is_(None))
+            .values(used_at=now)
+            .execution_options(synchronize_session=False)
+        )
+        return result.rowcount == 1
 
     async def membership(self, user_id: int, org_id: int) -> Membership | None:
         result = await self._session.execute(

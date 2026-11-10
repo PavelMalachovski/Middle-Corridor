@@ -76,7 +76,10 @@ class AuthService:
             await session.commit()
         if send:
             subject, body = render("login_code", locale, code=code)
-            await self._mail.send(email, subject, body)
+            try:
+                await self._mail.send(email, subject, body)
+            except Exception:
+                log.warning("login_mail_failed", email_hash=security.email_fingerprint(email))
 
     async def verify(
         self, email: str, code: str, device_name: str, ip: str
@@ -89,9 +92,8 @@ class AuthService:
         async with self._sf() as session:
             repo = AccountsRepository(session)
             row = await repo.latest_open_code(email, now)
-            if row is None or row.attempts >= MAX_ATTEMPTS:
+            if row is None or not await repo.claim_attempt(row.id, MAX_ATTEMPTS):
                 return None
-            row.attempts += 1
             expected = security.hash_code(self._settings.auth_secret, email, code.strip())
             user = await repo.get_user_by_email(email)
             invitations = await repo.active_invitations(email, now)
@@ -113,7 +115,9 @@ class AuthService:
                 await session.commit()
                 return None
 
-            row.used_at = now
+            if not await repo.mark_used(row.id, now):
+                await session.commit()
+                return None
             if user is None:
                 user = User(email=email, locale="ru", created_at=now)
                 repo.add(user)

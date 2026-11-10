@@ -336,3 +336,49 @@ async def test_resend_sender_posts_expected_request() -> None:
         "subject": "Subj",
         "text": "Body",
     }
+
+
+async def test_attempt_claim_is_capped_and_mark_used_once(
+    session: AsyncSession,
+) -> None:
+    from app.db.repositories.accounts import AccountsRepository
+
+    repo = AccountsRepository(session)
+    row = repo.add_code("a@x.kz", "1.1.1.1", "h", T0, timedelta(minutes=10))
+    await session.commit()
+    results = [await repo.claim_attempt(row.id, 5) for _ in range(7)]
+    assert results == [True] * 5 + [False] * 2
+    other = repo.add_code("b@x.kz", "1.1.1.1", "h", T0, timedelta(minutes=10))
+    await session.commit()
+    assert await repo.mark_used(other.id, T0) is True
+    assert await repo.mark_used(other.id, T0) is False
+    assert await repo.claim_attempt(other.id, 5) is False
+
+
+async def test_parallel_verify_yields_single_session(
+    auth: AuthService, mail: LogEmailSender, session: AsyncSession
+) -> None:
+    import asyncio
+
+    await add_user(session)
+    await auth.request_code("a@x.kz", "1.1.1.1")
+    code = last_code(mail)
+    results = await asyncio.gather(*[auth.verify("a@x.kz", code, "d", "1.1.1.1") for _ in range(5)])
+    assert len([r for r in results if r is not None]) == 1
+    assert len((await session.execute(select(AuthSession))).scalars().all()) == 1
+
+
+class FailingSender:
+    async def send(self, to: str, subject: str, text: str) -> None:
+        raise RuntimeError("smtp down")
+
+
+async def test_request_code_swallows_mail_errors(
+    session_factory: async_sessionmaker[AsyncSession], session: AsyncSession, clock: Clock
+) -> None:
+    await add_user(session)
+    svc = AuthService(session_factory, Settings(auth_secret="s3cret"), FailingSender(), clock)
+    with structlog.testing.capture_logs() as logs:
+        assert await svc.request_code("a@x.kz", "1.1.1.1") is None
+    assert len((await session.execute(select(LoginCode))).scalars().all()) == 1
+    assert "a@x.kz" not in json.dumps(logs, default=str)
