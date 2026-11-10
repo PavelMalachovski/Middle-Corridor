@@ -150,9 +150,11 @@ public struct HTTPAccountAPI: AccountAPI {
         var request = URLRequest(url: url, timeoutInterval: timeout)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        var sentToken: String?
         if authorized {
             // без токена запрос не уходит: сервер всё равно ответил бы 401
             guard let token = tokens.load() else { throw APIError.unauthorized }
+            sentToken = token
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         if let body {
@@ -170,7 +172,8 @@ public struct HTTPAccountAPI: AccountAPI {
         switch status {
         case 200..<300: return data
         case 401:
-            if authorized { tokens.save(nil) }
+            // поздний 401 на старый токен не должен стереть новый, выданный за это время
+            if let sentToken, tokens.load() == sentToken { tokens.save(nil) }
             throw APIError.unauthorized
         case 404: throw APIError.notFound
         case 422: throw APIError.rejected(Self.rejectionCode(data))

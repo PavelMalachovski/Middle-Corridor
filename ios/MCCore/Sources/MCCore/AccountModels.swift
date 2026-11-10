@@ -40,9 +40,15 @@ public struct Me: Codable, Sendable, Hashable {
 }
 
 /// Ответ `POST /auth/verify`.
-public struct LoginResult: Codable, Sendable, Hashable {
+public struct LoginResult: Codable, Sendable, Hashable, CustomStringConvertible,
+    CustomDebugStringConvertible
+{
     public let token: String
     public let me: Me
+
+    // токен не должен попасть ни в лог, ни в отладчик
+    public var description: String { "LoginResult(token: <redacted>, me: \(me.id))" }
+    public var debugDescription: String { description }
 }
 
 /// Груз аккаунта: проекция + права на него. `eventNodes` — узлы маршрута, где можно

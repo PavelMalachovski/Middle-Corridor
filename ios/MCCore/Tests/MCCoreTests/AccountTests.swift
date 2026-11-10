@@ -359,3 +359,53 @@ final class AccountLabelsAndRulesTests: XCTestCase {
         XCTAssertEqual(run(["MC-OTHER"]).map(\.kind), [.event])
     }
 }
+
+final class AccountReviewFixesTests: XCTestCase {
+    override func tearDown() { StubProtocol.handler = nil }
+
+    func test_pushManaged_stillGetsDelayNotice_notEvent() throws {
+        let nodes = try Fixture.snapshot().nodes
+        let s = try Fixture.shipment("MC-26-0398")
+        var old = s
+        old.delayHours = 0
+        old.lastEventAt = old.lastEventAt?.addingTimeInterval(-3600)
+        old.lastEventKind = Coded(.departed)
+        old.lastEvent = "Отправление: другое"
+        func run(_ managed: Set<String>) -> [AppNotice] {
+            NotificationRules.diff(
+                old: [old.ref: old], new: [s.ref: s], oldNodes: nodes, newNodes: nodes,
+                settings: NotifySettings(storm: false, event: true, delay: true, queue: false),
+                labels: Labels(lang: .ru, nodes: nodes), pushManagedRefs: managed)
+        }
+        XCTAssertEqual(Set(run([]).map(\.kind)), [.event, .delay])
+        XCTAssertEqual(run([s.ref]).map(\.kind), [.delay])
+    }
+
+    func test_late401_keepsNewerToken() async throws {
+        let store = InMemoryTokenStore(token: "A")
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [StubProtocol.self]
+        let api = HTTPAccountAPI(
+            baseURL: URL(string: "http://localhost:8000")!, tokens: store, session: URLSession(configuration: config))
+        StubProtocol.handler = { _ in
+            store.save("B")  // за время запроса вход выдал новый токен
+            return (401, Data())
+        }
+        do {
+            _ = try await api.me()
+            XCTFail("ждали ошибку")
+        } catch {
+            XCTAssertEqual(error as? APIError, .unauthorized)
+        }
+        XCTAssertEqual(store.load(), "B")
+    }
+
+    func test_loginResult_redactsToken() throws {
+        let me = try String(decoding: accountData("me"), as: UTF8.self)
+        let json = #"{"token":"SECRET-TOKEN-XYZ","me":\#(me)}"#
+        let result = try APIDate.makeDecoder().decode(LoginResult.self, from: Data(json.utf8))
+        XCTAssertFalse(String(describing: result).contains("SECRET-TOKEN-XYZ"))
+        XCTAssertFalse(String(reflecting: result).contains("SECRET-TOKEN-XYZ"))
+        XCTAssertFalse("\(result)".contains("SECRET-TOKEN-XYZ"))
+    }
+}

@@ -45,8 +45,9 @@ public struct AppNotice: Sendable, Equatable, Identifiable {
 /// Что изменилось между двумя обновлениями — и о чём стоит сказать.
 /// Первая загрузка груза (старых данных нет) уведомлений не даёт.
 /// `pushManagedRefs` — номера грузов аккаунта, о которых сервер шлёт push (устройство
-/// зарегистрировано): по ним локальных уведомлений нет. Санкции сюда не относятся — в push
-/// их нет, `sanctions(_:sent:…)` работает как прежде.
+/// зарегистрировано). Push покрывает только события чекпоинтов и смену маршрута, поэтому
+/// по этим грузам пропускается лишь локальное «событие»; шторм, задержка, очередь и санкции
+/// работают как прежде.
 public enum NotificationRules {
     /// Задержка выросла хотя бы на столько часов.
     public static let delayStepHours = 3.0
@@ -67,13 +68,11 @@ public enum NotificationRules {
         var notices: [AppNotice] = []
         for ref in new.keys.sorted() {
             guard let now = new[ref], let before = old[ref] else { continue }
-            // грузы аккаунта с зарегистрированным push приходят с сервера — дубль не нужен
-            if pushManagedRefs.contains(ref) { continue }
             // без прошлого снимка любой «риск» выглядел бы эскалацией — молчим
             if settings.storm, !oldNodes.isEmpty {
                 notices += storms(now, oldLevels: oldLevels, newNodes: newByCode, labels: labels)
             }
-            if settings.event, isNewEvent(now, than: before) {
+            if settings.event, !pushManagedRefs.contains(ref), isNewEvent(now, than: before) {
                 let stamp = Int(now.lastEventAt?.timeIntervalSince1970 ?? 0)
                 notices.append(
                     AppNotice(
