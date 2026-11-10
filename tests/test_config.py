@@ -64,3 +64,9 @@ def test_empty_env_values_fall_back_to_defaults(monkeypatch: pytest.MonkeyPatch)
     assert settings.scheduler_enabled is False
     assert settings.mock_time_scale == 1.0
     assert settings.mock_data is False
+
+
+def test_accounts_enabled_needs_secret_and_real_mode() -> None:
+    assert _settings().accounts_enabled is False
+    assert _settings(auth_secret="s3cret", mock_data=True).accounts_enabled is False
+    assert _settings(auth_secret="s3cret", mock_data=False).accounts_enabled is True

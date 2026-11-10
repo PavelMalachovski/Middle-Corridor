@@ -95,6 +95,20 @@ class Settings(BaseSettings):
     wind_grid_lazy_refresh: bool = True  # без планировщика (serverless) — брать по запросу
     vercel: str = ""  # Vercel выставляет VERCEL=1 в окружении функции
 
+    # Аккаунты и доступ. AUTH_SECRET пуст или MOCK_DATA=true — аккаунты выключены,
+    # публичный API работает как раньше.
+    auth_secret: str = ""
+    email_provider: str = "log"  # log (в журнал, для разработки) | resend
+    email_api_key: str = ""
+    email_from: str = ""
+    # APNs (push в iOS): ключ .p8 строкой PEM; пустые = push выключен
+    apns_key_id: str = ""
+    apns_team_id: str = ""
+    apns_key_p8: str = ""
+    apns_bundle_id: str = "com.malakhouski.mcstatus"
+    apns_env: str = "sandbox"  # sandbox | production
+    shipment_ref_prefix: str = "MC"  # номера отправок: MC-26-0001
+
     # Runtime
     log_level: str = "INFO"
     env: str = "production"
@@ -113,6 +127,10 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [part.strip() for part in value.split(",") if part.strip()]
         return value
+
+    @property
+    def accounts_enabled(self) -> bool:
+        return bool(self.auth_secret) and not self.mock_data
 
     @property
     def is_production(self) -> bool:

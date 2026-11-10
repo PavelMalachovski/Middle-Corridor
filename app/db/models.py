@@ -17,6 +17,7 @@ from sqlalchemy import (
     Index,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -277,3 +278,245 @@ class Subscriber(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     tg_chat_id: Mapped[int] = mapped_column(BigInteger, unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# --- Аккаунты, доступ, отправки и события на чекпоинтах ---
+
+
+class OrgKind(enum.StrEnum):
+    forwarder = "forwarder"
+    client = "client"
+    platform = "platform"
+
+
+class Role(enum.StrEnum):
+    owner = "owner"
+    admin = "admin"
+    agent = "agent"
+    viewer = "viewer"
+
+
+class CheckpointEventKind(enum.StrEnum):
+    arrived = "arrived"
+    departed = "departed"
+    held = "held"
+    released = "released"
+
+
+class Organization(Base):
+    __tablename__ = "organizations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(256))
+    kind: Mapped[OrgKind] = mapped_column(_str_enum(OrgKind))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True)
+    name: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    locale: Mapped[str] = mapped_column(String(8), default="ru")
+    is_platform_admin: Mapped[bool] = mapped_column(default=False)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Membership(Base):
+    __tablename__ = "memberships"
+    __table_args__ = (UniqueConstraint("user_id", "org_id", name="uq_memberships_user_org"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    org_id: Mapped[int] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"))
+    role: Mapped[Role] = mapped_column(_str_enum(Role))
+    # Коды узлов, где агент вправе отмечать события; пусто = ограничения нет
+    node_codes: Mapped[list[str]] = mapped_column(JsonVariant, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Invitation(Base):
+    __tablename__ = "invitations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    org_id: Mapped[int] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"))
+    email: Mapped[str] = mapped_column(String(320), index=True)
+    role: Mapped[Role] = mapped_column(_str_enum(Role))
+    node_codes: Mapped[list[str]] = mapped_column(JsonVariant, default=list)
+    invited_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class LoginCode(Base):
+    __tablename__ = "login_codes"
+    __table_args__ = (
+        Index("ix_login_codes_email_created", "email", "created_at"),
+        Index("ix_login_codes_ip_created", "ip", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(320))
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    code_hash: Mapped[str] = mapped_column(String(128))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    attempts: Mapped[int] = mapped_column(default=0)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AuthSession(Base):
+    __tablename__ = "sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(128), unique=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    device_name: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class OrgLink(Base):
+    """Экспедитор → клиент: клиент видит отправки, которыми с ним поделились."""
+
+    __tablename__ = "org_links"
+
+    forwarder_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), primary_key=True
+    )
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ShipmentRow(Base):
+    """Отправка в БД (не путать с pydantic tracking.Shipment)."""
+
+    __tablename__ = "shipments"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ref: Mapped[str] = mapped_column(String(64), unique=True)
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
+    container_no: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    container_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    route: Mapped[list[str]] = mapped_column(JsonVariant, default=list)  # коды узлов по порядку
+    planned_departure_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    cargo: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cargo_en: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cargo_manifest: Mapped[dict[str, Any] | None] = mapped_column(JsonVariant, nullable=True)
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ShipmentShare(Base):
+    """Отправка расшарена организации-клиенту."""
+
+    __tablename__ = "shipment_shares"
+
+    shipment_id: Mapped[int] = mapped_column(
+        ForeignKey("shipments.id", ondelete="CASCADE"), primary_key=True
+    )
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ShipmentEventRow(Base):
+    """Событие на чекпоинте; правка = новая запись с supersedes_id."""
+
+    __tablename__ = "shipment_events"
+    __table_args__ = (Index("ix_shipment_events_shipment_at", "shipment_id", "occurred_at"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    shipment_id: Mapped[int] = mapped_column(ForeignKey("shipments.id", ondelete="CASCADE"))
+    kind: Mapped[CheckpointEventKind] = mapped_column(_str_enum(CheckpointEventKind))
+    node_code: Mapped[str] = mapped_column(String(32))
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    hold_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    vessel: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    source: Mapped[str] = mapped_column(String(32), default="manual")
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    supersedes_id: Mapped[int | None] = mapped_column(
+        ForeignKey("shipment_events.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ShipmentRevision(Base):
+    """История правок полей отправки."""
+
+    __tablename__ = "shipment_revisions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    shipment_id: Mapped[int] = mapped_column(
+        ForeignKey("shipments.id", ondelete="CASCADE"), index=True
+    )
+    changed_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    before: Mapped[dict[str, Any]] = mapped_column(JsonVariant, default=dict)
+    after: Mapped[dict[str, Any]] = mapped_column(JsonVariant, default=dict)
+
+
+class Subscription(Base):
+    """Персональные переопределения уведомлений (mute / канал выключен)."""
+
+    __tablename__ = "subscriptions"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    shipment_id: Mapped[int] = mapped_column(
+        ForeignKey("shipments.id", ondelete="CASCADE"), primary_key=True
+    )
+    push: Mapped[bool] = mapped_column(default=True)
+    email: Mapped[bool] = mapped_column(default=True)
+    muted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Device(Base):
+    __tablename__ = "devices"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    apns_token: Mapped[str] = mapped_column(String(256), unique=True)
+    environment: Mapped[str] = mapped_column(String(16), default="sandbox")
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_log"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    action: Mapped[str] = mapped_column(String(64))
+    entity: Mapped[str] = mapped_column(String(64))
+    entity_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    details: Mapped[dict[str, Any]] = mapped_column(JsonVariant, default=dict)
