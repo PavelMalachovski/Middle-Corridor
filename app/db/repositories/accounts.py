@@ -14,6 +14,7 @@ from app.db.models import (
     Membership,
     Organization,
     OrgLink,
+    ShipmentEventRow,
     ShipmentRow,
     ShipmentShare,
     User,
@@ -237,3 +238,46 @@ class AccountsRepository:
             .values(revoked_at=now)
             .execution_options(synchronize_session=False)
         )
+
+    async def shipment_by_ref(self, ref: str) -> ShipmentRow | None:
+        result = await self._session.execute(select(ShipmentRow).where(ShipmentRow.ref == ref))
+        return result.scalar_one_or_none()
+
+    async def shipments_by_ids(self, ids: list[int]) -> list[ShipmentRow]:
+        if not ids:
+            return []
+        result = await self._session.execute(
+            select(ShipmentRow).where(ShipmentRow.id.in_(ids)).order_by(ShipmentRow.id)
+        )
+        return list(result.scalars())
+
+    async def refs_with_prefix(self, prefix: str) -> list[str]:
+        result = await self._session.execute(
+            select(ShipmentRow.ref).where(ShipmentRow.ref.startswith(prefix, autoescape=True))
+        )
+        return list(result.scalars())
+
+    async def share_exists(self, shipment_id: int, org_id: int) -> bool:
+        return await self._session.get(ShipmentShare, (shipment_id, org_id)) is not None
+
+    async def live_events(self, shipment_ids: list[int]) -> list[ShipmentEventRow]:
+        """События, которые никто не исправил (на них не ссылается supersedes_id); по id."""
+        if not shipment_ids:
+            return []
+        superseded = select(ShipmentEventRow.supersedes_id).where(
+            ShipmentEventRow.supersedes_id.is_not(None)
+        )
+        stmt = select(ShipmentEventRow).where(
+            ShipmentEventRow.shipment_id.in_(shipment_ids),
+            ShipmentEventRow.id.not_in(superseded),
+        )
+        result = await self._session.execute(stmt.order_by(ShipmentEventRow.id))
+        return list(result.scalars())
+
+    async def org_names(self, org_ids: set[int]) -> dict[int, str]:
+        if not org_ids:
+            return {}
+        result = await self._session.execute(
+            select(Organization.id, Organization.name).where(Organization.id.in_(org_ids))
+        )
+        return {i: n for i, n in result.all()}
