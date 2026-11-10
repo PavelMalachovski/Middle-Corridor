@@ -18,13 +18,13 @@ struct ShipmentDetailView: View {
     var body: some View {
         Group {
             if let accountKey {
-                if let mine = account?.shipment(key: accountKey) {
-                    content(mine.shipment, labels: labels, owned: true)
+                if let account, let mine = account.shipment(key: accountKey) {
+                    content(mine.shipment, labels: labels, mine: (account, mine))
                 } else {
                     ContentUnavailableView(l("card.missing"), systemImage: "shippingbox")  // вышли из аккаунта
                 }
             } else if let shipment = store.shipments[ref] {
-                content(shipment, labels: labels, owned: false)
+                content(shipment, labels: labels, mine: nil)
             } else if store.missing.contains(ref) {
                 ContentUnavailableView(l("add.error.notFound"), systemImage: "shippingbox")
             } else if store.lastError != nil {
@@ -48,11 +48,17 @@ struct ShipmentDetailView: View {
 
     private var labels: Labels { Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? []) }
 
-    /// `owned` — груз аккаунта.
-    private func content(_ s: Shipment, labels: Labels, owned: Bool) -> some View {
+    /// `mine` — груз аккаунта (с его правами): действия «Отметить событие», «Изменить», «Открыть клиенту».
+    private func content(_ s: Shipment, labels: Labels, mine: (AccountModel, MyShipment)?) -> some View {
         let nodes = store.snapshot?.nodes ?? []
+        let owned = mine != nil
         return List {
             ShipmentHeroSection(shipment: s, labels: labels)
+
+            if let mine {
+                AccountActionsSection(
+                    account: mine.0, mine: mine.1, segments: store.snapshot?.segments, labels: labels)
+            }
 
             if s.isDelayed, let parts = s.delayBreakdown, !parts.isEmpty {
                 DelaySection(parts: parts, labels: labels)

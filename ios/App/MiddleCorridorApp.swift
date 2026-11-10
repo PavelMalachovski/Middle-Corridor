@@ -3,6 +3,8 @@ import SwiftUI
 
 @main
 struct MiddleCorridorApp: App {
+    /// Токен APNs (push о грузах аккаунта) приходит только в делегат приложения.
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model = AppModel()
     @AppStorage(LangChoice.key) private var langChoice = LangChoice.system.rawValue
 

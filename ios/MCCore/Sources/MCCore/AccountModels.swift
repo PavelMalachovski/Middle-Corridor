@@ -11,15 +11,13 @@ public enum CheckpointKind: String, Codable, Sendable, CaseIterable {
     case arrived, departed, held, released
 }
 
-/// Причины стоянки в форме; `other` уходит без кода — причина идёт текстом примечания.
+/// Причины стоянки в форме. На сервер уходит `rawValue`, и `other` тоже (без кода `held` — 422
+/// `hold_code_required`); в проекции у `other` кода нет — причина идёт текстом примечания.
 public enum HoldCode: String, Sendable, CaseIterable {
     case weatherBan = "weather_ban"
     case customsWait = "customs_wait"
     case ferryLoadingWait = "ferry_loading_wait"
     case other
-
-    /// Код для сервера: у `other` его нет.
-    public var apiCode: String? { self == .other ? nil : rawValue }
 }
 
 public struct MembershipInfo: Codable, Sendable, Hashable {

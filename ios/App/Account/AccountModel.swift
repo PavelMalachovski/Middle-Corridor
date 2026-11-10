@@ -15,6 +15,11 @@ final class AccountModel {
     private(set) var sessionExpired = false
     /// Ошибка последнего обновления; прежние данные остаются на экране.
     private(set) var lastError: APIError?
+    /// Приглашения, отправленные в этой сессии, по компаниям: сервер отдаёт только принявших.
+    private(set) var invitations: [Int: [PendingInvite]] = [:]
+
+    /// Грузы обновились (было → стало): локальные уведомления (`AppModel`).
+    @ObservationIgnored var onShipmentsChange: ((_ old: [MyShipment], _ new: [MyShipment]) -> Void)?
 
     @ObservationIgnored private let api: any AccountAPI
     /// Растёт при входе и выходе: ответ, начатый до них, уже не применяется.
@@ -42,7 +47,8 @@ final class AccountModel {
     }
 
     /// Раз в минуту на переднем плане, при возврате в приложение и после входа.
-    func refresh() async {
+    /// `notify: false` — после своего действия (событие, правка): о нём не уведомляем самого себя.
+    func refresh(notify: Bool = true) async {
         guard isSignedIn else { return }
         let started = generation
         do {
@@ -50,9 +56,11 @@ final class AccountModel {
             async let shipments = api.myShipments()
             let (newMe, newShipments) = try await (me, shipments)
             guard started == generation else { return }
+            let old = self.shipments
             self.me = newMe
             self.shipments = newShipments
             lastError = nil
+            if notify { onShipmentsChange?(old, newShipments) }
         } catch {
             guard started == generation else { return }
             let error = APIError.from(error)
@@ -72,6 +80,49 @@ final class AccountModel {
         try? await api.logout()
     }
 
+    // MARK: - Действия (после каждого — список заново, без уведомления о своём же действии)
+
+    /// Компании, где можно создать груз; пусто — «Новый груз» не показываем.
+    var creatableOrgs: [MembershipInfo] { AccountAccess.creatableOrgs(me) }
+    /// Компании, где можно смотреть команду и приглашать.
+    var managedOrgs: [MembershipInfo] { AccountAccess.managedOrgs(me) }
+
+    func create(_ shipment: NewShipment) async throws -> MyShipment {
+        let created = try await api.create(shipment)
+        await refresh(notify: false)
+        return created
+    }
+
+    func update(ref: String, _ patch: ShipmentPatch) async throws {
+        _ = try await api.update(ref: ref, patch)
+        await refresh(notify: false)
+    }
+
+    func addEvent(ref: String, _ event: CheckpointEventInput) async throws {
+        _ = try await api.addEvent(ref: ref, event)
+        await refresh(notify: false)
+    }
+
+    func share(ref: String, orgId: Int) async throws { try await api.share(ref: ref, orgId: orgId) }
+    func clients(orgId: Int) async throws -> [OrgSummary] { try await api.clients(orgId: orgId) }
+    func members(orgId: Int) async throws -> [OrgMember] { try await api.members(orgId: orgId) }
+    func revoke(orgId: Int, userId: Int) async throws { try await api.revoke(orgId: orgId, userId: userId) }
+
+    /// Приглашение; ответ `mail` — ушло ли письмо (приглашение создано в любом случае).
+    func invite(orgId: Int, email: String, role: AccountRole, nodeCodes: [String]) async throws -> Invitation {
+        let email = Self.normalize(email)
+        let result = try await api.invite(orgId: orgId, email: email, role: role, nodeCodes: nodeCodes)
+        var list = invitations[orgId, default: []].filter { $0.email != email }
+        list.append(PendingInvite(email: email, role: role, nodeCodes: nodeCodes, mailSent: result.mailSent))
+        invitations[orgId] = list
+        return result
+    }
+
+    /// Устройство зарегистрировано для push: о событиях скажет сервер.
+    func registerDevice(token: String, environment: String) async throws {
+        try await api.registerDevice(apnsToken: token, environment: environment)
+    }
+
     /// Груз по ключу строки `AccountRows.key` (компания + номер).
     func shipment(key: String) -> MyShipment? {
         AccountRows.find(key, in: shipments)
@@ -88,9 +139,19 @@ final class AccountModel {
         shipments = []
         isSignedIn = false
         lastError = nil
+        invitations = [:]
     }
 
     static func normalize(_ email: String) -> String {
         email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
+}
+
+/// Приглашение этой сессии — в «Команде» до первого входа приглашённого.
+struct PendingInvite: Hashable, Identifiable {
+    let email: String
+    let role: AccountRole
+    let nodeCodes: [String]
+    let mailSent: Bool
+    var id: String { email }
 }

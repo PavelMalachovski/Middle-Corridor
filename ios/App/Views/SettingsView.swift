@@ -192,7 +192,19 @@ private struct AccountSection: View {
                         .accessibilityElement(children: .combine)
                         .accessibilityIdentifier("account.email")
                     ForEach(me.memberships, id: \.orgId) { membership in
-                        LabeledContent(membership.orgName, value: role(membership))
+                        if AccountAccess.canManageMembers(me, orgId: membership.orgId) {
+                            // owner/admin — «Команда»: люди компании и приглашения
+                            NavigationLink {
+                                OrgMembersView(
+                                    account: account, org: membership, labels: Labels(lang: l.lang, nodes: nodes),
+                                    nodeCodes: nodes.map(\.code))
+                            } label: {
+                                LabeledContent(membership.orgName, value: role(membership))
+                            }
+                            .accessibilityIdentifier("account.org.\(membership.orgId)")
+                        } else {
+                            LabeledContent(membership.orgName, value: role(membership))
+                        }
                     }
                 } else {
                     // токен есть, «кто я» ещё не пришёл (старт без сети)

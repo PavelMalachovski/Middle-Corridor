@@ -9,6 +9,7 @@ struct MyShipmentsView: View {
     @Bindable var model: AppModel
     @Environment(\.l10n) private var l
     @State private var showAdd = false
+    @State private var showNew = false
     @State private var showSettings = false
     /// Только что удалённый груз — плашка «Отменить» на несколько секунд.
     @State private var removed: String?
@@ -33,11 +34,7 @@ struct MyShipmentsView: View {
                         .accessibilityLabel(l("list.settings"))
                         .accessibilityIdentifier("settings")
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showAdd = true } label: { Image(systemName: "plus") }
-                        .accessibilityLabel(l("add.title"))
-                        .accessibilityIdentifier("add")
-                }
+                ToolbarItem(placement: .topBarTrailing) { addButton }
             }
             .navigationDestination(for: String.self) { value in
                 // груз аккаунта — по ключу `acct:<org>:<номер>`: номер может совпасть с демо-номером
@@ -77,6 +74,18 @@ struct MyShipmentsView: View {
                 Task { await model.notifier.requestAuthorizationIfNeeded() }
             }
         }
+        .sheet(isPresented: $showNew) {
+            if let account = model.account {
+                NewShipmentView(
+                    account: account, segments: store.snapshot?.segments,
+                    labels: Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? [])
+                ) { created in
+                    showNew = false
+                    addedCount += 1
+                    model.path = [AccountRows.key(created)]
+                }
+            }
+        }
         .sheet(isPresented: $showSettings) {
             SettingsView(model: model)
         }
@@ -88,6 +97,28 @@ struct MyShipmentsView: View {
             Button(l("common.ok"), role: .cancel) {}
         } message: { error in
             Text(AddShipmentView.message(for: error, l))
+        }
+    }
+
+    /// «+»: экспедитор (owner/admin) выбирает «Новый груз» или «Отследить по номеру»; остальные —
+    /// сразу добавление номера.
+    @ViewBuilder
+    private var addButton: some View {
+        if model.account?.creatableOrgs.isEmpty == false {
+            Menu {
+                Button { showNew = true } label: { Label(l("new.title"), systemImage: "shippingbox") }
+                    .accessibilityIdentifier("add.new")
+                Button { showAdd = true } label: { Label(l("add.track"), systemImage: "number") }
+                    .accessibilityIdentifier("add.track")
+            } label: {
+                Image(systemName: "plus")
+            }
+            .accessibilityLabel(l("add.menu"))
+            .accessibilityIdentifier("add")
+        } else {
+            Button { showAdd = true } label: { Image(systemName: "plus") }
+                .accessibilityLabel(l("add.title"))
+                .accessibilityIdentifier("add")
         }
     }
 

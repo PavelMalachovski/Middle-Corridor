@@ -95,9 +95,9 @@ final class AccountModelsTests: XCTestCase {
         XCTAssertNil(json["route"])
     }
 
-    func test_holdCode_other_hasNoApiCode() {
-        XCTAssertNil(HoldCode.other.apiCode)
-        XCTAssertEqual(HoldCode.weatherBan.apiCode, "weather_ban")
+    /// Сервер принимает `other` кодом (HOLD_CODES), без кода `held` отклоняется.
+    func test_holdCode_rawValuesMatchServer() {
+        XCTAssertEqual(HoldCode.allCases.map(\.rawValue), ["weather_ban", "customs_wait", "ferry_loading_wait", "other"])
     }
 }
 

@@ -538,4 +538,132 @@ final class SmokeTests: XCTestCase {
         XCTAssertFalse(second.exists)
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
     }
+
+    /// Вход владельцем «Caspian Freight» (он же агент «Aktau Port Agency» в Актау) — до списка грузов.
+    @MainActor
+    private func signIn(_ app: XCUIApplication, email: String = "owner@example.com") {
+        XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
+        app.buttons["settings"].tap()
+        let login = element(app, "account.login")
+        XCTAssertTrue(login.waitForExistence(timeout: 5))
+        login.tap()
+        let field = app.textFields["login.email"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText(email)
+        app.buttons["login.requestCode"].tap()
+        let code = app.textFields["login.code"]
+        XCTAssertTrue(code.waitForExistence(timeout: 5))
+        code.tap()
+        code.typeText("000000")
+        app.buttons["login.submit"].tap()
+        XCTAssertTrue(element(app, "account.email").waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    private func waitEnabled(_ element: XCUIElement, _ enabled: Bool) -> Bool {
+        let predicate = NSPredicate(format: "isEnabled == %@", NSNumber(value: enabled))
+        return XCTWaiter().wait(for: [expectation(for: predicate, evaluatedWith: element)], timeout: 5) == .completed
+    }
+
+    /// «+» → «Новый груз»: неверная контрольная цифра — «Создать» неактивна и есть подсказка;
+    /// верная — груз создан (номер выдаёт сервер), открыта его карточка, он в списке.
+    @MainActor
+    func test_createShipment() {
+        let app = launch()
+        signIn(app)
+        app.buttons["settings.done"].tap()
+        XCTAssertTrue(element(app, "account.row.MC-27-0001").waitForExistence(timeout: 5))
+
+        app.buttons["add"].tap()
+        let new = app.buttons["add.new"]
+        XCTAssertTrue(new.waitForExistence(timeout: 5))
+        new.tap()
+        let container = app.textFields["new.container"]
+        XCTAssertTrue(container.waitForExistence(timeout: 5))
+        container.tap()
+        container.typeText("CSQU3054384")
+        let submit = app.buttons["new.submit"]
+        XCTAssertTrue(submit.waitForExistence(timeout: 5))
+        XCTAssertTrue(waitEnabled(submit, false))
+        XCTAssertTrue(element(app, "new.container.invalid").exists)
+        shot(app, "44-new-shipment-invalid-ru")
+
+        container.typeText(XCUIKeyboardKey.delete.rawValue + "3")
+        XCTAssertTrue(waitEnabled(submit, true))
+        XCTAssertFalse(element(app, "new.container.invalid").exists)
+        submit.tap()
+
+        XCTAssertTrue(app.navigationBars["MC-27-0003"].waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "card.edit").waitForExistence(timeout: 5))
+        shot(app, "45-new-shipment-card-ru")
+        app.navigationBars["MC-27-0003"].buttons.firstMatch.tap()
+        XCTAssertTrue(element(app, "account.row.MC-27-0003").waitForExistence(timeout: 5))
+    }
+
+    /// Агент Актау: «Отметить событие» → «Стоит» → «Погодный запрет» → карточка показывает причину.
+    @MainActor
+    func test_markEvent() {
+        let app = launch()
+        signIn(app)
+        app.buttons["settings.done"].tap()
+        let row = element(app, "account.row.MC-27-0002")
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        XCTAssertTrue(app.navigationBars["MC-27-0002"].waitForExistence(timeout: 5))
+        XCTAssertFalse(element(app, "hold").exists)  // стоянки ещё нет
+        XCTAssertFalse(element(app, "card.edit").exists)  // агент груз не правит
+
+        let mark = element(app, "card.markEvent")
+        XCTAssertTrue(mark.waitForExistence(timeout: 5))
+        mark.tap()
+        XCTAssertTrue(element(app, "event.node").waitForExistence(timeout: 5))
+        XCTAssertEqual(element(app, "event.node").label, "Актау")
+        let submit = app.buttons["event.submit"]
+        app.buttons["Стоит"].tap()
+        XCTAssertTrue(waitEnabled(submit, false))  // без причины нельзя
+        app.buttons["Погодный запрет"].tap()
+        XCTAssertTrue(waitEnabled(submit, true))
+        shot(app, "46-mark-event-ru")
+        submit.tap()
+
+        let hold = element(app, "hold")
+        XCTAssertTrue(hold.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["MC-27-0002"].exists)
+        XCTAssertTrue(hold.label.contains("Погодный запрет"), hold.label)
+        shot(app, "47-card-held-ru")
+    }
+
+    /// Владелец: «Команда» → «Пригласить» → e-mail, роль агент, узел Актау → приглашение в списке.
+    @MainActor
+    func test_inviteAgent() {
+        let app = launch()
+        signIn(app)
+        let org = element(app, "account.org.1")
+        XCTAssertTrue(org.waitForExistence(timeout: 5))
+        XCTAssertFalse(element(app, "account.org.2").exists)  // агент Актау команду не видит
+        org.tap()
+        XCTAssertTrue(element(app, "member.dispatch@caspian.example").waitForExistence(timeout: 5))
+        app.buttons["members.invite"].tap()
+
+        let agent = app.buttons["Агент"]
+        XCTAssertTrue(agent.waitForExistence(timeout: 5))
+        agent.tap()
+        let node = element(app, "invite.node.AKTAU")
+        XCTAssertTrue(node.waitForExistence(timeout: 5))
+        for _ in 0..<3 where !node.isHittable { app.swipeUp() }
+        node.tap()
+        for _ in 0..<3 where !app.textFields["invite.email"].isHittable { app.swipeDown() }
+        let email = app.textFields["invite.email"]
+        email.tap()
+        email.typeText("agent@example.com")
+        shot(app, "48-invite-ru")
+        app.buttons["invite.submit"].tap()
+
+        let pending = element(app, "invite.pending.agent@example.com")
+        XCTAssertTrue(pending.waitForExistence(timeout: 5))
+        XCTAssertTrue(pending.label.contains("агент · Актау"), pending.label)
+        XCTAssertTrue(pending.label.contains("Письмо отправлено"), pending.label)
+        shot(app, "49-members-ru")
+    }
 }

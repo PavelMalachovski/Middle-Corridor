@@ -19,6 +19,8 @@ final class AppModel {
     /// Пульт ведущего (скрыт; включается долгим нажатием на версию в настройках).
     @ObservationIgnored lazy var demo = DemoController(model: self, defaults: defaults)
     @ObservationIgnored let notifier = Notifier()
+    /// Push о грузах аккаунта (если есть в сборке, `MCPushEnabled`).
+    let push = PushRegistration()
     private(set) var serverURL: String
     var path: [String] = []
     var tab: AppTab = .shipments
@@ -63,6 +65,7 @@ final class AppModel {
         account = Self.makeAccount(fake: isFake)
         observe(store)
         notifier.onOpen = { [weak self] ref in self?.show(ref) }
+        account?.onShipmentsChange = { [weak self] old, new in self?.handleAccount(old: old, new: new) }
     }
 
     /// Меняет сервер: список номеров сохраняется, данные перезагрузятся с нового адреса.
@@ -118,10 +121,33 @@ final class AppModel {
         }
     }
 
-    /// Нажатие на уведомление, виджет или Live Activity: карточка этого груза.
+    /// Нажатие на уведомление (локальное или push `{"ref": …}`), виджет или Live Activity:
+    /// карточка этого груза. Груз аккаунта открывается своей карточкой (ключ `acct:`).
     func show(_ ref: String) {
         showSplash = false
         tab = .shipments
+        if let account, account.isSignedIn {
+            if let mine = account.shipments.first(where: { $0.shipment.ref == ref }) {
+                path = [AccountRows.key(mine)]
+                return
+            }
+            if account.shipments.isEmpty {
+                // холодный старт по нажатию на push: грузы аккаунта ещё не загружены
+                Task {
+                    await account.refresh()
+                    if let mine = account.shipments.first(where: { $0.shipment.ref == ref }) {
+                        path = [AccountRows.key(mine)]
+                    } else {
+                        showTracked(ref)
+                    }
+                }
+                return
+            }
+        }
+        showTracked(ref)
+    }
+
+    private func showTracked(_ ref: String) {
         if store.refs.contains(ref) {
             path = [ref]
         } else if let url = URL(string: "mcstatus://s/\(ref)") {
@@ -155,6 +181,24 @@ final class AppModel {
             }
         }
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Грузы аккаунта обновились: то же правило, что у отслеживаемых (`NotificationRules.diff`).
+    /// Устройство зарегистрировано для push — «событие» по ним присылает сервер, локальное молчит.
+    /// Узлы те же, что сейчас: шторм по снимку коридора приходит с обновлением отслеживаемых.
+    private func handleAccount(old: [MyShipment], new: [MyShipment]) {
+        guard !old.isEmpty else { return }  // первая загрузка после входа — не новость
+        let lang = (LangChoice(rawValue: defaults.string(forKey: LangChoice.key) ?? "") ?? .system).resolved()
+        let nodes = store.snapshot?.nodes ?? []
+        let byRef = { (list: [MyShipment]) in
+            Dictionary(list.map { ($0.shipment.ref, $0.shipment) }, uniquingKeysWith: { first, _ in first })
+        }
+        let newByRef = byRef(new)
+        let notices = NotificationRules.merge(NotificationRules.diff(
+            old: byRef(old), new: newByRef, oldNodes: nodes, newNodes: nodes,
+            settings: NotifyPrefs.load(defaults), labels: Labels(lang: lang, nodes: nodes),
+            pushManagedRefs: push.isRegistered ? Set(newByRef.keys) : []))
+        notifier.deliver(notices, after: notifyDelay)
     }
 
     /// Груз только что добавили: флаг санкций — сразу, не дожидаясь обновления по таймеру.

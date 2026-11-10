@@ -52,6 +52,11 @@ struct RootView: View {
             if !visible { model.showSplash = false }
         }
         .task { await model.demo.probe() }
+        .task(id: model.account?.isSignedIn) {
+            // вошли (или старт с сохранённым входом) — разрешение на уведомления и push-токен
+            guard let account = model.account, account.isSignedIn else { return model.push.reset() }
+            await model.push.start(account: account, notifier: model.notifier)
+        }
         .task {
             // на переднем плане — обновление раз в минуту (и грузы аккаунта): изменения → уведомления
             // без проверки scenePhase: в долгой задаче это копия на момент её старта (могла
