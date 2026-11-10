@@ -274,6 +274,15 @@ class AccountsRepository:
         result = await self._session.execute(stmt.order_by(ShipmentEventRow.id))
         return list(result.scalars())
 
+    async def all_events(self, shipment_id: int) -> list[ShipmentEventRow]:
+        """Все события груза, включая исправленные; по id."""
+        result = await self._session.execute(
+            select(ShipmentEventRow)
+            .where(ShipmentEventRow.shipment_id == shipment_id)
+            .order_by(ShipmentEventRow.id)
+        )
+        return list(result.scalars())
+
     async def org_names(self, org_ids: set[int]) -> dict[int, str]:
         if not org_ids:
             return {}

@@ -99,6 +99,20 @@ def _same(old: Any, new: Any) -> bool:
     return old == new
 
 
+async def load_shipment(session: AsyncSession, actor: Principal, ref: str, *, manage: bool):
+    """Груз и доступ; невидимый — NotFound, видимый без права управлять — PermissionDenied."""
+    row = await AccountsRepository(session).shipment_by_ref(ref)
+    if row is None:
+        raise NotFound
+    access = await shipment_access(session, row)
+    managing = can_manage(actor, access)
+    if not can_view(actor, access) or (row.archived_at is not None and not managing):
+        raise NotFound
+    if manage and not managing:
+        raise PermissionDenied
+    return row, access
+
+
 class ShipmentService:
     def __init__(
         self,
@@ -180,17 +194,7 @@ class ShipmentService:
         return max(numbers, default=0) + 1
 
     async def _load(self, session: AsyncSession, actor: Principal, ref: str, *, manage: bool):
-        """Груз и доступ; невидимый — NotFound, видимый без права управлять — PermissionDenied."""
-        row = await AccountsRepository(session).shipment_by_ref(ref)
-        if row is None:
-            raise NotFound
-        access = await shipment_access(session, row)
-        managing = can_manage(actor, access)
-        if not can_view(actor, access) or (row.archived_at is not None and not managing):
-            raise NotFound
-        if manage and not managing:
-            raise PermissionDenied
-        return row, access
+        return await load_shipment(session, actor, ref, manage=manage)
 
     async def get(self, actor: Principal, ref: str) -> ShipmentRow:
         async with self._sf() as session:
