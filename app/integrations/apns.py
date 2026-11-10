@@ -15,6 +15,7 @@ PushResult = Literal["ok", "gone", "error"]
 HOSTS = {"sandbox": "api.sandbox.push.apple.com", "production": "api.push.apple.com"}
 TOKEN_TTL = timedelta(minutes=50)
 _GONE_REASONS = frozenset({"BadDeviceToken", "Unregistered"})
+_BAD_PROVIDER_TOKEN = frozenset({"ExpiredProviderToken", "InvalidProviderToken"})
 
 
 def _tail(token: str) -> str:
@@ -75,6 +76,8 @@ class ApnsSender:
         reason = _reason(response)
         if response.status_code == 410 or (response.status_code == 400 and reason in _GONE_REASONS):
             return "gone"
+        if response.status_code == 403 and reason in _BAD_PROVIDER_TOKEN:
+            self._jwt = None  # следующая попытка подпишет свежий токен
         log.warning(
             "apns_rejected", token_tail=_tail(token), status=response.status_code, reason=reason
         )

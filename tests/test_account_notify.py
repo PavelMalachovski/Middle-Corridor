@@ -375,3 +375,106 @@ async def test_set_subscription(session_factory, session, world):
         await n.set_subscription(stranger, ref, push=True, email=True, muted=False)
     with pytest.raises(NotFound):
         await n.set_subscription(viewer, "NOPE", push=True, email=True, muted=False)
+
+
+async def test_unexpected_errors_are_logged(session_factory, world, monkeypatch):
+    from structlog.testing import capture_logs
+
+    n, push, _ = _notifier(session_factory)
+
+    async def boom(*a, **k):
+        raise RuntimeError("x")
+
+    monkeypatch.setattr(n, "_push_one", boom)
+    with capture_logs() as logs:
+        await _fire(n, world)
+    failed = [e for e in logs if e["event"] == "notify_recipient_failed"]
+    assert failed and failed[0]["error"] == "RuntimeError"
+    assert {"user_id", "shipment_id"} <= failed[0].keys()
+
+
+async def test_revoke_failure_logged(session_factory, world):
+    from structlog.testing import capture_logs
+
+    bad = _token_of(world, "colleague")
+    n, _, _ = _notifier(session_factory, FakePush({bad: ["gone"]}))
+
+    def broken_clock():
+        raise RuntimeError("clock")
+
+    n._clock = broken_clock
+    with capture_logs() as logs:
+        await _fire(n, world)
+    assert any(e["event"] == "device_revoke_failed" for e in logs)
+
+
+async def test_failure_logs_carry_error_type(session_factory, world):
+    from structlog.testing import capture_logs
+
+    class Boom(LogEmailSender):
+        async def send(self, to, subject, text):
+            raise ValueError("smtp")
+
+    n, _, _ = _notifier(session_factory, mail=Boom())
+    with capture_logs() as logs:
+        await _fire(n, world)
+    assert any(e["event"] == "email_failed" and e["error"] == "ValueError" for e in logs)
+    assert "x.test" not in repr(logs)
+
+
+async def test_retry_skips_reassigned_token(session_factory, world):
+    t = _token_of(world, "colleague")
+    other = world["users"]["viewer"].id
+
+    async def sleep(_: float) -> None:
+        n2 = ShipmentNotifier(session_factory, FakePush(), LogEmailSender(), sleep=no_sleep)
+        await n2.register_device(other, t, "sandbox")
+
+    push = FakePush({t: ["error", "ok"]})
+    n = ShipmentNotifier(session_factory, push, LogEmailSender(), sleep=sleep)
+    await _fire(n, world)
+    assert sum(1 for s in push.sent if s[0] == t) == 1
+
+
+async def test_retry_skips_when_access_lost(session_factory, session, world):
+    t = _token_of(world, "viewer")
+
+    async def sleep(_: float) -> None:
+        async with session_factory() as s:
+            await s.execute(
+                ShipmentShare.__table__.delete().where(
+                    ShipmentShare.shipment_id == world["ship"].id
+                )
+            )
+            await s.commit()
+
+    push = FakePush({t: ["error", "ok"]})
+    n = ShipmentNotifier(session_factory, push, LogEmailSender(), sleep=sleep)
+    await _fire(n, world)
+    assert sum(1 for s in push.sent if s[0] == t) == 1
+
+
+async def test_agent_outside_route_not_notified(session_factory, session, world):
+    off = User(email="agent-off@x.test")
+    on = User(email="agent-on@x.test")
+    session.add_all([off, on])
+    await session.flush()
+    fwd_id = world["fwd"].id
+    session.add_all(
+        [
+            Membership(user_id=off.id, org_id=fwd_id, role=Role.agent, node_codes=["XIAN"]),
+            Membership(user_id=on.id, org_id=fwd_id, role=Role.agent, node_codes=["POTI"]),
+        ]
+    )
+    session.add_all(
+        [
+            Device(user_id=off.id, apns_token=tok(90), environment="sandbox"),
+            Device(user_id=on.id, apns_token=tok(91), environment="sandbox"),
+        ]
+    )
+    await session.commit()
+    n, push, mail = _notifier(session_factory)
+    await _fire(n, world)
+    tokens = {s[0] for s in push.sent}
+    assert tok(90) not in tokens and "agent-off@x.test" not in {m[0] for m in mail.sent}
+    assert tok(91) in tokens and "agent-on@x.test" in {m[0] for m in mail.sent}

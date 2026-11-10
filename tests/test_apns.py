@@ -107,3 +107,21 @@ async def test_jwt_cached_50_minutes():
     now[0] = NOW + timedelta(minutes=51)
     await sender.send(TOKEN, "sandbox", "t", "b", {})
     assert tokens[2] != tokens[0]
+
+
+@pytest.mark.parametrize("reason", ["ExpiredProviderToken", "InvalidProviderToken"])
+async def test_provider_token_rejection_drops_cached_jwt(reason):
+    tokens: list[str] = []
+    now = [NOW]
+
+    def handler(request):
+        tokens.append(request.headers["authorization"])
+        if len(tokens) == 1:
+            return httpx.Response(403, json={"reason": reason})
+        return httpx.Response(200)
+
+    sender, _ = _sender(handler, clock=lambda: now[0])
+    assert await sender.send(TOKEN, "sandbox", "t", "b", {}) == "error"
+    now[0] = NOW + timedelta(seconds=5)  # iat другой -> подпись другая
+    assert await sender.send(TOKEN, "sandbox", "t", "b", {}) == "ok"
+    assert tokens[0] != tokens[1]

@@ -93,6 +93,16 @@ def route_changed_text(ref: str, lang: str) -> str:
     return f"{ref}: route changed" if lang == "en" else f"{ref}: изменён маршрут"
 
 
+def _log_failure(result: object, user_id: int, shipment_id: int) -> None:
+    if isinstance(result, BaseException):
+        log.error(
+            "notify_recipient_failed",
+            user_id=user_id,
+            shipment_id=shipment_id,
+            error=type(result).__name__,
+        )
+
+
 @dataclass(frozen=True)
 class _Target:
     device_id: int
@@ -161,10 +171,12 @@ class ShipmentNotifier:
     ) -> None:
         try:
             recipients = await self._recipients(shipment_id, org_id, author_id)
-            await asyncio.gather(
+            results = await asyncio.gather(
                 *(self._notify(r, shipment_id, ref, text) for r in recipients),
                 return_exceptions=True,
             )
+            for r, result in zip(recipients, results, strict=True):
+                _log_failure(result, r.user_id, shipment_id)
         except Exception:
             log.exception("notify_failed", shipment_id=shipment_id)
 
@@ -212,7 +224,8 @@ class ShipmentNotifier:
         jobs = [self._push_one(r, d, shipment_id, ref, body) for d in r.devices]
         if r.email is not None:
             jobs.append(self._email_one(r, shipment_id, body))
-        await asyncio.gather(*jobs, return_exceptions=True)
+        for result in await asyncio.gather(*jobs, return_exceptions=True):
+            _log_failure(result, r.user_id, shipment_id)
 
     async def _push_one(
         self, r: _Recipient, d: _Target, shipment_id: int, ref: str, body: str
@@ -220,14 +233,20 @@ class ShipmentNotifier:
         async def attempt() -> PushResult:
             try:
                 return await self._push.send(d.token, d.env, ref, body, {"ref": ref})
-            except Exception:
-                log.warning("push_failed", user_id=r.user_id, shipment_id=shipment_id)
+            except Exception as exc:
+                log.warning(
+                    "push_failed",
+                    user_id=r.user_id,
+                    shipment_id=shipment_id,
+                    error=type(exc).__name__,
+                )
                 return "error"
 
         result = await attempt()
         if result == "error":
             await self._sleep(RETRY_DELAY)
-            result = await attempt()
+            if await self._still_valid(r.user_id, shipment_id, d.device_id):
+                result = await attempt()
         if result == "gone":
             await self._revoke(d.device_id)
         elif result == "error":
@@ -240,19 +259,55 @@ class ShipmentNotifier:
                 assert r.email is not None
                 await self._mail.send(r.email, subject, text)
                 return
-            except Exception:
+            except Exception as exc:
                 log.warning(
-                    "email_failed", user_id=r.user_id, shipment_id=shipment_id, attempt=attempt
+                    "email_failed",
+                    user_id=r.user_id,
+                    shipment_id=shipment_id,
+                    attempt=attempt,
+                    error=type(exc).__name__,
                 )
                 if attempt == 1:
                     await self._sleep(RETRY_DELAY)
+                    if not await self._still_valid(r.user_id, shipment_id, None):
+                        return
+
+    async def _still_valid(self, user_id: int, shipment_id: int, device_id: int | None) -> bool:
+        """Перед повтором: снимок 30-секундной давности мог устареть."""
+        try:
+            async with self._sf() as session:
+                repo = AccountsRepository(session)
+                if device_id is not None:
+                    device = await session.get(Device, device_id)
+                    if device is None or device.user_id != user_id or device.revoked_at is not None:
+                        return False
+                rows = await repo.shipments_by_ids([shipment_id])
+                user = await repo.get_user(user_id)
+                if not rows or user is None:
+                    return False
+                sub = await repo.get_subscription(user_id, shipment_id)
+                if sub is not None and sub.muted_at is not None:
+                    return False
+                access = await shipment_access(session, rows[0])
+                return can_view(await load_principal(session, user), access)
+        except Exception as exc:
+            log.error(
+                "notify_recheck_failed",
+                user_id=user_id,
+                shipment_id=shipment_id,
+                error=type(exc).__name__,
+            )
+            return False
 
     async def _revoke(self, device_id: int) -> None:
-        async with self._sf() as session:
-            device = await session.get(Device, device_id)
-            if device is not None and device.revoked_at is None:
-                device.revoked_at = self._clock()
-                await session.commit()
+        try:
+            async with self._sf() as session:
+                device = await session.get(Device, device_id)
+                if device is not None and device.revoked_at is None:
+                    device.revoked_at = self._clock()
+                    await session.commit()
+        except Exception as exc:
+            log.error("device_revoke_failed", device_id=device_id, error=type(exc).__name__)
 
     # --- устройства и подписки -------------------------------------------
 
