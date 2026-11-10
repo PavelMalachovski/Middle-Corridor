@@ -14,6 +14,8 @@ final class AppModel {
     private(set) var store: TrackedShipments
     /// Клиент текущего сервера (данные — через store, часы демо — через demo).
     private(set) var api: any CorridorAPI
+    /// Аккаунт (вход по коду, грузы компаний); `nil` — сервер аккаунтов в сборке не задан.
+    let account: AccountModel?
     /// Пульт ведущего (скрыт; включается долгим нажатием на версию в настройках).
     @ObservationIgnored lazy var demo = DemoController(model: self, defaults: defaults)
     @ObservationIgnored let notifier = Notifier()
@@ -58,6 +60,7 @@ final class AppModel {
         let api = Self.makeAPI(fake: isFake, server: server)
         self.api = api
         store = TrackedShipments(api: api, storage: storage, cache: cache, server: server)
+        account = Self.makeAccount(fake: isFake)
         observe(store)
         notifier.onOpen = { [weak self] ref in self?.show(ref) }
     }
@@ -189,6 +192,30 @@ final class AppModel {
         if !s.contains("://") { s = "http://" + s }
         while s.hasSuffix("/") { s.removeLast() }
         return s
+    }
+
+    /// Обновление по таймеру и при возврате в приложение: коридор и грузы аккаунта.
+    func refreshAll() async {
+        async let local: Void = store.refresh()
+        if let account { await account.refresh() }
+        await local
+    }
+
+    /// Сервер аккаунтов — ключ сборки `MC_ACCOUNT_API_URL` (Info.plist `MCAccountAPIURL`), не адрес
+    /// демо из настроек: карта и демо-номера — публичный сервер, аккаунты — свой (Railway).
+    /// В `-mc-fake-api` — фейк с токеном в памяти: UI-тесты не делят сессию через Keychain.
+    private static func makeAccount(fake: Bool) -> AccountModel? {
+        #if DEBUG
+            if fake {
+                let tokens = InMemoryTokenStore()
+                return AccountModel(api: FakeAccountAPI(tokens: tokens), tokens: tokens)
+            }
+        #endif
+        let raw = (Bundle.main.object(forInfoDictionaryKey: "MCAccountAPIURL") as? String ?? "")
+            .trimmingCharacters(in: .whitespaces)
+        guard !raw.isEmpty, let url = URL(string: raw), url.scheme != nil else { return nil }
+        let tokens = KeychainTokenStore()
+        return AccountModel(api: HTTPAccountAPI(baseURL: url, tokens: tokens), tokens: tokens)
     }
 
     private static func makeAPI(fake: Bool, server: String) -> any CorridorAPI {

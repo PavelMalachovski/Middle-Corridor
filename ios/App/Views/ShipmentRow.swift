@@ -2,13 +2,14 @@ import MCCore
 import SwiftUI
 
 /// Строка «Моих грузов»: номер и статус, маршрут, где сейчас (или почему стоит), прогресс и ETA.
-/// `compact` — доставленные: только номер и статус.
+/// `compact` — доставленные: только номер и статус. `org` — бейдж компании у груза аккаунта.
 struct ShipmentRow: View {
     let row: TrackedRow
     let labels: Labels
     let isOffline: Bool
     let isMissing: Bool
     var compact = false
+    var org: String?
     @Environment(\.l10n) private var l
 
     var body: some View {
@@ -30,6 +31,15 @@ struct ShipmentRow: View {
                 if let shipment = row.shipment {
                     StatusPill(shipment: shipment, labels: labels)
                 }
+            }
+            if let org {
+                Label(org, systemImage: "building.2")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.secondary.opacity(0.12), in: Capsule())
+                    .accessibilityIdentifier("row.org")
             }
             if let shipment = row.shipment {
                 if !compact { details(shipment) }

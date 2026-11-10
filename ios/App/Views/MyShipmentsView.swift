@@ -3,6 +3,8 @@ import SwiftUI
 
 /// Первый экран — «Мои грузы»; пока список пуст — состояние коридора.
 /// Грузы — по срочности: требуют внимания → в пути → ждут отправления → доставленные.
+/// После входа в те же секции встают грузы аккаунта (с бейджем компании); удалить их из списка
+/// нельзя — они приходят с сервера.
 struct MyShipmentsView: View {
     @Bindable var model: AppModel
     @Environment(\.l10n) private var l
@@ -13,11 +15,19 @@ struct MyShipmentsView: View {
     @State private var addedCount = 0
 
     private var store: TrackedShipments { model.store }
+    /// Грузы аккаунта, которых нет среди отслеживаемых номеров (номер один — строка одна).
+    private var accountRows: [TrackedRow] {
+        guard let account = model.account else { return [] }
+        let local = Set(store.refs)
+        return account.shipments
+            .filter { !local.contains($0.shipment.ref) }
+            .map { TrackedRow(ref: $0.shipment.ref, shipment: $0.shipment) }
+    }
 
     var body: some View {
         NavigationStack(path: $model.path) {
             Group {
-                if store.refs.isEmpty {
+                if store.refs.isEmpty && accountRows.isEmpty {
                     CorridorSummaryView(store: store) { showAdd = true }
                 } else {
                     list
@@ -37,10 +47,11 @@ struct MyShipmentsView: View {
                 }
             }
             .navigationDestination(for: String.self) { ref in
-                ShipmentDetailView(ref: ref, store: store) { remove($0) }
+                ShipmentDetailView(ref: ref, store: store, account: model.account) { remove($0) }
             }
-            .refreshable { await store.refresh() }
+            .refreshable { await model.refreshAll() }
             .task(id: model.serverURL) { await store.refresh() }
+            .task { await model.account?.refresh() }  // вход сохранён в Keychain — грузы сразу
             .safeAreaInset(edge: .bottom) {
                 if let removed {
                     UndoBanner(text: l("list.removed", ["ref": removed]), action: l("list.undo")) {
@@ -83,7 +94,9 @@ struct MyShipmentsView: View {
     private var list: some View {
         let labels = Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? [])
         let offline = store.lastError != nil
-        let sections = ShipmentGroup.group(store.rows, nodes: store.snapshot?.nodes ?? [], missing: store.missing)
+        let sections = ShipmentGroup.group(
+            store.rows + accountRows, nodes: store.snapshot?.nodes ?? [], missing: store.missing)
+        let accountRefs = Set(accountRows.map(\.ref))
         return List {
             if offline {
                 Section { OfflineBanner(updatedAt: store.updatedAt) }
@@ -91,7 +104,12 @@ struct MyShipmentsView: View {
             ForEach(sections) { section in
                 Section {
                     ForEach(section.rows) { row in
-                        rowLink(row, labels: labels, offline: offline, compact: section.group == .delivered)
+                        let compact = section.group == .delivered
+                        if accountRefs.contains(row.ref) {
+                            accountLink(row, labels: labels, offline: offline, compact: compact)
+                        } else {
+                            rowLink(row, labels: labels, offline: offline, compact: compact)
+                        }
                     }
                 } header: {
                     // одна секция — заголовок не нужен: список и так однородный
@@ -134,6 +152,15 @@ struct MyShipmentsView: View {
                 Label(l("list.delete"), systemImage: "trash")
             }
         }
+    }
+
+    /// Груз аккаунта: без «Удалить» и «Поделиться» (ссылка на сайт открывает только демо-номера).
+    private func accountLink(_ row: TrackedRow, labels: Labels, offline: Bool, compact: Bool) -> some View {
+        let org = model.account?.shipment(row.ref).flatMap { model.account?.orgName($0) }
+        return NavigationLink(value: row.ref) {
+            ShipmentRow(row: row, labels: labels, isOffline: offline, isMissing: false, compact: compact, org: org)
+        }
+        .accessibilityIdentifier("row.\(row.ref)")
     }
 
     private func header(_ group: ShipmentGroup, count: Int) -> String {

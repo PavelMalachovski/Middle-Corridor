@@ -3,9 +3,12 @@ import SwiftUI
 
 /// Карточка груза — от ответа к подробностям: статус и ETA, где сейчас и почему стоит, очередь;
 /// почему задержка; Live Activity; карта (нажатие — на весь экран); погода в порту; лента маршрута; груз и клиент.
+/// Груз аккаунта (нет среди отслеживаемых номеров) берётся из `account`: без Live Activity,
+/// «Поделиться» и «Удалить» — он приходит с сервера аккаунтов и на сайте не открывается.
 struct ShipmentDetailView: View {
     let ref: String
     let store: TrackedShipments
+    let account: AccountModel?
     /// «Удалить из списка» из меню «…»: удаляет и закрывает карточку.
     let onRemove: (String) -> Void
     @Environment(\.l10n) private var l
@@ -13,7 +16,9 @@ struct ShipmentDetailView: View {
     var body: some View {
         Group {
             if let shipment = store.shipments[ref] {
-                content(shipment, labels: Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? []))
+                content(shipment, labels: Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? []), owned: false)
+            } else if let mine = account?.shipment(ref) {
+                content(mine.shipment, labels: Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? []), owned: true)
             } else if store.missing.contains(ref) {
                 ContentUnavailableView(l("add.error.notFound"), systemImage: "shippingbox")
             } else if store.lastError != nil {
@@ -26,10 +31,17 @@ struct ShipmentDetailView: View {
         }
         .navigationTitle(ref)
         .navigationBarTitleDisplayMode(.inline)
-        .refreshable { await store.refresh() }
+        .refreshable {
+            if let account, !store.refs.contains(ref), account.shipment(ref) != nil {
+                await account.refresh()
+            } else {
+                await store.refresh()
+            }
+        }
     }
 
-    private func content(_ s: Shipment, labels: Labels) -> some View {
+    /// `owned` — груз аккаунта.
+    private func content(_ s: Shipment, labels: Labels, owned: Bool) -> some View {
         let nodes = store.snapshot?.nodes ?? []
         return List {
             ShipmentHeroSection(shipment: s, labels: labels)
@@ -43,7 +55,7 @@ struct ShipmentDetailView: View {
                 SanctionsSection(check: check, labels: labels)
             }
 
-            if LiveActivities.enabled {
+            if LiveActivities.enabled, !owned {
                 Section {
                     LiveActivityButton(shipment: s, labels: labels)
                 }
@@ -77,25 +89,29 @@ struct ShipmentDetailView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    ShareLink(
-                        item: AppLinks.share(s.ref),
-                        subject: Text(s.ref),
-                        message: Text(AppLinks.message(s, labels: labels, l: l))
-                    ) {
-                        Label(l("card.share"), systemImage: "square.and.arrow.up")
-                    }
-                    Button(role: .destructive) { onRemove(s.ref) } label: {
-                        Label(l("card.remove"), systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .accessibilityLabel(l("card.actions"))
-                .accessibilityIdentifier("card.menu")
+            if !owned {
+                ToolbarItem(placement: .topBarTrailing) { menu(s, labels: labels) }
             }
         }
+    }
+
+    private func menu(_ s: Shipment, labels: Labels) -> some View {
+        Menu {
+            ShareLink(
+                item: AppLinks.share(s.ref),
+                subject: Text(s.ref),
+                message: Text(AppLinks.message(s, labels: labels, l: l))
+            ) {
+                Label(l("card.share"), systemImage: "square.and.arrow.up")
+            }
+            Button(role: .destructive) { onRemove(s.ref) } label: {
+                Label(l("card.remove"), systemImage: "trash")
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+        }
+        .accessibilityLabel(l("card.actions"))
+        .accessibilityIdentifier("card.menu")
     }
 }
 

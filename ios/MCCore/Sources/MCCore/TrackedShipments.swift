@@ -46,6 +46,11 @@ public struct TrackedRow: Identifiable, Sendable, Hashable {
     public var id: String { ref }
     public let ref: String
     public let shipment: Shipment?
+
+    public init(ref: String, shipment: Shipment?) {
+        self.ref = ref
+        self.shipment = shipment
+    }
 }
 
 /// Что было до обновления и что стало — для уведомлений и Live Activity.

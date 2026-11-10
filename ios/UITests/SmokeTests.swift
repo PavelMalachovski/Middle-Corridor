@@ -471,4 +471,69 @@ final class SmokeTests: XCTestCase {
         summary.swipeUp()
         XCTAssertTrue(map.isHittable)
     }
+
+    /// Вход по коду (фейковый API: `000000`) — грузы аккаунта в «Моих грузах» с бейджем компании;
+    /// «Выйти» — исчезли.
+    @MainActor
+    func test_loginAndAccountShipments() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 5))
+        app.buttons["settings"].tap()
+        let login = element(app, "account.login")
+        XCTAssertTrue(login.waitForExistence(timeout: 5))
+        login.tap()
+
+        let email = app.textFields["login.email"]
+        XCTAssertTrue(email.waitForExistence(timeout: 5))
+        email.tap()
+        email.typeText("owner@example.com")
+        app.buttons["login.requestCode"].tap()
+        let sent = element(app, "login.sent")
+        XCTAssertTrue(sent.waitForExistence(timeout: 5))
+        XCTAssertTrue(sent.label.contains("Если адрес приглашён"), sent.label)
+
+        let code = app.textFields["login.code"]
+        XCTAssertTrue(code.waitForExistence(timeout: 5))
+        code.tap()
+        code.typeText("123456")
+        app.buttons["login.submit"].tap()
+        let error = element(app, "login.error")
+        XCTAssertTrue(error.waitForExistence(timeout: 5))
+        XCTAssertEqual(error.label, "Неверный или просроченный код")
+        shot(app, "40-login-error-ru")
+
+        // неверный код стирается — вводим заново
+        code.tap()
+        code.typeText("000000")
+        app.buttons["login.submit"].tap()
+
+        let account = element(app, "account.email")
+        XCTAssertTrue(account.waitForExistence(timeout: 5))
+        XCTAssertTrue(account.label.contains("owner@example.com"), account.label)
+        shot(app, "41-settings-account-ru")
+        app.buttons["settings.done"].tap()
+
+        let first = element(app, "row.MC-27-0001")
+        let second = element(app, "row.MC-27-0002")
+        XCTAssertTrue(first.waitForExistence(timeout: 5))
+        XCTAssertTrue(second.waitForExistence(timeout: 5))
+        XCTAssertTrue(first.label.contains("Caspian Freight"), first.label)
+        XCTAssertTrue(second.label.contains("Aktau Port Agency"), second.label)
+        shot(app, "42-account-list-ru")
+
+        first.tap()
+        XCTAssertTrue(app.navigationBars["MC-27-0001"].waitForExistence(timeout: 5))
+        shot(app, "43-account-card-ru")
+        app.navigationBars["MC-27-0001"].buttons.firstMatch.tap()
+
+        app.buttons["settings"].tap()
+        let logout = element(app, "account.logout")
+        XCTAssertTrue(logout.waitForExistence(timeout: 5))
+        logout.tap()
+        XCTAssertTrue(login.waitForExistence(timeout: 5))
+        app.buttons["settings.done"].tap()
+        XCTAssertTrue(first.waitForNonExistence(timeout: 5))
+        XCTAssertFalse(second.exists)
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+    }
 }
