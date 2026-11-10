@@ -179,6 +179,11 @@ ROUTE_AKTAU = [
     "XIAN", "URUMQI", "KHORGOS", "ALMATY", "SHYMKENT", "KYZYLORDA", "BEINEU", "AKTAU",
     "BAKU_ALAT", "GANJA", "BOYUK_KASIK", "TBILISI", "POTI", "CONSTANTA",
 ]  # fmt: skip
+# Европа → Казахстан (на восток): завод → порт Копер → перевалка в Амбарлы → Поти → … → Костанай
+ROUTE_KOSTANAY = [
+    "MLADA_BOLESLAV", "KOPER", "AMBARLI", "POTI", "TBILISI", "BOYUK_KASIK", "GANJA",
+    "BAKU_ALAT", "AKTAU", "BEINEU", "KOSTANAY",
+]  # fmt: skip
 ROUTE_BATUMI = [
     "URUMQI", "KHORGOS", "ALMATY", "SHYMKENT", "KYZYLORDA", "BEINEU", "KURYK", "BAKU_ALAT",
     "GANJA", "BOYUK_KASIK", "TBILISI", "BATUMI", "CONSTANTA", "BUCHAREST",
@@ -204,6 +209,8 @@ CARGO_EN: dict[str, str] = {
     "2 × 40' HC, станки": "2 × 40' HC, machine tools",
     "3 × 40' HC, аккумуляторы": "3 × 40' HC, batteries",
     "2 × 20', ферросплавы": "2 × 20', ferroalloys",
+    "1 × 40' HC, автокомплекты": "1 × 40' HC, car assembly kits",
+    "1 × 40' HC, электрооборудование": "1 × 40' HC, electrical parts",
 }
 
 
@@ -435,6 +442,29 @@ class MockShipmentSource:
             now - 20 * h,
         )
 
+        # 11–12. На восток, в Костанай (по образцу автокомплектов Škoda, данные обезличены):
+        #     на пароме Баку → Актау и в Чёрном море на фидере Амбарлы → Поти
+        east_ferry = build_plan(
+            "MC-26-0501",
+            "Steppe Auto Assembly",
+            "1 × 40' HC, автокомплекты",
+            ROUTE_KOSTANAY,
+            EventKind.departed,
+            "BAKU_ALAT",
+            now - 8 * h,
+            vessels={("BAKU_ALAT", "AKTAU"): "Shahdag"},
+        )
+        east_sea = build_plan(
+            "MC-26-0502",
+            "Steppe Auto Assembly",
+            "1 × 40' HC, электрооборудование",
+            ROUTE_KOSTANAY,
+            EventKind.departed,
+            "AMBARLI",
+            now - 40 * h,
+            vessels={("AMBARLI", "POTI"): "Euxine Feeder"},
+        )
+
         # 10. Привязан к парому «Azerbaijan» вне AIS: в море — проекция,
         #     в порту — ждёт погрузки/возвращения парома
         az = ferries["Azerbaijan"]
@@ -480,5 +510,7 @@ class MockShipmentSource:
             khorgos,
             china,
             no_ais,
+            east_ferry,
+            east_sea,
         ]
         return [with_packing(p, now) for p in plans]

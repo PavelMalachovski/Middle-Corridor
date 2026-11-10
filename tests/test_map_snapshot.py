@@ -456,13 +456,14 @@ SANCTIONS_EXPECTED = {
     "MC-26-0412": "review",
     "MC-26-0447": "missing",
     "MC-26-0455": "pending",
+    "MC-26-0502": "review",  # восток: разъёмы из CHPL, получатель в Казахстане
 }
 
 
 async def test_mock_sanctions_statuses(mock_service: MapSnapshotService) -> None:
     snap = await mock_service.snapshot()
     statuses = {s.ref: s.sanctions.status for s in snap.shipments if s.sanctions}
-    assert len(statuses) == len(snap.shipments) == 10
+    assert len(statuses) == len(snap.shipments) == 12
     for ref, status in statuses.items():
         assert status == SANCTIONS_EXPECTED.get(ref, "clear"), ref
 
@@ -511,3 +512,17 @@ async def test_api_exposes_only_status_driving_lines(mock_service: MapSnapshotSe
             m.strong or m.reason_code != "code_only" or m.measure == "export_ban"
             for m in check.matches
         ), ref
+
+
+async def test_mock_eastbound_shipments(mock_service: MapSnapshotService) -> None:
+    """Европа → Казахстан: 0501 на пароме Баку → Актау («чисто»), 0502 в Чёрном море."""
+    snap = await mock_service.snapshot()
+    by_ref = {s.ref: s for s in snap.shipments}
+    ferry, black_sea = by_ref["MC-26-0501"], by_ref["MC-26-0502"]
+    for s in (ferry, black_sea):
+        assert s.origin_code == "MLADA_BOLESLAV" and s.destination_code == "KOSTANAY"
+    assert ferry.position.mode == "sea" and ferry.position.from_code == "BAKU_ALAT"
+    assert black_sea.position.mode == "sea" and black_sea.position.from_code == "AMBARLI"
+    assert ferry.sanctions and ferry.sanctions.status == "clear" and ferry.sanctions.matches == []
+    m = black_sea.sanctions.matches if black_sea.sanctions else []
+    assert [(x.line_no, x.list_id, x.reason_code) for x in m] == [(1, "chpl", "code_only")]
