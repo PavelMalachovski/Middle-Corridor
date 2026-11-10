@@ -37,6 +37,8 @@ class ShipmentAccess:
 
 
 async def load_principal(session: AsyncSession, user: User) -> Principal:
+    if user.disabled_at is not None:
+        return Principal(user.id, False, ())
     rows = await AccountsRepository(session).memberships_with_kind(user.id)
     return Principal(
         user_id=user.id,

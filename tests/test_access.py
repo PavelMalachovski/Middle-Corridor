@@ -184,9 +184,9 @@ async def test_agent_sees_only_routes_with_his_node(session) -> None:
     assert await _visible(session, users, ships, "agent") == ["B"]
 
 
-async def test_agent_still_sees_shipment_shared_with_his_other_org(session) -> None:
+async def test_agent_node_filter_applies_to_owner_org_shipments(session) -> None:
     _, users, ships = await _seed(session)
-    # multi (viewer Y) видит A через шаринг; агент X без узла — не видит A
+    # агент X [POTI]: A (без его узла) не видит, B видит
     p = await load_principal(session, users["agent"])
     assert not can_view(p, await shipment_access(session, ships["A"]))
     assert can_view(p, await shipment_access(session, ships["B"]))
@@ -206,3 +206,31 @@ async def test_user_without_memberships_sees_nothing(session) -> None:
     await session.commit()
     p = await load_principal(session, u)
     assert await visible_shipment_ids(session, p) == []
+
+
+async def test_agent_with_other_org_share_sees_shared_but_not_marks(session) -> None:
+    orgs, users, ships = await _seed(session)
+    u = User(email="dual@e.com")
+    session.add(u)
+    await session.flush()
+    session.add(Membership(user_id=u.id, org_id=orgs["x"].id, role=Role.agent, node_codes=["BAKU"]))
+    session.add(Membership(user_id=u.id, org_id=orgs["y"].id, role=Role.viewer, node_codes=[]))
+    await session.commit()
+    p = await load_principal(session, u)
+    a = await shipment_access(session, ships["A"])
+    assert can_view(p, a)
+    assert event_nodes(p, a) == frozenset()
+    assert not can_manage(p, a)
+    ids = await visible_shipment_ids(session, p)
+    assert ids == [ships["A"].id]  # B (не расшарена, без узла BAKU) скрыта
+
+
+async def test_disabled_user_has_no_rights(session) -> None:
+    _, users, ships = await _seed(session)
+    for key in ("root", "owner"):
+        users[key].disabled_at = datetime.now(UTC)
+    await session.commit()
+    for key in ("root", "owner"):
+        p = await load_principal(session, users[key])
+        assert await visible_shipment_ids(session, p) == []
+        assert not can_view(p, await shipment_access(session, ships["A"]))
