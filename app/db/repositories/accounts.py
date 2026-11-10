@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import (
@@ -12,6 +12,10 @@ from app.db.models import (
     Invitation,
     LoginCode,
     Membership,
+    Organization,
+    OrgLink,
+    ShipmentRow,
+    ShipmentShare,
     User,
 )
 
@@ -142,3 +146,47 @@ class AccountsRepository:
 
     async def get_user(self, user_id: int) -> User | None:
         return await self._session.get(User, user_id)
+
+    async def memberships_with_kind(self, user_id: int) -> list[tuple[Membership, Organization]]:
+        result = await self._session.execute(
+            select(Membership, Organization)
+            .join(Organization, Organization.id == Membership.org_id)
+            .where(Membership.user_id == user_id)
+            .order_by(Membership.id)
+        )
+        return [(m, o) for m, o in result.all()]
+
+    async def shared_org_ids(self, shipment_id: int) -> frozenset[int]:
+        result = await self._session.execute(
+            select(ShipmentShare.org_id).where(ShipmentShare.shipment_id == shipment_id)
+        )
+        return frozenset(result.scalars())
+
+    async def linked_client_ids(self, forwarder_id: int) -> set[int]:
+        result = await self._session.execute(
+            select(OrgLink.client_id).where(OrgLink.forwarder_id == forwarder_id)
+        )
+        return set(result.scalars())
+
+    async def candidate_shipments(
+        self, org_ids: set[int] | None
+    ) -> list[tuple[int, int, list[str], bool]]:
+        """Неархивные отправки: (id, org_id, route, расшарена ли одной из org_ids).
+
+        org_ids=None — все (платформа). Иначе — свои компании и расшаренные им.
+        """
+        base = select(ShipmentRow.id, ShipmentRow.org_id, ShipmentRow.route).where(
+            ShipmentRow.archived_at.is_(None)
+        )
+        if org_ids is None:
+            result = await self._session.execute(base.order_by(ShipmentRow.id))
+            return [(i, o, list(r or []), False) for i, o, r in result.all()]
+        if not org_ids:
+            return []
+        shared_ids = select(ShipmentShare.shipment_id).where(ShipmentShare.org_id.in_(org_ids))
+        result = await self._session.execute(
+            base.add_columns(ShipmentRow.id.in_(shared_ids))
+            .where(or_(ShipmentRow.org_id.in_(org_ids), ShipmentRow.id.in_(shared_ids)))
+            .order_by(ShipmentRow.id)
+        )
+        return [(i, o, list(r or []), bool(sh)) for i, o, r, sh in result.all()]

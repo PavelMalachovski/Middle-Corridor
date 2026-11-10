@@ -331,7 +331,9 @@ class Membership(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    org_id: Mapped[int] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"))
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     role: Mapped[Role] = mapped_column(_str_enum(Role))
     # Коды узлов, где агент вправе отмечать события; пусто = ограничения нет
     node_codes: Mapped[list[str]] = mapped_column(JsonVariant, default=list)
@@ -342,7 +344,9 @@ class Invitation(Base):
     __tablename__ = "invitations"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    org_id: Mapped[int] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"))
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     email: Mapped[str] = mapped_column(String(320), index=True)
     role: Mapped[Role] = mapped_column(_str_enum(Role))
     node_codes: Mapped[list[str]] = mapped_column(JsonVariant, default=list)
@@ -394,7 +398,7 @@ class OrgLink(Base):
         ForeignKey("organizations.id", ondelete="CASCADE"), primary_key=True
     )
     client_id: Mapped[int] = mapped_column(
-        ForeignKey("organizations.id", ondelete="CASCADE"), primary_key=True
+        ForeignKey("organizations.id", ondelete="CASCADE"), primary_key=True, index=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -434,7 +438,7 @@ class ShipmentShare(Base):
         ForeignKey("shipments.id", ondelete="CASCADE"), primary_key=True
     )
     org_id: Mapped[int] = mapped_column(
-        ForeignKey("organizations.id", ondelete="CASCADE"), primary_key=True
+        ForeignKey("organizations.id", ondelete="CASCADE"), primary_key=True, index=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

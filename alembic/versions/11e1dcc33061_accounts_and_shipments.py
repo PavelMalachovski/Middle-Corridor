@@ -122,6 +122,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["org_id"], ["organizations.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
+    op.create_index(op.f("ix_invitations_org_id"), "invitations", ["org_id"], unique=False)
     op.create_index(op.f("ix_invitations_email"), "invitations", ["email"], unique=False)
     op.create_table(
         "memberships",
@@ -142,6 +143,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("user_id", "org_id", name="uq_memberships_user_org"),
     )
+    op.create_index(op.f("ix_memberships_org_id"), "memberships", ["org_id"], unique=False)
     op.create_table(
         "org_links",
         sa.Column("forwarder_id", sa.Integer(), nullable=False),
@@ -153,6 +155,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["forwarder_id"], ["organizations.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("forwarder_id", "client_id"),
     )
+    op.create_index(op.f("ix_org_links_client_id"), "org_links", ["client_id"], unique=False)
     op.create_table(
         "sessions",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -261,6 +264,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["shipment_id"], ["shipments.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("shipment_id", "org_id"),
     )
+    op.create_index(op.f("ix_shipment_shares_org_id"), "shipment_shares", ["org_id"], unique=False)
     op.create_table(
         "subscriptions",
         sa.Column("user_id", sa.Integer(), nullable=False),
@@ -277,6 +281,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     op.drop_table("subscriptions")
+    op.drop_index(op.f("ix_shipment_shares_org_id"), table_name="shipment_shares")
     op.drop_table("shipment_shares")
     op.drop_index(op.f("ix_shipment_revisions_shipment_id"), table_name="shipment_revisions")
     op.drop_table("shipment_revisions")
@@ -286,9 +291,12 @@ def downgrade() -> None:
     op.drop_table("shipments")
     op.drop_index(op.f("ix_sessions_user_id"), table_name="sessions")
     op.drop_table("sessions")
+    op.drop_index(op.f("ix_org_links_client_id"), table_name="org_links")
     op.drop_table("org_links")
+    op.drop_index(op.f("ix_memberships_org_id"), table_name="memberships")
     op.drop_table("memberships")
     op.drop_index(op.f("ix_invitations_email"), table_name="invitations")
+    op.drop_index(op.f("ix_invitations_org_id"), table_name="invitations")
     op.drop_table("invitations")
     op.drop_index(op.f("ix_devices_user_id"), table_name="devices")
     op.drop_table("devices")
