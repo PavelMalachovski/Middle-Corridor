@@ -190,3 +190,50 @@ class AccountsRepository:
             .order_by(ShipmentRow.id)
         )
         return [(i, o, list(r or []), bool(sh)) for i, o, r, sh in result.all()]
+
+    async def get_org(self, org_id: int) -> Organization | None:
+        return await self._session.get(Organization, org_id)
+
+    async def link_exists(self, forwarder_id: int, client_id: int) -> bool:
+        result = await self._session.execute(
+            select(OrgLink.client_id).where(
+                OrgLink.forwarder_id == forwarder_id, OrgLink.client_id == client_id
+            )
+        )
+        return result.first() is not None
+
+    async def linked_clients(self, forwarder_id: int) -> list[Organization]:
+        result = await self._session.execute(
+            select(Organization)
+            .join(OrgLink, OrgLink.client_id == Organization.id)
+            .where(OrgLink.forwarder_id == forwarder_id)
+            .order_by(Organization.id)
+        )
+        return list(result.scalars())
+
+    async def org_memberships(self, org_id: int) -> list[Membership]:
+        result = await self._session.execute(
+            select(Membership).where(Membership.org_id == org_id).order_by(Membership.id)
+        )
+        return list(result.scalars())
+
+    async def pending_invitations(
+        self, org_id: int, *, email: str | None = None, now: datetime
+    ) -> list[Invitation]:
+        stmt = select(Invitation).where(
+            Invitation.org_id == org_id,
+            Invitation.accepted_at.is_(None),
+            Invitation.revoked_at.is_(None),
+        )
+        if email is not None:
+            stmt = stmt.where(Invitation.email == email)
+        result = await self._session.execute(stmt.order_by(Invitation.id))
+        return [i for i in result.scalars() if aware(i.expires_at) > now]
+
+    async def revoke_user_sessions(self, user_id: int, now: datetime) -> None:
+        await self._session.execute(
+            update(AuthSession)
+            .where(AuthSession.user_id == user_id, AuthSession.revoked_at.is_(None))
+            .values(revoked_at=now)
+            .execution_options(synchronize_session=False)
+        )
