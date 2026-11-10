@@ -17,7 +17,7 @@ from app.db.models import (
 )
 from app.integrations.mock.fleet import ROUTE_KOSTANAY
 from app.services.accounts.access import MembershipView, Principal
-from app.services.accounts.db_source import DbShipmentSource
+from app.services.accounts.db_source import DbShipmentSource, build_db_plan
 from app.services.accounts.errors import NotFound, PermissionDenied
 from app.services.accounts.shipments import ShipmentService, iso6346_valid
 from app.services.tracking import ShipmentState, project_shipment
@@ -72,6 +72,7 @@ def test_iso6346():
     assert not iso6346_valid("CSQU305438")
     assert not iso6346_valid("1SQU3054383")
     assert iso6346_valid(" csqu 305438 3 ")
+    assert not iso6346_valid("CSQU\u0663054383")  # арабско-индийская «3» — не ASCII-цифра
 
 
 async def test_create_assigns_ref(svc, orgs, session):
@@ -280,3 +281,72 @@ async def test_create_retries_ref_race(svc, orgs, monkeypatch):
 
     monkeypatch.setattr(ShipmentService, "_next_number", staticmethod(stale))
     assert (await _create(svc, owner, orgs["fwd"])).ref == "MC-27-0002"
+
+
+_K = CheckpointEventKind
+
+
+def _plan(*events: tuple, route: list[str] = ROUTE_KOSTANAY):
+    row = ShipmentRow(
+        id=1, ref="MC-27-0001", org_id=1, route=list(route), planned_departure_at=DEPART
+    )
+    rows = [
+        ShipmentEventRow(
+            id=n, shipment_id=1, kind=kind, node_code=node, occurred_at=at, hold_code=code
+        )
+        for n, (kind, node, at, *rest) in enumerate(events, start=1)
+        for code in [rest[0] if rest else None]
+    ]
+    return build_db_plan(row, "Fwd", rows)
+
+
+def test_hold_closed_by_moving_on():
+    plan = _plan(
+        (_K.held, "GANJA", NOW - timedelta(hours=10), "customs_wait"),
+        (_K.arrived, "BAKU_ALAT", NOW - timedelta(hours=2)),
+    )
+    assert plan.hold_code is None and plan.hold_node is None
+    shipment = project_shipment(plan, NOW)
+    assert shipment.state == ShipmentState.waiting
+    assert shipment.position.from_code == "BAKU_ALAT"
+    # отправление из узла дальше по маршруту тоже закрывает стоянку
+    plan = _plan(
+        (_K.held, "GANJA", NOW - timedelta(hours=10), "customs_wait"),
+        (_K.departed, "BAKU_ALAT", NOW - timedelta(hours=2)),
+    )
+    assert plan.hold_node is None
+
+
+def test_hold_that_cannot_apply_is_ignored():
+    # уже убыл из узла — стоянка там задним числом не возвращает груз назад
+    plan = _plan(
+        (_K.departed, "POTI", NOW - timedelta(hours=10)),
+        (_K.held, "POTI", NOW - timedelta(hours=5), "weather_ban"),
+    )
+    assert plan.hold_code is None
+    assert [(e.kind, e.node_code) for e in plan.events] == [("departed", "POTI")]
+    assert project_shipment(plan, NOW).state == ShipmentState.in_transit
+    # стоянка в узле раньше уже достигнутого, внесённая не по порядку
+    plan = _plan(
+        (_K.arrived, "GANJA", NOW - timedelta(hours=10)),
+        (_K.held, "TBILISI", NOW - timedelta(hours=5), "customs_wait"),
+    )
+    assert plan.hold_node is None
+    assert [(e.kind, e.node_code) for e in plan.events] == [("arrived", "GANJA")]
+    # узел вне маршрута — ни стоянки, ни прибытия
+    plan = _plan((_K.held, "KURYK", NOW - timedelta(hours=5), "weather_ban"))
+    assert plan.hold_node is None and plan.events == ()
+
+
+def test_same_time_events_ordered_by_route_and_kind():
+    at = NOW - timedelta(hours=3)
+    # «убыл» внесён раньше, исправленное «прибыл» с тем же временем — позже (больший id)
+    plan = _plan((_K.departed, "POTI", at), (_K.arrived, "POTI", at))
+    assert [(e.kind, e.node_code) for e in plan.events] == [
+        ("arrived", "POTI"),
+        ("departed", "POTI"),
+    ]
+    assert project_shipment(plan, NOW).state == ShipmentState.in_transit
+    # при равном времени узел дальше по маршруту — позже
+    plan = _plan((_K.arrived, "TBILISI", at), (_K.departed, "POTI", at))
+    assert [e.node_code for e in plan.events] == ["POTI", "TBILISI"]

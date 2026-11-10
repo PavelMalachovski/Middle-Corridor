@@ -33,7 +33,7 @@ REF_PREFIX = "MC"
 EDITABLE = frozenset(
     {"container_no", "container_type", "cargo", "cargo_en", "planned_departure_at", "route"}
 )
-_CONTAINER_RE = re.compile(r"^[A-Z]{4}\d{7}$")
+_CONTAINER_RE = re.compile(r"^[A-Z]{4}[0-9]{7}$")
 
 
 def _letter_values() -> dict[str, int]:
@@ -175,7 +175,7 @@ class ShipmentService:
         numbers = [
             int(tail)
             for ref in await repo.refs_with_prefix(prefix)
-            if (tail := ref[len(prefix) :]).isdigit()
+            if (tail := ref[len(prefix) :]).isascii() and tail.isdigit()
         ]
         return max(numbers, default=0) + 1
 
