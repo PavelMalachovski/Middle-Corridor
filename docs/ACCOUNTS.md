@@ -40,7 +40,7 @@ python -m app.cli admin --email owner@example.com                       # адм
 python -m app.cli org create --kind forwarder --name "Forwarder LLC"    # печатает id компании
 python -m app.cli org create --kind client --name "Client LLC"
 python -m app.cli org link --forwarder 1 --client 2                     # экспедитор видит грузы клиента
-python -m app.cli invite --org 1 --email agent@example.com --role agent [--nodes aktau,baku]
+python -m app.cli invite --org 1 --email agent@example.com --role agent [--nodes AKTAU,BAKU]
 python -m app.cli user disable --email gone@example.com                 # отключить пользователя
 ```
 
