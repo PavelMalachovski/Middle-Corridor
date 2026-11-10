@@ -370,14 +370,24 @@
     "name": "CHPL — общий список приоритетных товаров (прил. XL к 833/2014)",
     "name_en": "Common High Priority List (Annex XL to Regulation 833/2014)",
     "as_of": "2026-07-24",
-    "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
+    "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
+    "review_code_only": true
    },
    {
     "code": "eu_833_2014",
     "name": "ЕС 833/2014 — запреты ввоза из РФ (прил. XVII, XXI)",
     "name_en": "EU Regulation 833/2014 — import bans on Russian goods (Annexes XVII, XXI)",
     "as_of": "2026-07-24",
-    "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724"
+    "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
+    "review_code_only": false
+   },
+   {
+    "code": "eu_833_2014_export",
+    "name": "ЕС 833/2014 — запрет экспорта в РФ (прил. XXIII)",
+    "name_en": "EU Regulation 833/2014 — export ban to Russia (Annex XXIII)",
+    "as_of": "2026-07-24",
+    "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
+    "review_code_only": false
    }
   ],
   "matches": [
@@ -395,5 +405,41 @@
     "reason_code": "code_only"
    }
   ]
+ },
+ "cargo_details": {
+  "container_no": null,
+  "container_type": null,
+  "packages": null,
+  "package_kind": null,
+  "package_kind_en": null,
+  "gross_kg": null,
+  "net_kg": null,
+  "description": null,
+  "description_en": null,
+  "top_items": [
+   {
+    "description": "Микросхемы-процессоры",
+    "description_en": "Processor integrated circuits",
+    "hs_code": "8542310001",
+    "quantity": null,
+    "net_kg": null
+   },
+   {
+    "description": "Ноутбуки",
+    "description_en": "Laptops",
+    "hs_code": "8471300000",
+    "quantity": null,
+    "net_kg": null
+   },
+   {
+    "description": "Смартфоны",
+    "description_en": "Smartphones",
+    "hs_code": "8517130000",
+    "quantity": null,
+    "net_kg": null
+   }
+  ],
+  "more_items": 0,
+  "dangerous": []
  }
 }

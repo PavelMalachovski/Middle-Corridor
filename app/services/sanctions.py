@@ -115,6 +115,8 @@ class PackingLine:
     description: str
     description_en: str | None = None
     origin_country: str | None = None  # ISO-2
+    quantity: float | None = None  # штук (для блока «Груз»)
+    net_kg: float | None = None
 
 
 @dataclass(frozen=True, slots=True)

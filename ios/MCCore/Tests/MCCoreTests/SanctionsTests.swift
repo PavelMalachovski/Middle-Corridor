@@ -17,7 +17,7 @@ final class SanctionsTests: XCTestCase {
     func test_review_decodedFromFixture() throws {
         let check = try XCTUnwrap(try Fixture.shipment("MC-26-0412").sanctions)
         XCTAssertEqual(check.status.known, .review)
-        XCTAssertEqual(check.lists.map(\.code), ["chpl", "eu_833_2014"])
+        XCTAssertEqual(check.lists.map(\.code), ["chpl", "eu_833_2014", "eu_833_2014_export"])
         XCTAssertNotNil(check.checkedAt)
         let chpl = try XCTUnwrap(check.matches.first { $0.listId == "chpl" })
         XCTAssertEqual(chpl.listCode, "854231")

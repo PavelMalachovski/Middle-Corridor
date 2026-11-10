@@ -55,6 +55,7 @@ def _mock_shipments(at: datetime) -> dict[str, dict]:
 
 def _with_sanctions(shipment: dict, mock: dict[str, dict]) -> dict:
     shipment["sanctions"] = mock[shipment["ref"]]["sanctions"]
+    shipment["cargo_details"] = mock[shipment["ref"]]["cargo_details"]  # блок «Груз»
     return shipment
 
 
@@ -66,6 +67,8 @@ def main() -> None:
     shipments = [_with_sanctions(_with_queue(s), mock) for s in snapshot["shipments"]]
     if not any(s["ref"] == "MC-26-0431" for s in shipments):
         shipments.append(mock["MC-26-0431"])  # «возможна санкционка» для UI-смоука
+    if not any(s["ref"] == "MC-26-0501" for s in shipments):
+        shipments.append(mock["MC-26-0501"])  # восток, блок «Груз» с опасным грузом
     snapshot["shipments"] = shipments
     snapshot_path.write_text(json.dumps(snapshot, ensure_ascii=False, indent=1) + "\n")
 

@@ -18,6 +18,7 @@ from typing import Protocol
 import structlog
 from pydantic import BaseModel
 
+from app.services.cargo import CargoDetails, CargoManifest, cargo_details
 from app.services.corridor import NODES, TransportMode, route_points, segment
 from app.services.delay_breakdown import HOLD_TO_CAUSE, DelayCause, DelayPart, breakdown
 from app.services.geo import LatLon, point_along, polyline_length_km
@@ -87,6 +88,8 @@ class ShipmentPlan:
     delay_causes: tuple[DelayCause, ...] = ()
     # пакинг-лист (коды ТН ВЭД) — в API целиком не уходит, только результат сверки
     packing_list: PackingList | None = None
+    # сведения уровня отправки: контейнер, места, вес, опасный груз
+    cargo_manifest: CargoManifest | None = None
 
     @property
     def route(self) -> list[str]:
@@ -146,6 +149,8 @@ class Shipment(BaseModel):
     queue: QueueForecast | None = None  # прогноз выхода из очереди (state == waiting)
     # проверка пакинг-листа по санкционным спискам (подсказка, не вердикт)
     sanctions: SanctionsCheck | None = None
+    # блок «Груз»: контейнер, места, вес, опасный груз, главные позиции (без стоимости)
+    cargo_details: CargoDetails | None = None
     progress: float  # 0..1 по длине маршрута
     checkpoints: list[Checkpoint]
     track: list[list[float]]  # [lon, lat] — порядок GeoJSON
@@ -296,6 +301,7 @@ def project_shipment(  # noqa: PLR0912, PLR0915 — линейный разбо�
         progress=round(progress, 4),
         checkpoints=checkpoints,
         sanctions=_sanctions(plan, checkpoints, now),
+        cargo_details=cargo_details(plan.cargo_manifest, plan.packing_list, at=now),
         track=[[lon, lat] for lat, lon in route_points(route)],
     )
 
