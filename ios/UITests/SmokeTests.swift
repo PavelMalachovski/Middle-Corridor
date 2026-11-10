@@ -249,6 +249,22 @@ final class SmokeTests: XCTestCase {
         shot(app, "10-demo-ru")
     }
 
+    /// Блок «Груз»: 0501 (Европа → Костанай) — контейнер, места, вес, опасный груз UN 2800.
+    @MainActor
+    func test_cargoBlock() {
+        let app = launch()
+        XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0501")
+        XCTAssertTrue(app.navigationBars["MC-26-0501"].waitForExistence(timeout: 5))
+        let block = element(app, "card.cargo")
+        for _ in 0..<5 where !block.exists { app.swipeUp() }
+        XCTAssertTrue(block.waitForExistence(timeout: 5))
+        XCTAssertTrue(block.label.contains("UN 2800"), block.label)
+        XCTAssertTrue(block.label.contains("DEMU5010012"), block.label)
+        XCTAssertTrue(block.label.contains("и ещё 4"), block.label)
+        shot(app, "32-cargo-ru")
+    }
+
     /// Проверка санкций: 0431 — стальной прокат российского происхождения среди автозапчастей.
     @MainActor
     func test_sanctionsCardAndRow() {

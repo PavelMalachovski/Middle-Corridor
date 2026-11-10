@@ -24,7 +24,7 @@ final class ModelsTests: XCTestCase {
     func test_decodesSnapshotFixture() throws {
         let snap = try Fixture.snapshot()
         XCTAssertEqual(snap.nodes.count, 18)
-        XCTAssertEqual(snap.shipments.count, 4)  // + MC-26-0431 (санкции) из patch_fixtures
+        XCTAssertEqual(snap.shipments.count, 5)  // + MC-26-0431 (санкции), MC-26-0501 (груз) из patch_fixtures
         XCTAssertEqual(snap.summary?.caspianCrossings, 3)
         XCTAssertEqual(snap.nodes.first?.nameEn, "Xi'an")
         XCTAssertTrue(snap.mock)

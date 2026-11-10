@@ -109,6 +109,41 @@ public struct Shipment: Codable, Sendable, Hashable, Identifiable {
     public var track: [[Double]]  // [lon, lat] — порядок GeoJSON
     /// Проверка пакинг-листа по санкционным спискам (подсказка, не вердикт). Старый бэкенд — nil.
     public var sanctions: SanctionsCheck?
+    /// Блок «Груз»: контейнер, места, вес, опасный груз, главные позиции. Старый бэкенд — nil.
+    public var cargoDetails: CargoDetails?
+}
+
+public struct CargoItem: Codable, Sendable, Hashable {
+    public var description: String
+    public var descriptionEn: String?
+    public var hsCode: String
+    public var quantity: Double?
+    public var netKg: Double?
+}
+
+/// Опасный груз (декларация DGD): номер ООН и класс опасности.
+public struct DangerousGoodsInfo: Codable, Sendable, Hashable {
+    public var unNumber: String
+    public var hazardClass: String
+    public var description: String
+    public var descriptionEn: String?
+    public var grossKg: Double?
+}
+
+/// Сведения о грузе без стоимости, получателя и пломб (ответ публичный).
+public struct CargoDetails: Codable, Sendable, Hashable {
+    public var containerNo: String?
+    public var containerType: String?
+    public var packages: Int?
+    public var packageKind: String?
+    public var packageKindEn: String?
+    public var grossKg: Double?
+    public var netKg: Double?
+    public var description: String?
+    public var descriptionEn: String?
+    public var topItems: [CargoItem]
+    public var moreItems: Int
+    public var dangerous: [DangerousGoodsInfo]
 }
 
 /// pending — ждём пакинг-лист; missing — Хоргос пройден без листа; clear — нечего проверять;

@@ -67,6 +67,10 @@ struct ShipmentDetailView: View {
                 SanctionsSection(check: check, labels: labels)
             }
 
+            if let cargo = s.cargoDetails {
+                CargoSection(cargo: cargo, lang: labels.lang)
+            }
+
             Section(l("card.details")) {
                 LabeledContent(l("card.cargo"), value: labels.cargo(s))
                 LabeledContent(l("card.client"), value: s.client)
