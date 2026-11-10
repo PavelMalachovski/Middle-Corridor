@@ -125,7 +125,7 @@ public final class TrackedShipments {
             switch APIError.from(error) {
             case .notFound: throw .notFound
             case .offline: throw .offline
-            case .http, .decoding: throw .server
+            case .http, .decoding, .unauthorized, .rejected: throw .server
             }
         }
         guard !refs.contains(ref) else { return ref }  // пока ждали ответа, добавили ещё раз

@@ -29,7 +29,7 @@ public enum ShipmentState: String, Sendable, CaseIterable {
     case delivered
 }
 
-public enum EventKind: String, Sendable { case departed, arrived }
+public enum EventKind: String, Sendable { case departed, arrived, held, released }
 public enum CheckpointState: String, Sendable { case done, current, planned }
 
 /// event — стоим в узле (подтверждено), ais — на пароме с живой позицией,

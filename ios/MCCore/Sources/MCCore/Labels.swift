@@ -83,6 +83,14 @@ public struct Labels: Sendable {
         return lang == .ru ? s.lastEvent : base
     }
 
+    /// Название события чекпоинта («Стоянка: Актау»); узел — по коду, неизвестный остаётся кодом.
+    public func checkpointEvent(_ kind: CheckpointKind, node code: String) -> String {
+        t("event.\(kind.rawValue)", ["node": nameOrCode(code)])
+    }
+
+    /// Причина стоянки в форме ввода («Погодный запрет», «Другая причина»).
+    public func holdChoice(_ code: HoldCode) -> String { t("hold.choice.\(code.rawValue)") }
+
     public func hold(_ s: Shipment) -> String? {
         if s.holdReason == nil && s.holdCode == nil { return nil }
         if let code = s.holdCode, Self.holdCodes.contains(code) {

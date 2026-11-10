@@ -157,10 +157,10 @@ struct SettingsView: View {
     /// Ошибка проверки связи словами, а не `String(describing:)`.
     static func message(for error: APIError, _ l: L10n) -> String {
         switch error {
-        case .offline: l("settings.fail.offline")
+        case .offline, .unauthorized: l("settings.fail.offline")
         case .notFound: l("settings.fail.notFound")
         case .http(let code): l("settings.fail.http", ["code": String(code)])
-        case .decoding: l("settings.fail.decoding")
+        case .decoding, .rejected: l("settings.fail.decoding")
         }
     }
 

@@ -1,0 +1,438 @@
+[
+  {
+    "shipment": {
+      "ref": "MC-27-0001",
+      "client": "Demo Forwarder",
+      "cargo": "Запчасти",
+      "cargo_en": null,
+      "origin": "Млада-Болеслав",
+      "destination": "Костанай",
+      "origin_code": "MLADA_BOLESLAV",
+      "destination_code": "KOSTANAY",
+      "state": "waiting",
+      "hold_reason": null,
+      "hold_code": "weather_ban",
+      "hold_node": "AKTAU",
+      "hold_vessel": null,
+      "delay_hours": 0.0,
+      "last_event": "Прибытие: Актау",
+      "last_event_kind": "arrived",
+      "last_event_node": "AKTAU",
+      "last_event_note_code": null,
+      "last_event_note_vessel": null,
+      "last_event_at": "2027-03-08T10:00:00Z",
+      "eta": "2027-03-17T20:00:00Z",
+      "eta_latest": "2027-03-18T13:36:00Z",
+      "delay_breakdown": [],
+      "position": {
+        "lat": 43.63,
+        "lon": 51.25,
+        "heading": null,
+        "confirmed": true,
+        "source": "event",
+        "on_vessel": null,
+        "mode": null,
+        "from_code": "AKTAU",
+        "to_code": "BEINEU",
+        "leg_progress": 0.0
+      },
+      "queue": null,
+      "sanctions": {
+        "status": "pending",
+        "checked_at": null,
+        "lists": [
+          {
+            "code": "chpl",
+            "name": "CHPL — общий список приоритетных товаров (прил. XL к 833/2014)",
+            "name_en": "Common High Priority List (Annex XL to Regulation 833/2014)",
+            "as_of": "2026-07-24",
+            "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
+            "review_code_only": true
+          },
+          {
+            "code": "eu_833_2014",
+            "name": "ЕС 833/2014 — запреты ввоза из РФ (прил. XVII, XXI)",
+            "name_en": "EU Regulation 833/2014 — import bans on Russian goods (Annexes XVII, XXI)",
+            "as_of": "2026-07-24",
+            "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
+            "review_code_only": false
+          },
+          {
+            "code": "eu_833_2014_export",
+            "name": "ЕС 833/2014 — запрет экспорта в РФ (прил. XXIII)",
+            "name_en": "EU Regulation 833/2014 — export ban to Russia (Annex XXIII)",
+            "as_of": "2026-07-24",
+            "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
+            "review_code_only": false
+          }
+        ],
+        "matches": []
+      },
+      "cargo_details": null,
+      "progress": 0.7699,
+      "checkpoints": [
+        {
+          "code": "MLADA_BOLESLAV",
+          "name": "Млада-Болеслав",
+          "lat": 50.41,
+          "lon": 14.9,
+          "planned_at": "2027-03-01T08:00:00Z",
+          "actual_at": "2027-03-01T09:00:00Z",
+          "state": "done"
+        },
+        {
+          "code": "KOPER",
+          "name": "Копер",
+          "lat": 45.55,
+          "lon": 13.73,
+          "planned_at": "2027-03-02T14:00:00Z",
+          "actual_at": null,
+          "state": "planned"
+        },
+        {
+          "code": "AMBARLI",
+          "name": "Амбарлы (Стамбул)",
+          "lat": 40.97,
+          "lon": 28.68,
+          "planned_at": "2027-03-06T02:00:00Z",
+          "actual_at": null,
+          "state": "planned"
+        },
+        {
+          "code": "POTI",
+          "name": "Поти",
+          "lat": 42.15,
+          "lon": 41.65,
+          "planned_at": "2027-03-10T18:00:00Z",
+          "actual_at": null,
+          "state": "planned"
+        },
+        {
+          "code": "TBILISI",
+          "name": "Тбилиси",
+          "lat": 41.72,
+          "lon": 44.8,
+          "planned_at": "2027-03-11T16:00:00Z",
+          "actual_at": null,
+          "state": "planned"
+        },
+        {
+          "code": "BOYUK_KASIK",
+          "name": "Бёюк-Кясик / Гардабани",
+          "lat": 41.44,
+          "lon": 45.1,
+          "planned_at": "2027-03-12T01:00:00Z",
+          "actual_at": null,
+          "state": "planned"
+        },
+        {
+          "code": "GANJA",
+          "name": "Гянджа",
+          "lat": 40.68,
+          "lon": 46.36,
+          "planned_at": "2027-03-13T00:00:00Z",
+          "actual_at": null,
+          "state": "planned"
+        },
+        {
+          "code": "BAKU_ALAT",
+          "name": "Баку (Алят)",
+          "lat": 39.93,
+          "lon": 49.41,
+          "planned_at": "2027-03-13T14:00:00Z",
+          "actual_at": null,
+          "state": "planned"
+        },
+        {
+          "code": "AKTAU",
+          "name": "Актау",
+          "lat": 43.63,
+          "lon": 51.25,
+          "planned_at": "2027-03-15T00:00:00Z",
+          "actual_at": "2027-03-08T10:00:00Z",
+          "state": "current"
+        },
+        {
+          "code": "BEINEU",
+          "name": "Бейнеу",
+          "lat": 45.32,
+          "lon": 55.19,
+          "planned_at": "2027-03-15T22:00:00Z",
+          "actual_at": null,
+          "state": "planned"
+        },
+        {
+          "code": "KOSTANAY",
+          "name": "Костанай",
+          "lat": 53.21,
+          "lon": 63.62,
+          "planned_at": "2027-03-17T20:00:00Z",
+          "actual_at": null,
+          "state": "planned"
+        }
+      ],
+      "track": [
+        [
+          14.9,
+          50.41
+        ],
+        [
+          14.43,
+          50.08
+        ],
+        [
+          14.47,
+          48.97
+        ],
+        [
+          14.29,
+          48.3
+        ],
+        [
+          15.44,
+          47.07
+        ],
+        [
+          14.51,
+          46.05
+        ],
+        [
+          13.73,
+          45.55
+        ],
+        [
+          13.3,
+          45.2
+        ],
+        [
+          14.5,
+          44.0
+        ],
+        [
+          16.3,
+          42.7
+        ],
+        [
+          17.9,
+          41.6
+        ],
+        [
+          18.9,
+          40.3
+        ],
+        [
+          19.6,
+          39.3
+        ],
+        [
+          20.4,
+          37.9
+        ],
+        [
+          21.6,
+          36.5
+        ],
+        [
+          22.9,
+          36.25
+        ],
+        [
+          24.5,
+          36.9
+        ],
+        [
+          25.0,
+          37.9
+        ],
+        [
+          25.6,
+          39.3
+        ],
+        [
+          26.15,
+          40.05
+        ],
+        [
+          26.7,
+          40.4
+        ],
+        [
+          27.7,
+          40.75
+        ],
+        [
+          28.5,
+          40.93
+        ],
+        [
+          28.68,
+          40.97
+        ],
+        [
+          28.95,
+          40.98
+        ],
+        [
+          29.06,
+          41.08
+        ],
+        [
+          29.12,
+          41.23
+        ],
+        [
+          30.5,
+          41.45
+        ],
+        [
+          32.5,
+          41.75
+        ],
+        [
+          35.0,
+          42.1
+        ],
+        [
+          37.5,
+          41.9
+        ],
+        [
+          39.5,
+          41.6
+        ],
+        [
+          41.2,
+          41.9
+        ],
+        [
+          41.65,
+          42.15
+        ],
+        [
+          42.34,
+          42.16
+        ],
+        [
+          43.05,
+          42.11
+        ],
+        [
+          43.6,
+          41.99
+        ],
+        [
+          44.11,
+          41.98
+        ],
+        [
+          44.8,
+          41.72
+        ],
+        [
+          45.09,
+          41.46
+        ],
+        [
+          45.1,
+          41.44
+        ],
+        [
+          45.63,
+          40.99
+        ],
+        [
+          46.36,
+          40.68
+        ],
+        [
+          47.15,
+          40.62
+        ],
+        [
+          48.15,
+          40.34
+        ],
+        [
+          49.41,
+          39.93
+        ],
+        [
+          50.1,
+          40.05
+        ],
+        [
+          50.9,
+          40.45
+        ],
+        [
+          51.1,
+          41.0
+        ],
+        [
+          51.2,
+          42.8
+        ],
+        [
+          51.25,
+          43.63
+        ],
+        [
+          52.1,
+          44.17
+        ],
+        [
+          55.19,
+          45.32
+        ],
+        [
+          55.8,
+          47.1
+        ],
+        [
+          57.0,
+          48.6
+        ],
+        [
+          57.42,
+          49.47
+        ],
+        [
+          57.17,
+          50.28
+        ],
+        [
+          58.45,
+          50.25
+        ],
+        [
+          60.6,
+          51.4
+        ],
+        [
+          62.4,
+          52.4
+        ],
+        [
+          63.62,
+          53.21
+        ]
+      ]
+    },
+    "org_id": 1,
+    "can_manage": true,
+    "event_nodes": [
+      "MLADA_BOLESLAV",
+      "KOPER",
+      "AMBARLI",
+      "POTI",
+      "TBILISI",
+      "BOYUK_KASIK",
+      "GANJA",
+      "BAKU_ALAT",
+      "AKTAU",
+      "BEINEU",
+      "KOSTANAY"
+    ],
+    "container_no": "CSQU3054383"
+  }
+]
