@@ -213,7 +213,9 @@ final class AppModel {
         #endif
         let raw = (Bundle.main.object(forInfoDictionaryKey: "MCAccountAPIURL") as? String ?? "")
             .trimmingCharacters(in: .whitespaces)
-        guard !raw.isEmpty, let url = URL(string: raw), url.scheme != nil else { return nil }
+        // только полный адрес: «localhost:8000» URL примет со схемой «localhost» — такой не годится
+        guard let url = URL(string: raw), ["http", "https"].contains(url.scheme?.lowercased()), url.host != nil
+        else { return nil }
         let tokens = KeychainTokenStore()
         return AccountModel(api: HTTPAccountAPI(baseURL: url, tokens: tokens), tokens: tokens)
     }

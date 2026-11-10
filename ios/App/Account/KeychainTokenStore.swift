@@ -1,5 +1,6 @@
 import Foundation
 import MCCore
+import OSLog
 import Security
 
 /// Токен сессии аккаунта — в Keychain (только это устройство, после первой разблокировки:
@@ -25,13 +26,31 @@ struct KeychainTokenStore: TokenStore {
     }
 
     func save(_ token: String?) {
-        SecItemDelete(baseQuery as CFDictionary)
-        guard let token, let data = token.data(using: .utf8) else { return }
-        var query = baseQuery
-        query[kSecValueData as String] = data
-        query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        SecItemAdd(query as CFDictionary, nil)
+        guard let token else {
+            let status = SecItemDelete(baseQuery as CFDictionary)
+            if status != errSecSuccess && status != errSecItemNotFound { report("delete", status) }
+            return
+        }
+        let data = Data(token.utf8)
+        // сначала обновление: без «удалить, потом добавить» токен не пропадает, если добавление не прошло
+        let attributes: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+        ]
+        var status = SecItemUpdate(baseQuery as CFDictionary, attributes as CFDictionary)
+        if status == errSecItemNotFound {
+            let query = baseQuery.merging(attributes) { _, new in new }
+            status = SecItemAdd(query as CFDictionary, nil)
+        }
+        if status != errSecSuccess { report("save", status) }
     }
+
+    /// Только код ошибки Keychain — без токена.
+    private func report(_ action: String, _ status: OSStatus) {
+        Self.log.error("keychain \(action, privacy: .public) failed: \(status, privacy: .public)")
+    }
+
+    private static let log = Logger(subsystem: "com.malakhouski.mcstatus", category: "account")
 
     private var baseQuery: [String: Any] {
         [

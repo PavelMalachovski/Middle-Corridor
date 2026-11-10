@@ -3,22 +3,28 @@ import SwiftUI
 
 /// Карточка груза — от ответа к подробностям: статус и ETA, где сейчас и почему стоит, очередь;
 /// почему задержка; Live Activity; карта (нажатие — на весь экран); погода в порту; лента маршрута; груз и клиент.
-/// Груз аккаунта (нет среди отслеживаемых номеров) берётся из `account`: без Live Activity,
-/// «Поделиться» и «Удалить» — он приходит с сервера аккаунтов и на сайте не открывается.
+/// Груз аккаунта (`accountKey` — ключ `AccountRows`) берётся только из `account`, даже если такой же
+/// номер отслеживается как демо: без Live Activity, «Поделиться» и «Удалить» — он приходит с сервера
+/// аккаунтов и на сайте не открывается.
 struct ShipmentDetailView: View {
     let ref: String
     let store: TrackedShipments
     let account: AccountModel?
+    let accountKey: String?
     /// «Удалить из списка» из меню «…»: удаляет и закрывает карточку.
     let onRemove: (String) -> Void
     @Environment(\.l10n) private var l
 
     var body: some View {
         Group {
-            if let shipment = store.shipments[ref] {
-                content(shipment, labels: Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? []), owned: false)
-            } else if let mine = account?.shipment(ref) {
-                content(mine.shipment, labels: Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? []), owned: true)
+            if let accountKey {
+                if let mine = account?.shipment(key: accountKey) {
+                    content(mine.shipment, labels: labels, owned: true)
+                } else {
+                    ContentUnavailableView(l("card.missing"), systemImage: "shippingbox")  // вышли из аккаунта
+                }
+            } else if let shipment = store.shipments[ref] {
+                content(shipment, labels: labels, owned: false)
             } else if store.missing.contains(ref) {
                 ContentUnavailableView(l("add.error.notFound"), systemImage: "shippingbox")
             } else if store.lastError != nil {
@@ -32,13 +38,15 @@ struct ShipmentDetailView: View {
         .navigationTitle(ref)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable {
-            if let account, !store.refs.contains(ref), account.shipment(ref) != nil {
+            if let account, accountKey != nil {
                 await account.refresh()
             } else {
                 await store.refresh()
             }
         }
     }
+
+    private var labels: Labels { Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? []) }
 
     /// `owned` — груз аккаунта.
     private func content(_ s: Shipment, labels: Labels, owned: Bool) -> some View {

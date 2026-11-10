@@ -72,8 +72,9 @@ final class AccountModel {
         try? await api.logout()
     }
 
-    func shipment(_ ref: String) -> MyShipment? {
-        shipments.first { $0.shipment.ref == ref }
+    /// Груз по ключу строки `AccountRows.key` (компания + номер).
+    func shipment(key: String) -> MyShipment? {
+        AccountRows.find(key, in: shipments)
     }
 
     /// Название компании груза для бейджа — из членств пользователя.

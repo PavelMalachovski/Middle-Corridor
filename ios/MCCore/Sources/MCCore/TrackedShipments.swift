@@ -42,12 +42,15 @@ public enum AddError: Error, Equatable, Sendable {
 }
 
 /// Строка списка «Мои грузы»: номер есть всегда, данных может не быть (ещё не загрузились).
+/// `id` — ключ строки: у отслеживаемого номера — сам номер, у груза аккаунта — `AccountRows.key`
+/// (номер аккаунта может совпасть с демо-номером — строк тогда две).
 public struct TrackedRow: Identifiable, Sendable, Hashable {
-    public var id: String { ref }
+    public let id: String
     public let ref: String
     public let shipment: Shipment?
 
-    public init(ref: String, shipment: Shipment?) {
+    public init(ref: String, shipment: Shipment?, id: String? = nil) {
+        self.id = id ?? ref
         self.ref = ref
         self.shipment = shipment
     }

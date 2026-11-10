@@ -15,19 +15,12 @@ struct MyShipmentsView: View {
     @State private var addedCount = 0
 
     private var store: TrackedShipments { model.store }
-    /// Грузы аккаунта, которых нет среди отслеживаемых номеров (номер один — строка одна).
-    private var accountRows: [TrackedRow] {
-        guard let account = model.account else { return [] }
-        let local = Set(store.refs)
-        return account.shipments
-            .filter { !local.contains($0.shipment.ref) }
-            .map { TrackedRow(ref: $0.shipment.ref, shipment: $0.shipment) }
-    }
+    private var accountShipments: [MyShipment] { model.account?.shipments ?? [] }
 
     var body: some View {
         NavigationStack(path: $model.path) {
             Group {
-                if store.refs.isEmpty && accountRows.isEmpty {
+                if store.refs.isEmpty && accountShipments.isEmpty {
                     CorridorSummaryView(store: store) { showAdd = true }
                 } else {
                     list
@@ -46,8 +39,15 @@ struct MyShipmentsView: View {
                         .accessibilityIdentifier("add")
                 }
             }
-            .navigationDestination(for: String.self) { ref in
-                ShipmentDetailView(ref: ref, store: store, account: model.account) { remove($0) }
+            .navigationDestination(for: String.self) { value in
+                // груз аккаунта — по ключу `acct:<org>:<номер>`: номер может совпасть с демо-номером
+                if let key = AccountRows.parse(value) {
+                    ShipmentDetailView(ref: key.ref, store: store, account: model.account, accountKey: value) {
+                        remove($0)
+                    }
+                } else {
+                    ShipmentDetailView(ref: value, store: store, account: nil, accountKey: nil) { remove($0) }
+                }
             }
             .refreshable { await model.refreshAll() }
             .task(id: model.serverURL) { await store.refresh() }
@@ -94,9 +94,8 @@ struct MyShipmentsView: View {
     private var list: some View {
         let labels = Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? [])
         let offline = store.lastError != nil
-        let sections = ShipmentGroup.group(
-            store.rows + accountRows, nodes: store.snapshot?.nodes ?? [], missing: store.missing)
-        let accountRefs = Set(accountRows.map(\.ref))
+        let rows = AccountRows.merge(local: store.rows, account: accountShipments)
+        let sections = ShipmentGroup.group(rows, nodes: store.snapshot?.nodes ?? [], missing: store.missing)
         return List {
             if offline {
                 Section { OfflineBanner(updatedAt: store.updatedAt) }
@@ -105,7 +104,7 @@ struct MyShipmentsView: View {
                 Section {
                     ForEach(section.rows) { row in
                         let compact = section.group == .delivered
-                        if accountRefs.contains(row.ref) {
+                        if AccountRows.parse(row.id) != nil {
                             accountLink(row, labels: labels, offline: offline, compact: compact)
                         } else {
                             rowLink(row, labels: labels, offline: offline, compact: compact)
@@ -156,11 +155,11 @@ struct MyShipmentsView: View {
 
     /// Груз аккаунта: без «Удалить» и «Поделиться» (ссылка на сайт открывает только демо-номера).
     private func accountLink(_ row: TrackedRow, labels: Labels, offline: Bool, compact: Bool) -> some View {
-        let org = model.account?.shipment(row.ref).flatMap { model.account?.orgName($0) }
-        return NavigationLink(value: row.ref) {
+        let org = model.account?.shipment(key: row.id).flatMap { model.account?.orgName($0) }
+        return NavigationLink(value: row.id) {
             ShipmentRow(row: row, labels: labels, isOffline: offline, isMissing: false, compact: compact, org: org)
         }
-        .accessibilityIdentifier("row.\(row.ref)")
+        .accessibilityIdentifier("account.row.\(row.ref)")
     }
 
     private func header(_ group: ShipmentGroup, count: Int) -> String {

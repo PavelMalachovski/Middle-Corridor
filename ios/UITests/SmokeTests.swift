@@ -513,12 +513,14 @@ final class SmokeTests: XCTestCase {
         shot(app, "41-settings-account-ru")
         app.buttons["settings.done"].tap()
 
-        let first = element(app, "row.MC-27-0001")
-        let second = element(app, "row.MC-27-0002")
+        let first = element(app, "account.row.MC-27-0001")
+        let second = element(app, "account.row.MC-27-0002")
         XCTAssertTrue(first.waitForExistence(timeout: 5))
         XCTAssertTrue(second.waitForExistence(timeout: 5))
-        XCTAssertTrue(first.label.contains("Caspian Freight"), first.label)
-        XCTAssertTrue(second.label.contains("Aktau Port Agency"), second.label)
+        // бейдж — отдельный элемент (имя компании есть и в тексте клиента, по метке строки не проверить)
+        let badges = app.staticTexts.matching(identifier: "row.org")  // у Label есть ещё значок
+        XCTAssertTrue(badges.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertEqual(Set(badges.allElementsBoundByIndex.map(\.label)), ["Caspian Freight", "Aktau Port Agency"])
         shot(app, "42-account-list-ru")
 
         first.tap()
