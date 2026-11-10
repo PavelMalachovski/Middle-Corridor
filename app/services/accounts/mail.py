@@ -30,6 +30,10 @@ TEMPLATES: dict[str, dict[str, tuple[str, str]]] = {
             "{inviter} invited you to “{org}”. Open the app and sign in with this address.",
         ),
     },
+    "event": {
+        "ru": ("{text}", "{text}\n\nПодробности — в приложении Middle Corridor."),
+        "en": ("{text}", "{text}\n\nDetails are in the Middle Corridor app."),
+    },
 }
 
 
@@ -37,7 +41,7 @@ def render(template: str, locale: str | None, **params: str) -> tuple[str, str]:
     """Тема и тело письма; неизвестный язык — русский."""
     variants = TEMPLATES[template]
     subject, body = variants.get(locale or "ru", variants["ru"])
-    return subject, body.format(**params)
+    return subject.format(**params), body.format(**params)
 
 
 class EmailSender(Protocol):

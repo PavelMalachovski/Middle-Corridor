@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import (
     AuditLog,
     AuthSession,
+    Device,
     Invitation,
     LoginCode,
     Membership,
@@ -17,6 +18,7 @@ from app.db.models import (
     ShipmentEventRow,
     ShipmentRow,
     ShipmentShare,
+    Subscription,
     User,
 )
 
@@ -290,3 +292,33 @@ class AccountsRepository:
             select(Organization.id, Organization.name).where(Organization.id.in_(org_ids))
         )
         return {i: n for i, n in result.all()}
+
+    async def users_in_orgs(self, org_ids: set[int]) -> list[User]:
+        """Участники любой из организаций (по одному разу)."""
+        result = await self._session.execute(
+            select(User)
+            .where(User.id.in_(select(Membership.user_id).where(Membership.org_id.in_(org_ids))))
+            .order_by(User.id)
+        )
+        return list(result.scalars())
+
+    async def subscriptions_for(self, shipment_id: int) -> dict[int, Subscription]:
+        result = await self._session.execute(
+            select(Subscription).where(Subscription.shipment_id == shipment_id)
+        )
+        return {sub.user_id: sub for sub in result.scalars()}
+
+    async def get_subscription(self, user_id: int, shipment_id: int) -> Subscription | None:
+        return await self._session.get(Subscription, (user_id, shipment_id))
+
+    async def active_devices(self, user_ids: list[int]) -> list[Device]:
+        result = await self._session.execute(
+            select(Device)
+            .where(Device.user_id.in_(user_ids), Device.revoked_at.is_(None))
+            .order_by(Device.id)
+        )
+        return list(result.scalars())
+
+    async def device_by_token(self, token: str) -> Device | None:
+        result = await self._session.execute(select(Device).where(Device.apns_token == token))
+        return result.scalar_one_or_none()
