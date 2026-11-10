@@ -388,3 +388,15 @@ def test_sanctions_lists_unavailable_degrade_to_none(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(tracking, "default_lists", broken)
     shipment = project_shipment(_kz_plan(EventKind.arrived, "ALMATY"), NOW)
     assert shipment.sanctions is None and shipment.ref == "T-S"
+
+
+def test_cargo_details_in_shipment() -> None:
+    from app.services.cargo import CargoManifest
+
+    plan = dataclasses.replace(
+        _kz_plan(EventKind.arrived, "ALMATY"),
+        cargo_manifest=CargoManifest(container_no="DEMU1", packages=3, gross_kg=100.0),
+    )
+    details = project_shipment(plan, NOW).cargo_details
+    assert details is not None and details.container_no == "DEMU1" and details.packages == 3
+    assert project_shipment(_kz_plan(EventKind.arrived, "ALMATY"), NOW).cargo_details is None

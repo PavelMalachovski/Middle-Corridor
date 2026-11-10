@@ -526,3 +526,21 @@ async def test_mock_eastbound_shipments(mock_service: MapSnapshotService) -> Non
     assert ferry.sanctions and ferry.sanctions.status == "clear" and ferry.sanctions.matches == []
     m = black_sea.sanctions.matches if black_sea.sanctions else []
     assert [(x.line_no, x.list_id, x.reason_code) for x in m] == [(1, "chpl", "code_only")]
+
+
+async def test_mock_eastbound_cargo_details(mock_service: MapSnapshotService) -> None:
+    """Блок «Груз» у восточных демо-грузов: контейнер, места, вес, опасный груз, главные позиции."""
+    app = create_app(settings=_settings(), map_service=mock_service)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        body = (await client.get("/api/v1/shipments/MC-26-0501")).json()
+    cargo = body["cargo_details"]
+    assert cargo["container_type"] == "40' HC" and cargo["packages"] == 14
+    assert [(g["un_number"], g["hazard_class"]) for g in cargo["dangerous"]] == [("2800", "8")]
+    assert len(cargo["top_items"]) == 5 and cargo["more_items"] == 4
+    assert cargo["top_items"][0]["net_kg"] >= cargo["top_items"][-1]["net_kg"]
+    assert "value" not in str(cargo).lower() and "price" not in str(cargo).lower()
+    snap = await mock_service.snapshot()
+    with_cargo = {s.ref for s in snap.shipments if s.cargo_details}
+    assert {"MC-26-0501", "MC-26-0502"} <= with_cargo  # плюс западные — по пакинг-листу
+    assert not {"MC-26-0447", "MC-26-0455"} & with_cargo  # ни листа, ни сведений
