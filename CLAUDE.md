@@ -41,9 +41,14 @@ services/      бизнес-логика; НЕ импортирует aiogram/fa
                calibration.py — чистая сверка предиктора с фактами (POD/FAR/CSI, подбор порогов);
                predictor_accuracy.py — журнал остановок port_closures, точность, калибровка, бэкфилл
                sanctions.py — сверка кодов ТН ВЭД пакинг-листа со списками app/data/sanctions
+               accounts/ — аккаунты и грузы компаний: auth (код на почту, сессии), access (кто что видит),
+               orgs (компании, связи экспедитор↔клиент, приглашения), shipments, events (события и стоянки),
+               db_source (реальные грузы для карточек и проекции), notify (push/подписки), views, errors
 bot/           только aiogram-хендлеры/клавиатуры/тексты; вызывают services
 api/           только FastAPI-роуты; вызывают services
+               routes/accounts.py — /api/v1/auth|me|orgs|admin|my/shipments; deps.py — сессия и IP, limits.py — лимиты
 db/            модели SQLAlchemy 2 async + repositories (запросы только тут)
+cli.py         `python -m app.cli` — bootstrap аккаунтов (admin, org create/link, invite, user disable)
 scheduler/     джобы; APScheduler опционален (SCHEDULER_ENABLED, по умолчанию false)
 integrations/mock/  синтетические источники для карты (MOCK_DATA=true); реализуют те же Protocol'ы
 web/           фронт карты: React 19 + Vite 8 + TS 7 + MapLibre 6; ходит только в /api/v1, типы в src/api.ts
@@ -57,6 +62,7 @@ web/           фронт карты: React 19 + Vite 8 + TS 7 + MapLibre 6; х�
 .github/       ci.yml (backend · postgres · web), security.yml (pip-audit/npm audit), dependabot.yml
 docs/          AUDIT.md — аудит и бэклог крупных улучшений; GROWTH.md — фичи, продвижение, монетизация
 ios/           приложение iOS (SwiftUI, iOS 17+, docs/IOS.md): project.yml (XcodeGen, .xcodeproj не в git);
+               App/Account/ — вход по коду, грузы аккаунта, события, люди, push (Keychain для токена)
                MCCore/ — Swift Package без UI (модели /api/v1, клиент, ShipmentRef, Labels RU/EN, TrackedShipments);
                App/ — экраны; UITests/ — смоук на вшитых фикстурах (-mc-fake-api)
 api/index.py   точка входа Vercel (serverless FastAPI: только /api/v1 и /health); vercel.json — маршрутизация
@@ -304,6 +310,25 @@ api/index.py   точка входа Vercel (serverless FastAPI: только /a
   отдавать (снимок отдаёт все грузы без ключа) — до входа/ключей доступа. Позиции —
   из пакинг-листа, сведения уровня отправки — `CargoManifest` (букинг, лист
   погрузки, DGD); в демо — только 0501/0502 (номера контейнеров вымышлены).
+
+- Аккаунты: нет доступа к грузу/компании → **404, не 403** (не раскрываем существование). 422 — только
+  для snake_case-кодов ошибок валидации, всё остальное неожиданное — 500, не маскировать.
+- `accounts_enabled` = есть `AUTH_SECRET` И не `MOCK_DATA` И не Vercel: на Vercel и в демо маршруты
+  аккаунтов не поднимаются. Боевые аккаунты — отдельный сервис Railway с `MOCK_DATA=false` и своей базой
+  (`docs/ACCOUNTS.md`).
+- IP клиента для лимитов: `TRUST_PROXY=true` на Railway, адрес берётся СПРАВА из `X-Forwarded-For`
+  (`TRUSTED_PROXY_HOPS` записей) — слева его подделывает клиент. Без флага у всех адрес прокси.
+- Попытки ввода кода считает атомарный `UPDATE … SET attempts = attempts + 1`, не read-modify-write —
+  иначе параллельные запросы обходят лимит.
+- Коды стоянок: `weather_ban|customs_wait|ferry_loading_wait|other`. Запрос события шлёт `other`;
+  проекция отдаёт `hold_code=None` + текст примечания (код — только для известных причин).
+- Подписки на уведомления — только ПЕРЕОПРЕДЕЛЕНИЯ (по умолчанию включено); получатели события — все
+  пользователи с доступом к грузу, не только автор.
+- Реальные грузы аккаунтов НИКОГДА не попадают в публичный снимок `/api/v1/snapshot` (он без ключа):
+  `db_source` отдаёт их только в `/my/shipments` и по сессии.
+- iOS push — только при `MCPushEnabled=YES` (`MC_PUSH_ENABLED`) И entitlement `aps-environment` (нужен
+  платный Apple Developer). Иначе — локальные уведомления по грузам аккаунта. `MC_ACCOUNT_API_URL`
+  пуст → вход скрыт.
 
 ## Продукт (для контекста решений)
 

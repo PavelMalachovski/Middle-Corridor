@@ -195,3 +195,12 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swiftc -O ios/App/Splas
 - `mcstatus://s/MC-26-0412` — открыть груз (проверка: `xcrun simctl openurl booted "mcstatus://s/MC-26-0412"`;
   система спросит «Open in…?», в UI-тестах вместо этого `app.open(url)`).
 - `https://<домен>/?s=MC-26-0412` — Universal Link; нужен платный Apple Developer (Associated Domains).
+
+## Вход и аккаунты
+
+Вход по коду из письма; серверная часть и запуск — [`docs/ACCOUNTS.md`](../docs/ACCOUNTS.md).
+
+- `MC_ACCOUNT_API_URL` в `ios/project.yml` — адрес сервиса аккаунтов (по умолчанию пусто: вход скрыт).
+- `MC_PUSH_ENABLED` — `NO` по умолчанию (нет платного Apple Developer, нет `aps-environment`; работают
+  локальные уведомления). Для push: `YES` + entitlement `aps-environment` в подписи.
+- В UI-тестах (`-mc-fake-api`) вход идёт на фейковый сервер, код — `000000`.
