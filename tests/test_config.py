@@ -73,3 +73,4 @@ def test_accounts_enabled_needs_secret_and_real_mode() -> None:
     # Vercel аккаунты не обслуживает никогда (нет постоянного процесса для push/почты)
     assert _settings(auth_secret="s3cret", vercel="1").accounts_enabled is False
     assert _settings().trust_proxy is False
+    assert _settings().trusted_proxy_hops == 1

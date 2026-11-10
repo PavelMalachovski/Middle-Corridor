@@ -8,7 +8,7 @@ import secrets
 def normalize_email(raw: str) -> str:
     email = raw.strip().lower()
     if "@" not in email:
-        raise ValueError("invalid e-mail")
+        raise ValueError("invalid_email")
     return email
 
 

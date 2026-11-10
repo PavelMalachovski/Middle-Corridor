@@ -1,5 +1,6 @@
 """Зависимости API аккаунтов: сервисы, вызывающий по bearer-токену, адрес клиента."""
 
+import ipaddress
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -91,11 +92,21 @@ async def current_principal(caller: Annotated[Caller, Depends(current_caller)]) 
 
 
 def client_ip(request: Request) -> str:
-    """Первый адрес X-Forwarded-For — только за доверенным прокси (TRUST_PROXY)."""
+    """Адрес клиента для лимитов и аудита.
+
+    За доверенным прокси (TRUST_PROXY) — запись X-Forwarded-For на позиции
+    TRUSTED_PROXY_HOPS справа: её дописал наш прокси, левее — что прислал клиент.
+    Нет такой записи или это не IP — адрес сокета.
+    """
     settings: Settings = request.app.state.settings
-    if settings.trust_proxy:
-        forwarded = request.headers.get("x-forwarded-for", "")
-        first = forwarded.split(",")[0].strip()
-        if first:
-            return first[:64]
-    return request.client.host if request.client else ""
+    peer = request.client.host if request.client else ""
+    if not settings.trust_proxy:
+        return peer
+    hops = settings.trusted_proxy_hops
+    entries = [e.strip() for e in request.headers.get("x-forwarded-for", "").split(",")]
+    if hops < 1 or len(entries) < hops:
+        return peer
+    try:
+        return str(ipaddress.ip_address(entries[-hops]))
+    except ValueError:
+        return peer

@@ -382,3 +382,10 @@ async def test_request_code_swallows_mail_errors(
         assert await svc.request_code("a@x.kz", "1.1.1.1") is None
     assert len((await session.execute(select(LoginCode))).scalars().all()) == 1
     assert "a@x.kz" not in json.dumps(logs, default=str)
+
+
+def test_normalize_email_error_is_a_code() -> None:
+    from app.services.accounts.security import normalize_email
+
+    with pytest.raises(ValueError, match="^invalid_email$"):
+        normalize_email("nope")

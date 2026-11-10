@@ -108,9 +108,12 @@ class Settings(BaseSettings):
     apns_bundle_id: str = "com.malakhouski.mcstatus"
     apns_env: str = "sandbox"  # sandbox | production
     shipment_ref_prefix: str = "MC"  # номера отправок: MC-26-0001
-    # За прокси (Railway): адрес клиента — первый в X-Forwarded-For. Иначе заголовок
-    # подделывается, и лимит запросов кода по IP обходится.
+    # За прокси (Railway): адрес клиента берётся из X-Forwarded-For. Без прокси заголовок
+    # подделывается, и лимит запросов кода по IP обходится — тогда только адрес сокета.
     trust_proxy: bool = False
+    # Сколько доверенных прокси дописывают X-Forwarded-For: адрес клиента — запись на
+    # этой позиции справа (левые записи клиент подделывает сам).
+    trusted_proxy_hops: int = 1
 
     # Runtime
     log_level: str = "INFO"

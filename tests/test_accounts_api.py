@@ -75,7 +75,7 @@ async def _env(session_factory, mail=None, **settings_kw) -> AsyncIterator[Env]:
         map_service=build_map_service(settings, session_factory),
         accounts=acc,
     )
-    transport = httpx.ASGITransport(app=app, client=("9.9.9.9", 1234))
+    transport = httpx.ASGITransport(app=app, client=("9.9.9.9", 1234), raise_app_exceptions=False)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         yield Env(client, acc, mail, push)
     await acc.aclose()
@@ -443,18 +443,53 @@ async def test_cors_allows_authorization_header(session_factory) -> None:
         assert "authorization" in r.headers["access-control-allow-headers"].lower()
 
 
-def _request(headers: dict[str, str], trust: bool) -> Request:
+def _request(headers: dict[str, str], trust: bool, hops: int = 1) -> Request:
+    settings = _settings(trust_proxy=trust, trusted_proxy_hops=hops)
     scope = {
         "type": "http",
         "headers": [(k.lower().encode(), v.encode()) for k, v in headers.items()],
         "client": ("10.0.0.1", 5000),
-        "app": type("A", (), {"state": type("S", (), {"settings": _settings(trust_proxy=trust)})}),
+        "app": type("A", (), {"state": type("S", (), {"settings": settings})}),
     }
     return Request(scope)
 
 
 def test_client_ip_trusts_proxy_only_when_configured() -> None:
-    xff = {"X-Forwarded-For": "1.2.3.4, 10.0.0.9"}
+    # клиент подставил 6.6.6.6, прокси дописал настоящий адрес справа
+    xff = {"X-Forwarded-For": "6.6.6.6, 1.2.3.4"}
     assert client_ip(_request(xff, trust=False)) == "10.0.0.1"
     assert client_ip(_request(xff, trust=True)) == "1.2.3.4"
+    assert client_ip(_request({"X-Forwarded-For": "6.6.6.6, 1.2.3.4, 10.0.0.9"}, True, 2)) == (
+        "1.2.3.4"
+    )
     assert client_ip(_request({}, trust=True)) == "10.0.0.1"
+    assert client_ip(_request({"X-Forwarded-For": "1.2.3.4"}, True, 2)) == "10.0.0.1"
+    assert client_ip(_request({"X-Forwarded-For": "6.6.6.6, garbage"}, True)) == "10.0.0.1"
+    assert client_ip(_request({"X-Forwarded-For": " , "}, True)) == "10.0.0.1"
+    assert client_ip(_request({"X-Forwarded-For": "6.6.6.6, 2001:db8::1"}, True)) == "2001:db8::1"
+
+
+async def test_value_error_422_only_for_codes(session_factory) -> None:
+    async for env in _env(session_factory):
+        fwd = await _forwarder(env)
+        owner = await env.login("owner@x.test")
+        ref = await _create(env, owner, fwd)
+
+        async def coded(*args, **kwargs):
+            raise ValueError("bad_route")
+
+        async def raw(*args, **kwargs):
+            raise ValueError("invalid literal for int() with base 10: 'secret@x.test'")
+
+        env.acc.shipments.update = coded  # type: ignore[method-assign]
+        r = await env.client.patch(
+            f"/api/v1/my/shipments/{ref}", headers=bearer(owner), json={"cargo": "x"}
+        )
+        assert (r.status_code, r.json()) == (422, {"detail": "bad_route"})
+
+        env.acc.shipments.update = raw  # type: ignore[method-assign]
+        r = await env.client.patch(
+            f"/api/v1/my/shipments/{ref}", headers=bearer(owner), json={"cargo": "x"}
+        )
+        assert r.status_code == 500
+        assert "secret" not in r.text

@@ -2,7 +2,8 @@
 
 Только при `settings.accounts_enabled` (иначе каждый роут — 404, см. `deps.accounts`).
 Ошибки сервисов: нет прав / нет объекта — 404 `not_found` (не 403);
-`ValueError(code)` — 422 `{"detail": code}`. В логах — id, не e-mail и не токен.
+`ValueError(code)` с кодом `[a-z_]+` — 422 `{"detail": code}`, прочие ValueError — 500.
+В логах — id, не e-mail и не токен.
 
 POST /api/v1/auth/code {email}                 → 202 всегда (письмо — в фоне)
 POST /api/v1/auth/verify {email, code, device_name} → {token, me} | 401
@@ -14,6 +15,7 @@ GET|POST /api/v1/my/shipments, GET|PATCH …/{ref}, POST …/{ref}/share|archive
 GET|POST …/{ref}/events, PUT …/{ref}/subscription
 """
 
+import re
 from collections.abc import Awaitable, Callable
 from typing import Annotated
 
@@ -65,6 +67,9 @@ from app.services.accounts.views import MyShipmentView, Profile, my_shipment, my
 logger = structlog.get_logger(__name__)
 
 
+_ERROR_CODE = re.compile(r"[a-z_]+")
+
+
 class AccountsRoute(APIRoute):
     """Единое отображение ошибок сервисов аккаунтов в HTTP."""
 
@@ -79,6 +84,10 @@ class AccountsRoute(APIRoute):
             except ValidationError:
                 raise
             except ValueError as exc:
+                if not _ERROR_CODE.fullmatch(str(exc)):
+                    # не код сервиса — ошибка программы; текст может нести данные
+                    logger.error("unexpected_value_error", error=type(exc).__name__)
+                    raise
                 return JSONResponse({"detail": str(exc)}, status_code=422)
 
         return route
