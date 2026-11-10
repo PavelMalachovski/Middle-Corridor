@@ -72,6 +72,7 @@ NODES: dict[str, CorridorNode] = {
         _N("SHYMKENT", "Шымкент", "Казахстан", _L.rail_cis, 42.32, 69.60, NodeKind.rail),
         _N("KYZYLORDA", "Кызылорда", "Казахстан", _L.rail_cis, 44.85, 65.51, NodeKind.rail),
         _N("BEINEU", "Бейнеу", "Казахстан", _L.rail_cis, 45.32, 55.19, NodeKind.rail),
+        _N("KOSTANAY", "Костанай", "Казахстан", _L.rail_cis, 53.21, 63.62, NodeKind.rail),
         _N("AKTAU", "Актау", "Казахстан", _L.caspian, 43.63, 51.25, NodeKind.port),
         _N("KURYK", "Курык", "Казахстан", _L.caspian, 43.19, 51.65, NodeKind.port),
         # Азербайджан
@@ -94,6 +95,10 @@ NODES: dict[str, CorridorNode] = {
         _N("CONSTANTA", "Констанца", "Румыния", _L.europe, 44.17, 28.65, NodeKind.port),
         _N("BUCHAREST", "Бухарест", "Румыния", _L.europe, 44.43, 26.10, NodeKind.rail),
         _N("BUDAPEST", "Будапешт", "Венгрия", _L.europe, 47.50, 19.05, NodeKind.rail),
+        # Европа → Казахстан (на восток): завод, порт отправки, перевалка у Стамбула
+        _N("MLADA_BOLESLAV", "Млада-Болеслав", "Чехия", _L.europe, 50.41, 14.90, NodeKind.rail),
+        _N("KOPER", "Копер", "Словения", _L.europe, 45.55, 13.73, NodeKind.port),
+        _N("AMBARLI", "Амбарлы (Стамбул)", "Турция", _L.black_sea, 40.97, 28.68, NodeKind.port),
     ]
 }
 
@@ -118,6 +123,10 @@ _EN: dict[str, tuple[str, str]] = {
     "CONSTANTA": ("Constanța", "Romania"),
     "BUCHAREST": ("Bucharest", "Romania"),
     "BUDAPEST": ("Budapest", "Hungary"),
+    "KOSTANAY": ("Kostanay", "Kazakhstan"),
+    "MLADA_BOLESLAV": ("Mladá Boleslav", "Czechia"),
+    "KOPER": ("Koper", "Slovenia"),
+    "AMBARLI": ("Ambarlı (Istanbul)", "Türkiye"),
 }
 NODES = {
     code: replace(node, name_en=_EN[code][0], country_en=_EN[code][1])
@@ -193,6 +202,71 @@ SEGMENTS: dict[tuple[str, str], CorridorSegment] = {
         _seg("BATUMI", "CONSTANTA", _S, 50, (42.9, 38.0), (43.6, 33.0)),
         _seg("CONSTANTA", "BUCHAREST", _R, 6),
         _seg("BUCHAREST", "BUDAPEST", _R, 24, (45.66, 25.6), (46.77, 23.6), (47.07, 21.93)),
+        # Европа → Казахстан: Прага, Линц, Грац, Любляна
+        _seg(
+            "MLADA_BOLESLAV",
+            "KOPER",
+            _R,
+            30,
+            (50.08, 14.43),
+            (48.97, 14.47),
+            (48.30, 14.29),
+            (47.07, 15.44),
+            (46.05, 14.51),
+        ),
+        # Адриатика → вокруг Пелопоннеса → Эгейское море → Дарданеллы → Мраморное море
+        _seg(
+            "KOPER",
+            "AMBARLI",
+            _S,
+            72,
+            (45.2, 13.3),
+            (44.0, 14.5),
+            (42.7, 16.3),
+            (41.6, 17.9),
+            (40.3, 18.9),
+            (39.3, 19.6),
+            (37.9, 20.4),
+            (36.5, 21.6),
+            (36.25, 22.9),
+            (36.9, 24.5),
+            (37.9, 25.0),
+            (39.3, 25.6),
+            (40.05, 26.15),
+            (40.4, 26.7),
+            (40.75, 27.7),
+            (40.93, 28.5),
+        ),
+        # Босфор → вдоль турецкого берега Чёрного моря
+        _seg(
+            "AMBARLI",
+            "POTI",
+            _S,
+            100,
+            (40.98, 28.95),
+            (41.08, 29.06),
+            (41.23, 29.12),
+            (41.45, 30.5),
+            (41.75, 32.5),
+            (42.1, 35.0),
+            (41.9, 37.5),
+            (41.6, 39.5),
+            (41.9, 41.2),
+        ),
+        # Бейнеу → Кандыагаш → Актобе → Хромтау → Костанай
+        _seg(
+            "BEINEU",
+            "KOSTANAY",
+            _R,
+            40,
+            (47.1, 55.8),
+            (48.6, 57.0),
+            (49.47, 57.42),
+            (50.28, 57.17),
+            (50.25, 58.45),
+            (51.4, 60.6),
+            (52.4, 62.4),
+        ),
     ]
 }
 

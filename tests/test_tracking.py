@@ -49,6 +49,26 @@ def test_segments_reference_known_nodes_and_reverse() -> None:
         segment("XIAN", "BUDAPEST")
 
 
+# Европа → Казахстан (Škoda: Млада-Болеслав → Копер → Амбарлы → Поти → … → Актау → Костанай)
+ROUTE_EAST = [
+    "MLADA_BOLESLAV", "KOPER", "AMBARLI", "POTI", "TBILISI", "BOYUK_KASIK",
+    "GANJA", "BAKU_ALAT", "AKTAU", "BEINEU", "KOSTANAY",
+]  # fmt: skip
+
+
+def test_eastbound_route_has_segments_and_english_names() -> None:
+    for code in ("MLADA_BOLESLAV", "KOPER", "AMBARLI", "KOSTANAY"):
+        assert NODES[code].name_en and NODES[code].country_en, code
+    modes = {(a, b): segment(a, b).mode for a, b in zip(ROUTE_EAST, ROUTE_EAST[1:], strict=False)}
+    assert modes[("KOPER", "AMBARLI")] == "sea" and modes[("AMBARLI", "POTI")] == "sea"
+    assert modes[("BAKU_ALAT", "AKTAU")] == "sea" and modes[("BEINEU", "KOSTANAY")] == "rail"
+    assert 1800 < segment("KOPER", "AMBARLI").length_km < 2800  # вокруг Пелопоннеса
+    assert 1000 < segment("AMBARLI", "POTI").length_km < 1500
+    assert 1100 < segment("BEINEU", "KOSTANAY").length_km < 1900
+    pts = route_points(ROUTE_EAST)
+    assert pts[0] == NODES["MLADA_BOLESLAV"].latlon and pts[-1] == NODES["KOSTANAY"].latlon
+
+
 def test_route_points_are_continuous() -> None:
     pts = route_points(["KYZYLORDA", "BEINEU", "KURYK", "BAKU_ALAT"])
     assert pts[0] == NODES["KYZYLORDA"].latlon and pts[-1] == NODES["BAKU_ALAT"].latlon
