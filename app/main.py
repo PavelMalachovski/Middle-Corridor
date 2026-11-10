@@ -13,13 +13,15 @@
 import asyncio
 import hashlib
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
+import httpx
 import structlog
 import uvicorn
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.api.deps import AccountsServices
 from app.api.main import create_app
 from app.api.routes.telegram import TELEGRAM_WEBHOOK_PATH
 from app.bot.main import create_bot, create_dispatcher
@@ -28,6 +30,7 @@ from app.config import Settings, get_settings
 from app.db.base import create_engine, create_session_factory
 from app.integrations.ais.aisstream import AISStreamClient
 from app.integrations.ais.base import BoundingBox
+from app.integrations.apns import ApnsSender
 from app.integrations.llm.claude import ClaudeNewsTranslator
 from app.integrations.mock.accuracy import MockAccuracySource
 from app.integrations.mock.clock import MockClock
@@ -41,6 +44,13 @@ from app.integrations.news.rss import RssNewsProvider
 from app.integrations.weather.open_meteo import OpenMeteoProvider
 from app.logging import configure_logging
 from app.scheduler.scheduler import create_scheduler
+from app.services.accounts.auth import AuthService
+from app.services.accounts.events import EventService
+from app.services.accounts.mail import EmailSender, LogEmailSender, ResendEmailSender
+from app.services.accounts.notify import LogPushSender, PushSender, ShipmentNotifier
+from app.services.accounts.orgs import OrgService
+from app.services.accounts.shipments import ShipmentService
+from app.services.accounts.views import ProfileService
 from app.services.ais_tracker import AISStreamWorker, AISTrackerService
 from app.services.manual_reports import ManualReportsService
 from app.services.map_snapshot import (
@@ -121,6 +131,61 @@ def build_map_service(
         wind=wind,
         thresholds=thresholds,
         live=live,
+    )
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
+
+
+def build_accounts(
+    settings: Settings,
+    session_factory: async_sessionmaker[AsyncSession] | None,
+    *,
+    clock: Callable[[], datetime] = _utcnow,
+    mail: EmailSender | None = None,
+    push: PushSender | None = None,
+) -> AccountsServices | None:
+    """Сервисы аккаунтов; None — выключены (MOCK_DATA, нет AUTH_SECRET, Vercel, нет БД).
+
+    Почта: EMAIL_PROVIDER=resend — Resend, иначе журнал. Push: все ключи APNs заданы —
+    APNs по HTTP/2, иначе журнал. mail/push подменяются в тестах.
+    """
+    if not settings.accounts_enabled or session_factory is None:
+        return None
+    clients: list[httpx.AsyncClient] = []
+    if mail is None:
+        if settings.email_provider == "resend":
+            mail_client = httpx.AsyncClient(timeout=10)
+            clients.append(mail_client)
+            mail = ResendEmailSender(settings.email_api_key, settings.email_from, mail_client)
+        else:
+            mail = LogEmailSender()
+    if push is None:
+        if settings.apns_key_id and settings.apns_team_id and settings.apns_key_p8:
+            apns_client = httpx.AsyncClient(http2=True, timeout=10)
+            clients.append(apns_client)
+            push = ApnsSender(
+                settings.apns_key_id,
+                settings.apns_team_id,
+                settings.apns_key_p8,
+                settings.apns_bundle_id,
+                client=apns_client,
+            )
+        else:
+            push = LogPushSender()
+    notifier = ShipmentNotifier(session_factory, push, mail, clock=clock)
+    return AccountsServices(
+        auth=AuthService(session_factory, settings, mail, clock),
+        orgs=OrgService(session_factory, mail, clock),
+        shipments=ShipmentService(session_factory, clock),
+        events=EventService(session_factory, clock, on_event=notifier.on_event),
+        notifier=notifier,
+        profile=ProfileService(session_factory),
+        session_factory=session_factory,
+        settings=settings,
+        clock=clock,
+        clients=clients,
     )
 
 
@@ -218,6 +283,7 @@ async def run() -> None:  # noqa: PLR0915 — точка сборки всего
         map_service=map_service,
         # в моке точность — синтетика с пометкой demo (журнала остановок нет)
         accuracy_service=MockAccuracySource() if settings.mock_data else accuracy_service,
+        accounts=build_accounts(settings, session_factory),
     )
     server = uvicorn.Server(
         uvicorn.Config(api_app, host="0.0.0.0", port=settings.port, log_config=None)

@@ -108,6 +108,9 @@ class Settings(BaseSettings):
     apns_bundle_id: str = "com.malakhouski.mcstatus"
     apns_env: str = "sandbox"  # sandbox | production
     shipment_ref_prefix: str = "MC"  # номера отправок: MC-26-0001
+    # За прокси (Railway): адрес клиента — первый в X-Forwarded-For. Иначе заголовок
+    # подделывается, и лимит запросов кода по IP обходится.
+    trust_proxy: bool = False
 
     # Runtime
     log_level: str = "INFO"
@@ -130,7 +133,8 @@ class Settings(BaseSettings):
 
     @property
     def accounts_enabled(self) -> bool:
-        return bool(self.auth_secret) and not self.mock_data
+        # Vercel — без постоянного процесса (push, почта в фоне): аккаунты только на Railway
+        return bool(self.auth_secret) and not self.mock_data and not self.vercel
 
     @property
     def is_production(self) -> bool:

@@ -128,3 +128,18 @@ async def test_set_platform_admin(svc, session):
     user = (await session.execute(select(User))).scalars().one()
     assert user.email == "boss@x.kz" and user.is_platform_admin
     assert (await session.execute(select(Organization))).first() is None
+
+
+async def test_invite_mail_failure_keeps_invitation(session_factory, session):
+    from app.services.accounts.errors import InvitationMailFailed
+
+    class Broken(LogEmailSender):
+        async def send(self, to: str, subject: str, text: str) -> None:
+            raise OSError("down")
+
+    svc = OrgService(session_factory, Broken(), lambda: NOW)
+    fwd = await svc.create_org(None, "Fwd", OrgKind.forwarder)
+    with pytest.raises(InvitationMailFailed) as err:
+        await svc.invite(None, fwd.id, "a@x.kz", Role.viewer, [])
+    inv = (await session.execute(select(Invitation))).scalars().one()
+    assert err.value.invitation_id == inv.id

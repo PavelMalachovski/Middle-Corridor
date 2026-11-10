@@ -220,6 +220,15 @@ class AccountsRepository:
         )
         return list(result.scalars())
 
+    async def org_members_with_users(self, org_id: int) -> list[tuple[Membership, User]]:
+        result = await self._session.execute(
+            select(Membership, User)
+            .join(User, User.id == Membership.user_id)
+            .where(Membership.org_id == org_id)
+            .order_by(Membership.id)
+        )
+        return [(m, u) for m, u in result.all()]
+
     async def pending_invitations(
         self, org_id: int, *, email: str | None = None, now: datetime
     ) -> list[Invitation]:

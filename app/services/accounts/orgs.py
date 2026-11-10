@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from datetime import datetime, timedelta
 
+import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.db.models import Invitation, Membership, Organization, OrgKind, OrgLink, Role, User
@@ -10,8 +11,10 @@ from app.db.repositories.accounts import AccountsRepository, audit
 from app.services import corridor
 from app.services.accounts import security
 from app.services.accounts.access import Principal, can_invite
-from app.services.accounts.errors import NotFound, PermissionDenied
+from app.services.accounts.errors import InvitationMailFailed, NotFound, PermissionDenied
 from app.services.accounts.mail import EmailSender, render
+
+log = structlog.get_logger()
 
 INVITATION_TTL = timedelta(days=7)
 
@@ -139,7 +142,11 @@ class OrgService:
             locale = None
             inviter_name = (inviter.name or "Middle Corridor") if inviter else "Middle Corridor"
         subject, body = render("invited", locale, inviter=inviter_name, org=org_name)
-        await self._mail.send(email, subject, body)
+        try:
+            await self._mail.send(email, subject, body)
+        except Exception as exc:
+            log.warning("invitation_mail_failed", invitation_id=inv.id, error=type(exc).__name__)
+            raise InvitationMailFailed(inv.id) from exc
         return inv
 
     async def revoke_membership(self, actor: Principal | None, org_id: int, user_id: int) -> None:
@@ -177,6 +184,15 @@ class OrgService:
             raise PermissionDenied
         async with self._sf() as session:
             return await AccountsRepository(session).org_memberships(org_id)
+
+    async def members_with_users(
+        self, actor: Principal | None, org_id: int
+    ) -> list[tuple[Membership, User]]:
+        """Команда компании с профилями — для экрана «Команда» (только менеджерам)."""
+        if not _is_platform(actor) and not (actor and can_invite(actor, org_id)):
+            raise PermissionDenied
+        async with self._sf() as session:
+            return await AccountsRepository(session).org_members_with_users(org_id)
 
     async def linked_clients(
         self, actor: Principal | None, forwarder_id: int
