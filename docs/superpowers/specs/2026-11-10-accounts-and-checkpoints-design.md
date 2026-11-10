@@ -96,8 +96,8 @@ push-токен, — иначе дубль; без push (нет Apple Developer)
 - `shipment_shares` — shipment_id, org_id (клиент) — кто ещё видит груз (только чтение).
 - `org_links` — forwarder_id, client_id: с какими клиентами экспедитору разрешено делиться.
 - `shipment_events` — id, shipment_id, kind (`arrived` | `departed` | `held` | `released`),
-  node_code, occurred_at, hold_code (для `held`: `weather_ban` | `customs` | `waiting_vessel` |
-  `other` — те же коды, что `delay_causes`/`hold_code` в проекции), note, vessel, source
+  node_code, occurred_at, hold_code (для `held`: `weather_ban` | `customs_wait` | `ferry_loading_wait` |
+  `other` — существующие коды `hold_code` проекции, подписи уже есть в вебе и iOS), note, vessel, source
   (`manual`), created_by, created_at, supersedes_id (исправление ссылается на ошибочное;
   удалений нет).
 - `shipment_revisions` — id, shipment_id, changed_by, at, before/after (JSON изменённых полей).
