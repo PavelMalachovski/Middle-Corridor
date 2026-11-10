@@ -21,6 +21,8 @@ final class AppModel {
     @ObservationIgnored let notifier = Notifier()
     /// Push о грузах аккаунта (если есть в сборке, `MCPushEnabled`).
     let push = PushRegistration()
+    /// Узлы коридора на прошлом обновлении грузов аккаунта — «было» для штормов по ним.
+    @ObservationIgnored private var lastAccountNodes: [NodeStatus] = []
     private(set) var serverURL: String
     var path: [String] = []
     var tab: AppTab = .shipments
@@ -126,25 +128,23 @@ final class AppModel {
     func show(_ ref: String) {
         showSplash = false
         tab = .shipments
-        if let account, account.isSignedIn {
-            if let mine = account.shipments.first(where: { $0.shipment.ref == ref }) {
-                path = [AccountRows.key(mine)]
-                return
-            }
-            if account.shipments.isEmpty {
-                // холодный старт по нажатию на push: грузы аккаунта ещё не загружены
-                Task {
-                    await account.refresh()
-                    if let mine = account.shipments.first(where: { $0.shipment.ref == ref }) {
-                        path = [AccountRows.key(mine)]
-                    } else {
-                        showTracked(ref)
-                    }
-                }
-                return
+        route(ref, refreshed: false)
+    }
+
+    /// Груз аккаунта — его карточка; номера нет в списке аккаунта (не загружен или устарел:
+    /// новый, открытый клиенту) — сначала обновить список, и только потом — демо-номера.
+    private func route(_ ref: String, refreshed: Bool) {
+        let target = AccountRows.notificationTarget(
+            ref, in: account?.shipments ?? [], signedIn: account?.isSignedIn == true, refreshed: refreshed)
+        switch target {
+        case .account(let key): path = [key]
+        case .tracked(let ref): showTracked(ref)
+        case .refresh:
+            Task {
+                await account?.refresh()
+                route(ref, refreshed: true)
             }
         }
-        showTracked(ref)
     }
 
     private func showTracked(_ ref: String) {
@@ -183,21 +183,19 @@ final class AppModel {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    /// Грузы аккаунта обновились: то же правило, что у отслеживаемых (`NotificationRules.diff`).
+    /// Грузы аккаунта обновились: то же правило, что у отслеживаемых (`NotificationRules.accountDiff`).
     /// Устройство зарегистрировано для push — «событие» по ним присылает сервер, локальное молчит.
-    /// Узлы те же, что сейчас: шторм по снимку коридора приходит с обновлением отслеживаемых.
+    /// Узлы «было» — те, что видели на прошлом обновлении аккаунта: шторм — по их разнице.
     private func handleAccount(old: [MyShipment], new: [MyShipment]) {
+        let nodes = store.snapshot?.nodes ?? []
+        let oldNodes = lastAccountNodes
+        if !nodes.isEmpty { lastAccountNodes = nodes }  // снимка нет (офлайн) — прежние узлы остаются
         guard !old.isEmpty else { return }  // первая загрузка после входа — не новость
         let lang = (LangChoice(rawValue: defaults.string(forKey: LangChoice.key) ?? "") ?? .system).resolved()
-        let nodes = store.snapshot?.nodes ?? []
-        let byRef = { (list: [MyShipment]) in
-            Dictionary(list.map { ($0.shipment.ref, $0.shipment) }, uniquingKeysWith: { first, _ in first })
-        }
-        let newByRef = byRef(new)
-        let notices = NotificationRules.merge(NotificationRules.diff(
-            old: byRef(old), new: newByRef, oldNodes: nodes, newNodes: nodes,
+        let notices = NotificationRules.merge(NotificationRules.accountDiff(
+            old: old, new: new, oldNodes: oldNodes, newNodes: nodes,
             settings: NotifyPrefs.load(defaults), labels: Labels(lang: lang, nodes: nodes),
-            pushManagedRefs: push.isRegistered ? Set(newByRef.keys) : []))
+            pushRegistered: push.isRegistered))
         notifier.deliver(notices, after: notifyDelay)
     }
 

@@ -30,4 +30,23 @@ public enum AccountRows {
         guard let parsed = parse(key) else { return nil }
         return shipments.first { $0.orgId == parsed.orgId && $0.shipment.ref == parsed.ref }
     }
+
+    /// Куда ведёт нажатие на уведомление (локальное или push `{"ref": …}`).
+    public enum NotificationTarget: Equatable, Sendable {
+        /// Карточка груза аккаунта (ключ `acct:`).
+        case account(String)
+        /// Номера нет в списке аккаунта — список мог устареть (новый или открытый клиенту груз):
+        /// обновить и спросить снова с `refreshed: true`.
+        case refresh
+        /// Отслеживаемый номер (демо).
+        case tracked(String)
+    }
+
+    public static func notificationTarget(
+        _ ref: String, in shipments: [MyShipment], signedIn: Bool, refreshed: Bool
+    ) -> NotificationTarget {
+        guard signedIn else { return .tracked(ref) }
+        if let mine = shipments.first(where: { $0.shipment.ref == ref }) { return .account(key(mine)) }
+        return refreshed ? .tracked(ref) : .refresh
+    }
 }

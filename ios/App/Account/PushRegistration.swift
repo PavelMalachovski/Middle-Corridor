@@ -41,9 +41,11 @@ final class PushRegistration {
 
     /// После входа (и на каждом старте с сохранённым входом — токен мог смениться): разрешение
     /// на уведомления, затем — токен APNs, если push есть в сборке.
-    func start(account: AccountModel, notifier: Notifier) async {
+    /// `askPermission: false` — UI-тесты (`-mc-fake-api`): системный запрос на чистом симуляторе
+    /// перекрыл бы экран после входа.
+    func start(account: AccountModel, notifier: Notifier, askPermission: Bool) async {
         self.account = account
-        await notifier.requestAuthorizationIfNeeded()
+        if askPermission { await notifier.requestAuthorizationIfNeeded() }
         guard Self.isEnabled, await notifier.isAuthorized() else { return }
         UIApplication.shared.registerForRemoteNotifications()
     }

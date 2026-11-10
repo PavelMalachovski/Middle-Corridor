@@ -101,6 +101,22 @@ public enum NotificationRules {
         return notices
     }
 
+    /// Грузы аккаунта — то же правило по номерам. Узлы — «было» с прошлого обновления аккаунта и
+    /// «стало» сейчас (иначе шторм не виден: push о нём не приходит). `pushRegistered` — о событиях
+    /// грузов аккаунта шлёт сервер, локальное «событие» по ним молчит.
+    public static func accountDiff(
+        old: [MyShipment], new: [MyShipment], oldNodes: [NodeStatus], newNodes: [NodeStatus],
+        settings: NotifySettings, labels: Labels, pushRegistered: Bool
+    ) -> [AppNotice] {
+        func byRef(_ list: [MyShipment]) -> [String: Shipment] {
+            Dictionary(list.map { ($0.shipment.ref, $0.shipment) }, uniquingKeysWith: { first, _ in first })
+        }
+        let newByRef = byRef(new)
+        return diff(
+            old: byRef(old), new: newByRef, oldNodes: oldNodes, newNodes: newNodes, settings: settings,
+            labels: labels, pushManagedRefs: pushRegistered ? Set(newByRef.keys) : [])
+    }
+
     /// Санкции — по текущему состоянию, а не по разнице «было → стало»: груз `flagged` или
     /// `missing` даёт уведомление, если его `id` нет в `sent` (набор хранит приложение). Так
     /// флаг приходит и для только что добавленного груза, и не повторяется после перезапуска,

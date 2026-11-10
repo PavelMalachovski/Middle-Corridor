@@ -48,6 +48,9 @@ struct ShareShipmentView: View {
 
     private func row(_ client: OrgSummary) -> some View {
         Button {
+            // занято сразу, до задачи: двойное нажатие не отправит второй запрос
+            guard busy == nil, !shared.contains(client.id) else { return }
+            busy = client.id
             Task { await share(client) }
         } label: {
             HStack {
@@ -75,8 +78,8 @@ struct ShareShipmentView: View {
         }
     }
 
+    /// `busy` ставит нажатие (синхронно), здесь — только снимаем.
     private func share(_ client: OrgSummary) async {
-        busy = client.id
         defer { busy = nil }
         error = nil
         do {

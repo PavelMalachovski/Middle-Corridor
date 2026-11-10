@@ -51,7 +51,12 @@ struct EditShipmentView: View {
 
     private var graph: RouteGraph? { segments.map(RouteGraph.init(segments:)) }
     private var locked: Int { RouteEdit.lockedCount(mine.shipment) }
-    private var containerValid: Bool { ContainerNumber.isValid(container) }
+    /// Номер проверяется, только если его поменяли: груз без номера (или со старым, не по ISO)
+    /// можно сохранить с правкой других полей.
+    private var containerChanged: Bool {
+        ContainerNumber.normalize(container) != ContainerNumber.normalize(original.container)
+    }
+    private var containerValid: Bool { !containerChanged || ContainerNumber.isValid(container) }
     private var routeValid: Bool { route == original.route || graph?.isValid(route) == true }
 
     private var patch: ShipmentPatch {
