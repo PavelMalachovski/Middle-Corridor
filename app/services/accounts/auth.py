@@ -187,13 +187,18 @@ class AuthService:
                 await session.commit()
             return user
 
-    async def logout(self, token: str) -> None:
+    async def logout(self, token: str, apns_token: str | None = None) -> None:
+        """Выход; `apns_token` — устройство этого же пользователя тоже отзывается (чужое — нет)."""
         now = self._clock()
         async with self._sf() as session:
             repo = AccountsRepository(session)
             row = await repo.session_by_hash(security.hash_token(token))
             if row is None or row.revoked_at is not None:
                 return
+            if apns_token:
+                device = await repo.device_by_token(apns_token)
+                if device is not None and device.user_id == row.user_id:
+                    device.revoked_at = device.revoked_at or now
             row.revoked_at = now
             await audit(session, "logout", "session", at=now, entity_id=row.id, user_id=row.user_id)
             await session.commit()

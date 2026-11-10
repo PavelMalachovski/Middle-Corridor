@@ -24,6 +24,8 @@ final class AccountModel {
     @ObservationIgnored private let api: any AccountAPI
     /// Растёт при входе и выходе: ответ, начатый до них, уже не применяется.
     @ObservationIgnored private var generation = 0
+    /// Последний токен APNs, принятый сервером: при выходе уходит в `logout`, чтобы устройство отозвали.
+    @ObservationIgnored private var pushToken: String?
 
     init(api: any AccountAPI, tokens: any TokenStore) {
         self.api = api
@@ -77,7 +79,9 @@ final class AccountModel {
     func logout() async {
         clear()
         sessionExpired = false
-        try? await api.logout()
+        let token = pushToken
+        pushToken = nil
+        try? await api.logout(apnsToken: token)
     }
 
     // MARK: - Действия (после каждого — список заново, без уведомления о своём же действии)
@@ -121,6 +125,7 @@ final class AccountModel {
     /// Устройство зарегистрировано для push: о событиях скажет сервер.
     func registerDevice(token: String, environment: String) async throws {
         try await api.registerDevice(apnsToken: token, environment: environment)
+        pushToken = token
     }
 
     /// Груз по ключу строки `AccountRows.key` (компания + номер).

@@ -15,7 +15,7 @@ from app.db.models import CheckpointEventKind as Kind
 from app.db.models import ShipmentEventRow, ShipmentRow
 from app.db.repositories.accounts import AccountsRepository, audit, aware
 from app.services.accounts.access import Principal, event_nodes
-from app.services.accounts.db_source import _ordered, furthest_reached, open_hold
+from app.services.accounts.db_source import _ordered, open_hold, reach_state
 from app.services.accounts.shipments import load_shipment
 
 log = structlog.get_logger()
@@ -153,7 +153,11 @@ class EventService:
             previous = full[position - 1] if position else None
         if previous is not None and when < aware(previous.occurred_at):
             raise ValueError("out_of_order")
-        if kind in _MOVING and route.index(node_code) < furthest_reached(others, route):
+        reached, departed = reach_state(others, route)
+        here = route.index(node_code)
+        if kind in _MOVING and here < reached:
+            raise ValueError("backwards")
+        if kind == Kind.held and here == reached and departed:  # стоянка после отправления
             raise ValueError("backwards")
         if kind == Kind.released:
             hold = open_hold(others, route)

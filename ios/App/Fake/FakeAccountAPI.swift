@@ -28,7 +28,7 @@
             return result
         }
 
-        func logout() async throws {
+        func logout(apnsToken: String?) async throws {
             tokens.save(nil)
         }
 

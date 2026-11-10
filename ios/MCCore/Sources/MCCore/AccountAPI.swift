@@ -12,8 +12,9 @@ public protocol AccountAPI: Sendable {
     func requestCode(email: String) async throws
     /// Обмен кода на сессию; токен кладётся в `TokenStore`.
     func verify(email: String, code: String, deviceName: String) async throws -> LoginResult
-    /// Выход: токен стирается локально в любом случае.
-    func logout() async throws
+    /// Выход: токен стирается локально в любом случае. `apnsToken` — токен этого устройства:
+    /// сервер отзывает его, чтобы push предыдущего пользователя сюда больше не шли.
+    func logout(apnsToken: String?) async throws
     func me() async throws -> Me
     func registerDevice(apnsToken: String, environment: String) async throws
     func myShipments() async throws -> [MyShipment]
@@ -56,10 +57,11 @@ public struct HTTPAccountAPI: AccountAPI {
         return result
     }
 
-    public func logout() async throws {
+    public func logout(apnsToken: String?) async throws {
         defer { tokens.save(nil) }
         do {
-            try await sendVoid("POST", "auth/logout")
+            try await sendVoid(
+                "POST", "auth/logout", body: apnsToken.map { ["apns_token": $0] })
         } catch APIError.unauthorized {
             // сессия уже недействительна — выходить больше не из чего
         }

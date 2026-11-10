@@ -263,7 +263,7 @@ final class AccountAPITests: XCTestCase {
     func test_logout_erasesTokenEvenWhenOffline() async {
         StubProtocol.handler = { _ in throw URLError(.notConnectedToInternet) }
         do {
-            try await api().logout()
+            try await api().logout(apnsToken: nil)
             XCTFail("ждали ошибку")
         } catch {
             XCTAssertEqual(error as? APIError, .offline)
@@ -273,9 +273,37 @@ final class AccountAPITests: XCTestCase {
 
     func test_logout_204() async throws {
         StubProtocol.handler = { _ in (204, Data()) }
-        try await api().logout()
+        try await api().logout(apnsToken: nil)
         XCTAssertNil(tokens.load())
         XCTAssertEqual(StubProtocol.lastPath, "/api/v1/auth/logout")
+    }
+
+    func test_logout_sendsDeviceTokenOrNoBody() async throws {
+        nonisolated(unsafe) var bodies: [String?] = []
+        StubProtocol.handler = { request in
+            var data = request.httpBody
+            if data == nil, let stream = request.httpBodyStream {
+                stream.open()
+                defer { stream.close() }
+                var collected = Data()
+                var buffer = [UInt8](repeating: 0, count: 1024)
+                while stream.hasBytesAvailable {
+                    let n = stream.read(&buffer, maxLength: buffer.count)
+                    if n <= 0 { break }
+                    collected.append(buffer, count: n)
+                }
+                data = collected
+            }
+            bodies.append(data.flatMap { String(data: $0, encoding: .utf8) })
+            return (204, Data())
+        }
+        try await api().logout(apnsToken: "abcd")
+        tokens.save("tok-123")  // выход стёр токен
+        try await api().logout(apnsToken: nil)
+        XCTAssertEqual(bodies.count, 2)
+        guard bodies.count == 2 else { return }
+        XCTAssertEqual(bodies[0], #"{"apns_token":"abcd"}"#)
+        XCTAssertTrue(bodies[1] == nil || bodies[1] == "")
     }
 
     func test_voidEndpoints_methodsAndPaths() async throws {

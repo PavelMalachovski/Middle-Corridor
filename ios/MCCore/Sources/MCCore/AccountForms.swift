@@ -140,7 +140,7 @@ public struct EventDraft: Sendable, Equatable {
         guard note.count <= Self.noteMax, Self.trimmed(vessel).count <= Self.vesselMax else { return false }
         guard kind == .held else { return true }
         guard let hold else { return false }
-        // «другая причина» уходит без кода — её текст и есть примечание
+        // «другая причина» уходит с кодом "other"; её текст (обязателен) — примечание
         return hold != .other || !Self.trimmed(note).isEmpty
     }
 
