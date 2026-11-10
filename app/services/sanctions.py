@@ -40,6 +40,15 @@ class SanctionsListInfo(BaseModel):
     name_en: str
     as_of: date
     source_url: str
+    # совпадение кода без связи с РФ/РБ — «проверить вручную» (CHPL: товары, которые чаще
+    # всего уходят в РФ через третьи страны); у остальных списков такое совпадение не в счёт
+    review_code_only: bool = False
+
+
+# Запрет ввоза (прил. XVII, XXI) касается только ввоза в ЕС
+EU_COUNTRIES = frozenset(
+    "AT BE BG CY CZ DE DK EE ES FI FR GR HR HU IE IT LT LU LV MT NL PL PT RO SE SI SK".split()
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,7 +93,11 @@ def load_lists(directory: Path = DATA_DIR) -> SanctionsLists:
                 raise ValueError(f"{path.name}: колонки должны быть {','.join(_COLUMNS)}")
             for row in reader:
                 entries.append(_entry(item["code"], row, f"{path.name}:{reader.line_num}"))
-    return SanctionsLists(tuple(infos), tuple(entries))
+    # в приложениях бывают повторы одного кода (поправки) — одна запись на код в списке
+    unique = {(e.list_id, e.code): e for e in reversed(entries)}
+    return SanctionsLists(
+        tuple(infos), tuple(e for e in entries if unique[(e.list_id, e.code)] is e)
+    )
 
 
 @cache
@@ -161,14 +174,22 @@ def _strength(entry: SanctionsEntry, line: PackingLine, pl: PackingList) -> tupl
     return (True, "consignee_ru") if parties & entry.countries else (False, "code_only")
 
 
-def _relevant(m: SanctionsMatch) -> bool:
+def _relevant(m: SanctionsMatch, review_lists: frozenset[str]) -> bool:
     """Совпадение, из-за которого есть статус: сильное или «проверить вручную».
 
-    Запрет ввоза по прил. XXI действует только на товар происхождения из списка: известное
-    другое происхождение — не совпадение. Такие позиции наружу не отдаём: прил. XXI покрывает
-    почти любую электронику, пластик и автозапчасти, и ответ раскрыл бы весь пакинг-лист.
+    Код без связи с РФ/РБ — не совпадение, кроме списков с `review_code_only` (CHPL).
+    Прил. XXI и XXIII покрывают почти любую электронику, пластик, автозапчасти и станки:
+    иначе «проверить вручную» стояло бы на каждом контейнере, а ответ раскрыл бы весь лист.
     """
-    return m.strong or m.measure == Measure.export_ban or m.reason_code != "code_only"
+    return m.strong or m.reason_code != "code_only" or m.list_id in review_lists
+
+
+def _applies(entry: SanctionsEntry, pl: PackingList) -> bool:
+    """Запрет ввоза — только для груза в ЕС (назначение не указано — проверяем)."""
+    if entry.measure != Measure.import_ban:
+        return True
+    dest = (pl.destination_country or "").upper()
+    return not dest or dest in EU_COUNTRIES
 
 
 def screen(
@@ -184,12 +205,18 @@ def screen(
         status = SanctionsStatus.missing if border_reached else SanctionsStatus.pending
         return SanctionsCheck(status=status, lists=infos, matches=[])
 
+    review_lists = frozenset(i.code for i in lists.infos if i.review_code_only)
     matches: list[SanctionsMatch] = []
+    seen: set[tuple[int, str, str]] = set()
     for line in sorted(packing_list.lines, key=lambda x: x.no):
         code = _digits(line.hs_code)
         for entry in lists.entries:
-            if not code.startswith(entry.code[:6]):
+            key = (line.no, entry.list_id, entry.code[:6])  # КН-8 сверяем по 6 знакам
+            if key in seen or not code.startswith(entry.code[:6]):
                 continue
+            if not _applies(entry, packing_list):
+                continue
+            seen.add(key)
             strong, reason = _strength(entry, line, packing_list)
             matches.append(
                 SanctionsMatch(
@@ -206,7 +233,7 @@ def screen(
                     reason_code=reason,
                 )
             )
-    matches = [m for m in matches if _relevant(m)]
+    matches = [m for m in matches if _relevant(m, review_lists)]
     matches.sort(key=lambda m: (not m.strong, m.line_no))  # сортировка устойчивая
     if any(m.strong for m in matches):
         status = SanctionsStatus.flagged

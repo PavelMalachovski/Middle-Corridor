@@ -28,10 +28,22 @@ INFOS = (
         code="eu", name="ЕС", name_en="EU", as_of=date(2026, 7, 24), source_url="https://x"
     ),
     SanctionsListInfo(
-        code="chpl", name="CHPL", name_en="CHPL", as_of=date(2026, 7, 24), source_url="https://x"
+        code="chpl",
+        name="CHPL",
+        name_en="CHPL",
+        as_of=date(2026, 7, 24),
+        source_url="https://x",
+        review_code_only=True,
+    ),
+    SanctionsListInfo(
+        code="eu_x", name="XXIII", name_en="XXIII", as_of=date(2026, 7, 24), source_url="https://x"
     ),
 )
 LISTS = SanctionsLists(INFOS, (STEEL, CHIPS))
+# прил. XXIII: запрет экспорта в РФ (автозапчасти 870899)
+PARTS = SanctionsEntry(
+    "eu_x", "870899", "parts", "Annex XXIII", Measure.export_ban, frozenset({"RU"})
+)
 
 
 def _list(
@@ -65,7 +77,7 @@ def test_list_after_border_wins_over_missing() -> None:
     check = _screen(_list(TOYS), border=True)
     assert check.status == SanctionsStatus.clear
     assert check.checked_at == NOW - timedelta(hours=6)
-    assert [i.code for i in check.lists] == ["eu", "chpl"]
+    assert [i.code for i in check.lists] == ["eu", "chpl", "eu_x"]
 
 
 def test_received_later_than_at_counts_as_absent() -> None:
@@ -170,3 +182,71 @@ def test_matches_only_matched_lines() -> None:
     lines.append(PackingLine(5, "7208519800", "Прокат", origin_country="RU"))
     check = _screen(_list(*lines))
     assert len(check.matches) == 1 and check.matches[0].line_no == 5
+
+
+# --- направление перевозки -------------------------------------------------------
+
+
+def test_import_ban_not_applied_outside_eu() -> None:
+    """Сталь из РФ едет в Казахстан — запрет ввоза в ЕС тут ни при чём."""
+    steel_ru = PackingLine(1, "7208519800", "Прокат", origin_country="RU")
+    check = _screen(_list(steel_ru, consignee="KZ", dest="KZ"))
+    assert check.status == SanctionsStatus.clear and check.matches == []
+
+
+def test_import_ban_applied_when_destination_unknown() -> None:
+    steel_ru = PackingLine(1, "7208519800", "Прокат", origin_country="RU")
+    assert _screen(_list(steel_ru, consignee=None, dest=None)).status == SanctionsStatus.flagged
+
+
+def test_eu_steel_export_eastbound_is_clear() -> None:
+    """Чешский крепёж (7318) в Костанай: не «происхождение стали» — груз из ЕС вывозится."""
+    screws = PackingLine(1, "7318158800", "Болты", origin_country="CZ")
+    check = _screen(_list(screws, consignee="KZ", dest="KZ"))
+    assert check.status == SanctionsStatus.clear and check.matches == []
+
+
+def test_annex_xxiii_without_ru_link_is_not_a_match() -> None:
+    lists = SanctionsLists(INFOS, (PARTS,))
+    line = PackingLine(1, "8708999740", "Запчасти", origin_country="CZ")
+    check = _screen(_list(line, consignee="KZ", dest="KZ"), lists=lists)
+    assert check.status == SanctionsStatus.clear and check.matches == []
+
+
+def test_annex_xxiii_to_russia_is_flagged() -> None:
+    lists = SanctionsLists(INFOS, (PARTS,))
+    line = PackingLine(1, "8708999740", "Запчасти", origin_country="CZ")
+    check = _screen(_list(line, consignee="RU", dest="RU"), lists=lists)
+    assert check.status == SanctionsStatus.flagged
+    assert check.matches[0].reason_code == "consignee_ru"
+
+
+def test_chpl_to_kazakhstan_needs_review() -> None:
+    """CHPL — товары, которые чаще всего уходят в РФ через третьи страны: проверить вручную."""
+    plugs = SanctionsEntry(
+        "chpl", "853669", "plugs", "Tier 3.A", Measure.export_ban, frozenset({"RU", "BY"})
+    )
+    line = PackingLine(1, "8536699008", "Разъёмы", origin_country="DE")
+    check = _screen(_list(line, consignee="KZ", dest="KZ"), lists=SanctionsLists(INFOS, (plugs,)))
+    assert check.status == SanctionsStatus.review
+    assert check.matches[0].reason_code == "code_only"
+
+
+def test_duplicate_entries_give_one_match() -> None:
+    lists = SanctionsLists(INFOS, (PARTS, PARTS))
+    line = PackingLine(1, "8708999740", "Запчасти", origin_country="CZ")
+    assert len(_screen(_list(line, consignee="RU", dest="RU"), lists=lists).matches) == 1
+
+
+def test_two_cn8_codes_with_same_hs6_give_one_match() -> None:
+    toys_a = SanctionsEntry(
+        "eu_x", "95030075", "toys", "Annex XXIII", Measure.export_ban, frozenset({"RU"})
+    )
+    toys_b = SanctionsEntry(
+        "eu_x", "95030079", "toys", "Annex XXIII", Measure.export_ban, frozenset({"RU"})
+    )
+    line = PackingLine(1, "9503007000", "Игрушки", origin_country="CN")
+    check = _screen(
+        _list(line, consignee="RU", dest="RU"), lists=SanctionsLists(INFOS, (toys_a, toys_b))
+    )
+    assert len(check.matches) == 1

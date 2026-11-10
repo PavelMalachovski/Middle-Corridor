@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from app.services.sanctions import PackingLine, PackingList
 from app.services.tracking import ShipmentPlan
 
-_DEST_COUNTRY = {"BUDAPEST": "HU", "CONSTANTA": "RO", "BUCHAREST": "RO"}
+_DEST_COUNTRY = {"BUDAPEST": "HU", "CONSTANTA": "RO", "BUCHAREST": "RO", "KOSTANAY": "KZ"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,6 +79,30 @@ DEMO_PACKING: dict[str, DemoPacking] = {
         timedelta(days=12),
         (_l(1, "6109100000", "Футболки хлопковые", "Cotton T-shirts", "CN"),),
         "HU",
+    ),
+    # Восток: коды — из настоящей экспортной декларации автокомплектов (данные обезличены).
+    # Чешский крепёж и запчасти в Казахстан — не запрет ввоза в ЕС и не прил. XXIII без
+    # связи с РФ → «чисто»; разъёмы из CHPL → «проверить вручную» (риск реэкспорта).
+    "MC-26-0501": DemoPacking(
+        timedelta(days=9),
+        (
+            _l(1, "8708509140", "Мост задний ведущий", "Rear drive axle", "CZ"),
+            _l(2, "8708299040", "Детали кузова", "Body parts", "CZ"),
+            _l(3, "7318158800", "Болты стальные", "Steel bolts", "CZ"),
+            _l(4, "3926909700", "Изделия из пластмасс", "Plastic parts", "CZ"),
+            _l(5, "9027101040", "Лямбда-зонд", "Lambda probe", "CZ"),
+            _l(6, "8507100000", "Аккумуляторы", "Batteries", "DE"),
+        ),
+        "KZ",
+    ),
+    "MC-26-0502": DemoPacking(
+        timedelta(days=4),
+        (
+            _l(1, "8536699008", "Разъёмы электрические", "Electrical connectors", "DE"),
+            _l(2, "8544429009", "Жгуты проводов", "Wiring harnesses", "CZ"),
+            _l(3, "8512200009", "Фары", "Headlamps", "CZ"),
+        ),
+        "KZ",
     ),
     "MC-26-0405": DemoPacking(
         timedelta(days=3),

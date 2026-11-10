@@ -9,7 +9,8 @@ from app.services.sanctions import Measure, default_lists, load_lists
 
 def test_default_lists_load_and_are_valid() -> None:
     lists = default_lists()
-    assert {i.code for i in lists.infos} == {"chpl", "eu_833_2014"}
+    assert {i.code for i in lists.infos} == {"chpl", "eu_833_2014", "eu_833_2014_export"}
+    assert [i.code for i in lists.infos if i.review_code_only] == ["chpl"]
     for info in lists.infos:
         assert info.source_url.startswith("https://") and info.as_of.year >= 2025
         assert info.name and info.name_en
@@ -27,6 +28,12 @@ def test_default_lists_load_and_are_valid() -> None:
     assert all(e.measure == Measure.import_ban and e.countries == {"RU"} for e in eu)
     assert sum(e.ref == "Annex XVII" for e in eu) == 50
     assert sum(e.ref == "Annex XXI" for e in eu) == 267
+
+    xxiii = [e for e in lists.entries if e.list_id == "eu_833_2014_export"]
+    assert all(e.measure == Measure.export_ban and e.countries == {"RU"} for e in xxiii)
+    assert all(e.ref == "Annex XXIII" for e in xxiii)
+    assert len(xxiii) == 504  # 514 строк приложения, 10 кодов в нём повторяются
+    assert len({e.code for e in xxiii}) == len(xxiii)
 
 
 def test_known_entries_present() -> None:
