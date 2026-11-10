@@ -23,11 +23,12 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 
 from app.integrations.mock.clock import MockClock
-from app.integrations.mock.fleet import _DWELL_H, CARGO_EN, ROUTE_AKTAU
+from app.integrations.mock.fleet import CARGO_EN, ROUTE_AKTAU
 from app.services.corridor import NODES, segment
 from app.services.delay_breakdown import DelayCause
 from app.services.demo_clock import DemoClockAction, DemoClockState
 from app.services.queue_forecast import QueueInput
+from app.services.schedule import DWELL_H
 from app.services.tracking import EventKind, PlannedLeg, ShipmentPlan, TrackingEvent
 
 H = timedelta(hours=1)
@@ -61,7 +62,7 @@ _VESSELS = {(PORT, "BAKU_ALAT"): FERRY, ("POTI", "CONSTANTA"): SEA_VESSEL}
 
 
 def _dwell(code: str) -> float:
-    return _DWELL_H[NODES[code].kind]
+    return DWELL_H[NODES[code].kind]
 
 
 def _schedule(port_departure_h: float) -> tuple[dict[str, float], dict[str, float]]:

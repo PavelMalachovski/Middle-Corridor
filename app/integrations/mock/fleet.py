@@ -17,11 +17,12 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from app.integrations.mock.packing import with_packing
-from app.services.corridor import NODES, NodeKind, segment
+from app.services.corridor import NODES, segment
 from app.services.geo import point_along
 from app.services.map_snapshot import VesselMapStatus
 from app.services.queue_forecast import QueueInput
-from app.services.tracking import EventKind, PlannedLeg, ShipmentPlan, TrackingEvent
+from app.services.schedule import leg_offsets, plan_legs
+from app.services.tracking import EventKind, ShipmentPlan, TrackingEvent
 
 if TYPE_CHECKING:
     from app.integrations.mock.story import DemoStory
@@ -169,8 +170,6 @@ class MockFleetSource:
 
 # --- Отправки ------------------------------------------------------------------
 
-_DWELL_H = {NodeKind.rail: 6.0, NodeKind.port: 12.0, NodeKind.border: 18.0}
-
 ROUTE_KURYK = [
     "XIAN", "URUMQI", "KHORGOS", "ALMATY", "SHYMKENT", "KYZYLORDA", "BEINEU", "KURYK",
     "BAKU_ALAT", "GANJA", "BOYUK_KASIK", "TBILISI", "POTI", "CONSTANTA", "BUCHAREST", "BUDAPEST",
@@ -239,28 +238,11 @@ def build_plan(  # noqa: PLR0913 — сценарий описывается п�
     фактическое минус delay_hours, от него раскладывается всё расписание.
     """
     vessels = vessels or {}
-    depart: dict[str, float] = {route[0]: 0.0}
-    arrive: dict[str, float] = {}
-    t = 0.0
-    for a, b in zip(route, route[1:], strict=False):
-        t += segment(a, b).typical_hours
-        arrive[b] = t
-        t += _DWELL_H[NODES[b].kind]
-        depart[b] = t
-
+    depart, arrive = leg_offsets(route)
     pivot_offset = depart[pivot_code] if pivot_kind == EventKind.departed else arrive[pivot_code]
     base = pivot_ts - timedelta(hours=delay_hours + pivot_offset)
 
-    legs = tuple(
-        PlannedLeg(
-            from_code=a,
-            to_code=b,
-            depart_at=base + timedelta(hours=depart[a]),
-            arrive_at=base + timedelta(hours=arrive[b]),
-            vessel=vessels.get((a, b)),
-        )
-        for a, b in zip(route, route[1:], strict=False)
-    )
+    legs = plan_legs(route, base, vessels)
 
     events: list[TrackingEvent] = []
     pivot_idx = route.index(pivot_code)
