@@ -19,7 +19,7 @@ final class CargoTests: XCTestCase {
 
     func test_absentField_isNil() throws {
         var json = try XCTUnwrap(
-            try JSONSerialization.jsonObject(with: Fixture.data("shipment_MC-26-0412")) as? [String: Any])
+            try JSONSerialization.jsonObject(with: Fixture.data("shipment_MC-26-0431")) as? [String: Any])
         json["cargo_details"] = nil
         let data = try JSONSerialization.data(withJSONObject: json)
         XCTAssertNil(try APIDate.makeDecoder().decode(Shipment.self, from: data).cargoDetails)

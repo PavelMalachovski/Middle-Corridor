@@ -18,8 +18,8 @@ test("ссылка открывает тот же груз в том же мес
   const at = new Date(Date.parse(snap.server_time) - 6 * 3_600_000);
   at.setUTCMinutes(0, 0, 0);
   const iso = at.toISOString().replace(/\.\d{3}Z$/, "Z");
-  await openMap(page, `/?s=mc-26-0412&view=6/43.5/50.5&basemap=light&at=${iso}`);
-  await expect(page.locator(".detail__ref")).toHaveText("MC-26-0412");
+  await openMap(page, `/?s=mc-26-0501&view=6/43.5/50.5&basemap=light&at=${iso}`);
+  await expect(page.locator(".detail__ref")).toHaveText("MC-26-0501");
   await expect(page.locator(".map")).toHaveAttribute("data-basemap", "light");
   const st = await mapState(page);
   expect(Math.abs(st.zoom - 6)).toBeLessThan(0.05);
@@ -28,14 +28,14 @@ test("ссылка открывает тот же груз в том же мес
   await expect(status(page)).toContainText(
     `replay · ${String(at.getUTCDate()).padStart(2, "0")}.${String(at.getUTCMonth() + 1).padStart(2, "0")}, ${hh}:00`,
   );
-  await expect(page).toHaveTitle(/MC-26-0412/);
+  await expect(page).toHaveTitle(/MC-26-0501/);
 });
 
 test("поиск и фильтры сужают список, адрес отражает груз и вид карты", async ({ page }) => {
   await page.addInitScript((p) => localStorage.setItem("mc-map-prefs", JSON.stringify(p)), ARROWS);
   await openMap(page);
   const total = await page.locator(".list .card").count();
-  await page.fill(".search", "0412");
+  await page.fill(".search", "0501");
   await expect(page.locator(".list .card")).toHaveCount(1);
   await page.fill(".search", "");
   await page.getByRole("button", { name: "с задержкой", exact: true }).click();
@@ -66,10 +66,10 @@ test("«поделиться» без Web Share кладёт ссылку в б�
 }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.addInitScript((p) => localStorage.setItem("mc-map-prefs", JSON.stringify(p)), ARROWS);
-  await openMap(page, "/?s=MC-26-0412");
-  await expect(page.locator(".detail__ref")).toHaveText("MC-26-0412");
+  await openMap(page, "/?s=MC-26-0501");
+  await expect(page.locator(".detail__ref")).toHaveText("MC-26-0501");
   await page.getByRole("button", { name: /поделиться/ }).click();
   await expect(page.locator(".toast")).toContainText("Ссылка скопирована");
   const clip = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clip).toContain("s=MC-26-0412");
+  expect(clip).toContain("s=MC-26-0501");
 });

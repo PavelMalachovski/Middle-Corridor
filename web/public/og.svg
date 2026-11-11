@@ -35,7 +35,7 @@
   <!-- паром и груз -->
   <path d="M610 240 l14 -22 l14 22 v22 h-28 z" fill="#eb6834" stroke="#000" stroke-opacity="0.5" stroke-width="2" transform="rotate(-25 624 240)"/>
   <circle cx="640" cy="228" r="18" fill="#2fd39a" stroke="#fff" stroke-width="5"/>
-  <text x="668" y="234" font-family="Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#2fd39a">MC-26-0412</text>
+  <text x="668" y="234" font-family="Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#2fd39a">MC-26-0501</text>
   <!-- подписи -->
   <text x="80" y="470" font-family="Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#f2f1ec" letter-spacing="-1">Middle Corridor</text>
   <text x="82" y="516" font-family="Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="26" fill="#b7b5ad" letter-spacing="3">КАРТА СТАТУСА КОРИДОРА</text>

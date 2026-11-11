@@ -98,8 +98,13 @@ struct ShipmentDetailView: View {
             }
 
             Section(l("card.details")) {
-                LabeledContent(l("card.cargo"), value: labels.cargo(s))
+                // есть блок «Груз» — строка «Груз» дублировала бы его
+                if s.cargoDetails == nil {
+                    LabeledContent(l("card.cargo"), value: labels.cargo(s))
+                        .accessibilityIdentifier("details.cargo")
+                }
                 LabeledContent(l("card.client"), value: s.client)
+                    .accessibilityIdentifier("details.client")
             }
         }
         .toolbar {

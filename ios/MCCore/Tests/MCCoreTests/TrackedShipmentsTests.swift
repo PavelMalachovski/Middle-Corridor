@@ -12,7 +12,7 @@ actor FakeAPI: CorridorAPI {
     init() throws {
         snap = try Fixture.snapshot()
         var known: [String: Shipment] = [:]
-        for ref in ["MC-26-0412", "MC-26-0398"] { known[ref] = try Fixture.shipment(ref) }
+        for ref in ["MC-26-0431", "MC-26-0501"] { known[ref] = try Fixture.shipment(ref) }
         self.known = known
     }
 
@@ -56,36 +56,36 @@ final class TrackedShipmentsTests: XCTestCase {
 
     func test_addNormalizesAndPersists() async throws {
         let (store, _, storage) = try make()
-        let ref = try await store.add(" mc-26-0412 ")
-        XCTAssertEqual(ref, "MC-26-0412")
-        XCTAssertEqual(store.refs, ["MC-26-0412"])
-        XCTAssertEqual(storage.load(), ["MC-26-0412"])
-        XCTAssertEqual(store.rows.first?.shipment?.ref, "MC-26-0412")
+        let ref = try await store.add(" mc-26-0431 ")
+        XCTAssertEqual(ref, "MC-26-0431")
+        XCTAssertEqual(store.refs, ["MC-26-0431"])
+        XCTAssertEqual(storage.load(), ["MC-26-0431"])
+        XCTAssertEqual(store.rows.first?.shipment?.ref, "MC-26-0431")
     }
 
     func test_add_callsOnAdded() async throws {
         let (store, _, _) = try make()
         var added: [String] = []
         store.onAdded = { added.append($0.ref) }
-        try await store.add("MC-26-0412")
-        try await store.add("mc-26-0412")  // уже в списке — второй раз не зовётся
-        XCTAssertEqual(added, ["MC-26-0412"])
+        try await store.add("MC-26-0431")
+        try await store.add("mc-26-0431")  // уже в списке — второй раз не зовётся
+        XCTAssertEqual(added, ["MC-26-0431"])
     }
 
     func test_addTwiceDifferentCase_keepsOne() async throws {
         let (store, api, _) = try make()
-        try await store.add("MC-26-0412")
-        try await store.add("mcstatus://s/mc-26-0412")
-        XCTAssertEqual(store.refs, ["MC-26-0412"])
+        try await store.add("MC-26-0431")
+        try await store.add("mcstatus://s/mc-26-0431")
+        XCTAssertEqual(store.refs, ["MC-26-0431"])
         let calls = await api.shipmentCalls
         XCTAssertEqual(calls, 1)
     }
 
     func test_newestFirst() async throws {
         let (store, _, _) = try make()
-        try await store.add("MC-26-0412")
-        try await store.add("MC-26-0398")
-        XCTAssertEqual(store.refs, ["MC-26-0398", "MC-26-0412"])
+        try await store.add("MC-26-0431")
+        try await store.add("MC-26-0501")
+        XCTAssertEqual(store.refs, ["MC-26-0501", "MC-26-0431"])
     }
 
     func test_addUnknown_throwsNotFound_andStoresNothing() async throws {
@@ -107,46 +107,46 @@ final class TrackedShipmentsTests: XCTestCase {
     func test_addOffline_throwsOffline() async throws {
         let (store, api, _) = try make()
         await api.setOffline(true)
-        let error = await addError(store, "MC-26-0412")
+        let error = await addError(store, "MC-26-0431")
         XCTAssertEqual(error, .offline)
         XCTAssertEqual(store.refs, [])
     }
 
     func test_remove() async throws {
         let (store, _, storage) = try make()
-        try await store.add("MC-26-0412")
-        store.remove("MC-26-0412")
+        try await store.add("MC-26-0431")
+        store.remove("MC-26-0431")
         XCTAssertEqual(store.refs, [])
-        XCTAssertNil(store.shipments["MC-26-0412"])
+        XCTAssertNil(store.shipments["MC-26-0431"])
         XCTAssertEqual(storage.load(), [])
     }
 
     func test_refreshOffline_keepsOldData() async throws {
-        let (store, api, _) = try make(MemoryRefStorage(["MC-26-0412"]))
+        let (store, api, _) = try make(MemoryRefStorage(["MC-26-0431"]))
         await store.refresh()
         XCTAssertNil(store.lastError)
         XCTAssertEqual(store.updatedAt, Date(timeIntervalSince1970: 1000))
         XCTAssertNotNil(store.snapshot)
-        XCTAssertEqual(store.rows.first?.shipment?.ref, "MC-26-0412")
+        XCTAssertEqual(store.rows.first?.shipment?.ref, "MC-26-0431")
 
         await api.setOffline(true)
         await store.refresh()
         XCTAssertEqual(store.lastError, .offline)
-        XCTAssertEqual(store.rows.first?.shipment?.ref, "MC-26-0412")
+        XCTAssertEqual(store.rows.first?.shipment?.ref, "MC-26-0431")
         XCTAssertNotNil(store.snapshot)
         XCTAssertEqual(store.updatedAt, Date(timeIntervalSince1970: 1000))
         XCTAssertFalse(store.isRefreshing)
     }
 
     func test_loadsRefsFromStorageOnInit() throws {
-        let (store, _, _) = try make(MemoryRefStorage(["MC-26-0398", "MC-26-0412"]))
-        XCTAssertEqual(store.refs, ["MC-26-0398", "MC-26-0412"])
+        let (store, _, _) = try make(MemoryRefStorage(["MC-26-0501", "MC-26-0431"]))
+        XCTAssertEqual(store.refs, ["MC-26-0501", "MC-26-0431"])
         XCTAssertNil(store.rows.first?.shipment)  // данные ещё не загружены
     }
 
     func test_cancelledRefresh_isNotOffline() async throws {
         // SwiftUI отменяет .task/.refreshable (переход в карточку) — это не «нет связи»
-        let (store, api, _) = try make(MemoryRefStorage(["MC-26-0412"]))
+        let (store, api, _) = try make(MemoryRefStorage(["MC-26-0431"]))
         await api.setDelay(.seconds(5))
         let task = Task { await store.refresh() }
         try await Task.sleep(for: .milliseconds(50))
@@ -158,11 +158,11 @@ final class TrackedShipmentsTests: XCTestCase {
     }
 
     func test_refreshUnknownRef_isMissing_notLoadingForever() async throws {
-        let (store, _, _) = try make(MemoryRefStorage(["MC-00-0000", "MC-26-0412"]))
+        let (store, _, _) = try make(MemoryRefStorage(["MC-00-0000", "MC-26-0431"]))
         await store.refresh()
         XCTAssertEqual(store.missing, ["MC-00-0000"])
         XCTAssertNil(store.lastError)
-        XCTAssertEqual(store.rows.map(\.ref), ["MC-00-0000", "MC-26-0412"])
+        XCTAssertEqual(store.rows.map(\.ref), ["MC-00-0000", "MC-26-0431"])
     }
 
     func test_removeClearsMissing() async throws {
@@ -177,23 +177,23 @@ final class TrackedShipmentsTests: XCTestCase {
     func test_startOffline_showsCachedData() async throws {
         let api = try FakeAPI()
         await api.setOffline(true)
-        let cached = try Fixture.shipment("MC-26-0412")
+        let cached = try Fixture.shipment("MC-26-0431")
         let cache = MemoryShipmentCache(
             CachedState(shipments: [cached.ref: cached], snapshot: nil, updatedAt: Date(timeIntervalSince1970: 500)))
         let store = TrackedShipments(
-            api: api, storage: MemoryRefStorage(["MC-26-0412"]), cache: cache,
+            api: api, storage: MemoryRefStorage(["MC-26-0431"]), cache: cache,
             now: { Date(timeIntervalSince1970: 1000) })
-        XCTAssertEqual(store.shipments["MC-26-0412"], cached)
+        XCTAssertEqual(store.shipments["MC-26-0431"], cached)
         XCTAssertEqual(store.updatedAt, Date(timeIntervalSince1970: 500))
 
         await store.refresh()
-        XCTAssertEqual(store.shipments["MC-26-0412"], cached)
+        XCTAssertEqual(store.shipments["MC-26-0431"], cached)
         XCTAssertEqual(store.lastError, .offline)
         XCTAssertEqual(store.updatedAt, Date(timeIntervalSince1970: 500))
     }
 
     func test_cacheIgnoresRefsNoLongerTracked() throws {
-        let cached = try Fixture.shipment("MC-26-0412")
+        let cached = try Fixture.shipment("MC-26-0431")
         let cache = MemoryShipmentCache(CachedState(shipments: [cached.ref: cached], snapshot: nil, updatedAt: nil))
         let store = TrackedShipments(api: try FakeAPI(), storage: MemoryRefStorage(), cache: cache)
         XCTAssertTrue(store.shipments.isEmpty)
@@ -202,11 +202,11 @@ final class TrackedShipmentsTests: XCTestCase {
     func test_refreshWritesCache() async throws {
         let cache = MemoryShipmentCache()
         let store = TrackedShipments(
-            api: try FakeAPI(), storage: MemoryRefStorage(["MC-26-0398"]), cache: cache,
+            api: try FakeAPI(), storage: MemoryRefStorage(["MC-26-0501"]), cache: cache,
             now: { Date(timeIntervalSince1970: 1000) })
         await store.refresh()
         let saved = try XCTUnwrap(cache.load())
-        XCTAssertEqual(Set(saved.shipments.keys), ["MC-26-0398"])
+        XCTAssertEqual(Set(saved.shipments.keys), ["MC-26-0501"])
         XCTAssertNotNil(saved.snapshot)
         XCTAssertEqual(saved.updatedAt, Date(timeIntervalSince1970: 1000))
     }
@@ -214,30 +214,30 @@ final class TrackedShipmentsTests: XCTestCase {
     func test_addWritesCache() async throws {
         let cache = MemoryShipmentCache()
         let store = TrackedShipments(api: try FakeAPI(), storage: MemoryRefStorage(), cache: cache)
-        try await store.add("MC-26-0412")
-        XCTAssertNotNil(cache.load()?.shipments["MC-26-0412"])
+        try await store.add("MC-26-0431")
+        XCTAssertNotNil(cache.load()?.shipments["MC-26-0431"])
     }
 
     func test_removeDropsFromCache() async throws {
         let cache = MemoryShipmentCache()
         let store = TrackedShipments(api: try FakeAPI(), storage: MemoryRefStorage(), cache: cache)
-        try await store.add("MC-26-0412")
-        store.remove("MC-26-0412")
-        XCTAssertNil(cache.load()?.shipments["MC-26-0412"])
+        try await store.add("MC-26-0431")
+        store.remove("MC-26-0431")
+        XCTAssertNil(cache.load()?.shipments["MC-26-0431"])
     }
 
     // MARK: изменения после обновления
 
     func test_refreshReportsChange() async throws {
         let api = try FakeAPI()
-        let store = TrackedShipments(api: api, storage: MemoryRefStorage(["MC-26-0398"]))
+        let store = TrackedShipments(api: api, storage: MemoryRefStorage(["MC-26-0501"]))
         var changes: [StoreChange] = []
         store.onChange = { changes.append($0) }
         await store.refresh()
         await store.refresh()
         XCTAssertEqual(changes.count, 2)
         XCTAssertTrue(changes[0].oldShipments.isEmpty)
-        XCTAssertEqual(changes[1].oldShipments["MC-26-0398"], changes[1].newShipments["MC-26-0398"])
+        XCTAssertEqual(changes[1].oldShipments["MC-26-0501"], changes[1].newShipments["MC-26-0501"])
         XCTAssertFalse(changes[1].newNodes.isEmpty)
         XCTAssertEqual(changes[1].oldNodes.count, changes[1].newNodes.count)
     }
@@ -245,7 +245,7 @@ final class TrackedShipmentsTests: XCTestCase {
     func test_cancelledRefresh_reportsNothing() async throws {
         let api = try FakeAPI()
         await api.setDelay(.milliseconds(300))
-        let store = TrackedShipments(api: api, storage: MemoryRefStorage(["MC-26-0398"]))
+        let store = TrackedShipments(api: api, storage: MemoryRefStorage(["MC-26-0501"]))
         var count = 0
         store.onChange = { _ in count += 1 }
         let task = Task { await store.refresh() }
@@ -259,35 +259,35 @@ final class TrackedShipmentsTests: XCTestCase {
         let store = TrackedShipments(api: try FakeAPI(), storage: MemoryRefStorage())
         var count = 0
         store.onChange = { _ in count += 1 }
-        try await store.add("MC-26-0412")
+        try await store.add("MC-26-0431")
         XCTAssertEqual(count, 0)
     }
 
     // MARK: кэш привязан к серверу
 
     func test_cacheFromOtherServer_ignored() throws {
-        let cached = try Fixture.shipment("MC-26-0412")
+        let cached = try Fixture.shipment("MC-26-0431")
         let cache = MemoryShipmentCache(
             CachedState(shipments: [cached.ref: cached], snapshot: nil, updatedAt: Date(), server: "http://a:8000"))
         let store = TrackedShipments(
-            api: try FakeAPI(), storage: MemoryRefStorage(["MC-26-0412"]), cache: cache, server: "http://b:8000")
+            api: try FakeAPI(), storage: MemoryRefStorage(["MC-26-0431"]), cache: cache, server: "http://b:8000")
         XCTAssertTrue(store.shipments.isEmpty)
         XCTAssertNil(store.updatedAt)
     }
 
     func test_cacheFromSameServer_used() throws {
-        let cached = try Fixture.shipment("MC-26-0412")
+        let cached = try Fixture.shipment("MC-26-0431")
         let cache = MemoryShipmentCache(
             CachedState(shipments: [cached.ref: cached], snapshot: nil, updatedAt: Date(), server: "http://a:8000"))
         let store = TrackedShipments(
-            api: try FakeAPI(), storage: MemoryRefStorage(["MC-26-0412"]), cache: cache, server: "http://a:8000")
-        XCTAssertNotNil(store.shipments["MC-26-0412"])
+            api: try FakeAPI(), storage: MemoryRefStorage(["MC-26-0431"]), cache: cache, server: "http://a:8000")
+        XCTAssertNotNil(store.shipments["MC-26-0431"])
     }
 
     func test_refreshSavesServer() async throws {
         let cache = MemoryShipmentCache()
         let store = TrackedShipments(
-            api: try FakeAPI(), storage: MemoryRefStorage(["MC-26-0398"]), cache: cache, server: "http://a:8000")
+            api: try FakeAPI(), storage: MemoryRefStorage(["MC-26-0501"]), cache: cache, server: "http://a:8000")
         await store.refresh()
         XCTAssertEqual(cache.load()?.server, "http://a:8000")
     }

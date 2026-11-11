@@ -484,13 +484,13 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Например, MC-26-0412 — или ссылка, которую прислал оператор."
+            "value": "Например, MC-26-0501 — или ссылка, которую прислал оператор."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "For example MC-26-0412 — or the link the operator sent you."
+            "value": "For example MC-26-0501 — or the link the operator sent you."
           }
         }
       }

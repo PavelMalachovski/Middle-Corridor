@@ -316,9 +316,9 @@ def test_delivered_eta_latest_equals_eta() -> None:
 
 
 def _kz_plan(pivot_kind: EventKind, pivot_code: str) -> ShipmentPlan:
-    from app.integrations.mock.fleet import ROUTE_AKTAU, build_plan
+    from app.integrations.mock.fleet import ROUTE_KURYK, build_plan
 
-    return build_plan("T-S", "c", "x", ROUTE_AKTAU, pivot_kind, pivot_code, NOW - H)
+    return build_plan("T-S", "c", "x", ROUTE_KURYK, pivot_kind, pivot_code, NOW - H)
 
 
 def test_sanctions_missing_after_khorgos() -> None:

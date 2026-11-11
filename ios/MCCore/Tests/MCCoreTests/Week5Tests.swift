@@ -7,11 +7,13 @@ final class Week5Tests: XCTestCase {
     private func labels(_ lang: Lang) throws -> Labels { Labels(lang: lang, nodes: try Fixture.snapshot().nodes) }
 
     func test_decodesEtaRangeAndBreakdown() throws {
-        let s = try Fixture.shipment("MC-26-0398")
+        let s = try Fixture.shipment("MC-26-0501")
         let eta = try XCTUnwrap(s.eta), latest = try XCTUnwrap(s.etaLatest)
-        XCTAssertEqual(latest.timeIntervalSince(eta), 60 * 3600, accuracy: 1)
-        XCTAssertEqual(s.delayBreakdown?.first?.code, "weather_ban")
-        XCTAssertEqual(s.delayBreakdown?.first?.hours, 18)
+        XCTAssertEqual(latest.timeIntervalSince(eta), 60 * 3600, accuracy: 1)  // P90 − P50 очереди
+        XCTAssertEqual(s.delayBreakdown?.map(\.code), ["ferry_wait", "weather_ban"])
+        XCTAssertEqual(s.delayBreakdown?.first?.nodeCode, "BAKU_ALAT")
+        XCTAssertEqual(s.delayBreakdown?.first?.hours, 24)
+        XCTAssertEqual(s.delayBreakdown?.last?.nodeCode, "AKTAU")
     }
 
     func test_decodesVesselsAndSegments() throws {
@@ -28,7 +30,11 @@ final class Week5Tests: XCTestCase {
     }
 
     func test_oldShipmentWithoutNewFields() throws {
-        let s = try Fixture.shipment("MC-26-0412")
+        var json = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: Fixture.data("shipment_MC-26-0431")) as? [String: Any])
+        json["eta_latest"] = nil  // старый бэкенд: полей недели 5 нет
+        json["delay_breakdown"] = nil
+        let s = try APIDate.makeDecoder().decode(Shipment.self, from: JSONSerialization.data(withJSONObject: json))
         XCTAssertNil(s.etaLatest)
         XCTAssertNil(s.delayBreakdown)
     }
@@ -87,14 +93,13 @@ final class Week5Tests: XCTestCase {
     }
 
     func test_mapShipments_projectionAndDelivered() throws {
-        let confirmed = try Fixture.shipment("MC-26-0412")
-        var projected = try Fixture.shipment("MC-26-0398")
-        projected.position.confirmed = false
-        var delivered = try Fixture.shipment("MC-26-0412")
+        let confirmed = try Fixture.shipment("MC-26-0501")
+        let projected = try Fixture.shipment("MC-26-0431")  // проекция по расписанию (рельсы)
+        var delivered = try Fixture.shipment("MC-26-0501")
         delivered.ref = "MC-26-0001"
         delivered.state = Coded(.delivered)
         let pins = CorridorMap.shipments([confirmed, projected, delivered])
-        XCTAssertEqual(pins.map(\.ref), ["MC-26-0412", "MC-26-0398"])  // доставленный — не на живой карте
+        XCTAssertEqual(pins.map(\.ref), ["MC-26-0501", "MC-26-0431"])  // доставленный — не на живой карте
         XCTAssertEqual(pins.map(\.confirmed), [true, false])  // проекция — не факт
     }
 

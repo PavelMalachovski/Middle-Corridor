@@ -62,7 +62,7 @@ struct ShipmentProvider: AppIntentTimelineProvider {
 
     /// Для галереи виджетов и предпросмотра.
     static let sample = LiveStatus(
-        ref: "MC-26-0398", leg: "Актау", status: "Стоянка · +18 ч", eta: .now.addingTimeInterval(5 * 86400),
+        ref: "MC-26-0501", leg: "Баку (Алят)", status: "Стоянка · +30 ч", eta: .now.addingTimeInterval(5 * 86400),
         delayHours: 18, progress: 0.7, tone: .delayed, phase: .stop, delivered: false)
 }
 

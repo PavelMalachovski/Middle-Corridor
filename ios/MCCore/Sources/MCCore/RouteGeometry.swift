@@ -38,9 +38,15 @@ public enum RouteGeometry {
         return (Array(points[...nearest]) + [here], [here] + Array(points[(nearest + 1)...]))
     }
 
-    /// Порт для блока «Погода»: где груз стоит, а в пути — ближайший порт впереди по маршруту.
+    /// Порт для блока «Погода»: при погодном запрете — порт запрета (груз ждёт в Аляте, а шторм и
+    /// запрет на швартовку — в Актау); иначе где груз стоит, а в пути — ближайший порт впереди.
     public static func weatherPort(for s: Shipment, nodes: [NodeStatus]) -> NodeStatus? {
         let byCode = Dictionary(nodes.map { ($0.code, $0) }, uniquingKeysWith: { first, _ in first })
+        if s.holdCode == HoldCode.weatherBan.rawValue, let code = s.holdNode, let port = byCode[code],
+            port.kind.known == .port, port.isWeatherTracked
+        {
+            return port
+        }
         if s.position.mode == nil, let here = byCode[s.position.fromCode], here.isWeatherTracked {
             return here
         }

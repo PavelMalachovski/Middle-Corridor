@@ -58,7 +58,7 @@
         func state(base: Date) -> DemoClockState {
             DemoClockState(
                 now: base.addingTimeInterval(offset * 3600), offsetHours: offset, storyStart: base,
-                storyRef: "MC-26-0398")
+                storyRef: "MC-26-0501")
         }
     }
 #endif

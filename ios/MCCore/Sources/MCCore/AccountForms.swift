@@ -33,7 +33,7 @@ public enum AccountAccess {
 public enum RoutePreset: String, CaseIterable, Sendable, Identifiable {
     /// `ROUTE_KOSTANAY`: завод → Копер → Амбарлы → Поти → … → Актау → Костанай.
     case europeToKazakhstan
-    /// `ROUTE_AKTAU`: Сиань → … → Актау → Баку → … → Поти → Констанца.
+    /// Китай → Европа через Актау: Сиань → … → Актау → Баку → … → Поти → Констанца.
     case chinaToEurope
 
     public var id: String { rawValue }

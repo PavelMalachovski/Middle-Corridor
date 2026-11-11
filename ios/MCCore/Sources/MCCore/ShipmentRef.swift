@@ -2,13 +2,13 @@ import Foundation
 
 /// Номер груза из ввода, буфера обмена и ссылок.
 ///
-/// Формат — как у мока бэкенда: `MC-26-0412` (`[A-Z]{2,4}-\d{2}-\d{3,6}`). Ищется в
+/// Формат — как у мока бэкенда: `MC-26-0501` (`[A-Z]{2,4}-\d{2}-\d{3,6}`). Ищется в
 /// любом месте строки без учёта регистра — вставка из письма тоже сработает.
 public enum ShipmentRef {
     public static func parse(_ input: String) -> String? {
         let pattern = /([A-Za-z]{2,4})-(\d{2})-(\d{3,6})/
         for match in input.matches(of: pattern) {
-            // границы слова руками: «XMC-26-0412» или «MC-26-04123456» — не номер
+            // границы слова руками: «XMC-26-0501» или «MC-26-05013456» — не номер
             if match.range.lowerBound > input.startIndex,
                 isWordChar(input[input.index(before: match.range.lowerBound)])
             {

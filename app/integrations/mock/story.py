@@ -1,21 +1,27 @@
-"""Демо-история груза MC-26-0398 — только при DEMO_CONTROL=true.
+"""Демо-история груза MC-26-0501 (Škoda → Костанай) — только при DEMO_CONTROL=true.
 
 Остальной мок строится относительно «сейчас» и при переводе часов не
 двигается. История привязана к моменту старта демо (MockClock.story_start),
-поэтому ведущий переводит часы — и груз проходит путь: ждёт парома в Актау
-под риском шторма → шторм, погодный запрет → погрузка на паром → Алят → … →
-Констанца. Ветер в Актау подогнан под историю, чтобы карточка, прогноз и
-вкладка «Коридор» не противоречили друг другу. Через PERIOD история
-начинается заново.
+поэтому ведущий переводит часы — и груз проходит восточный путь: ждёт парома в
+Аляте под риском шторма в Актау → шторм, погодный запрет на швартовку в Актау
+(паром из Алята не выходит) → ветер стихает, погрузка на паром → Актау →
+рельсы на Бейнеу → Костанай. Ветер в Актау подогнан под историю, чтобы
+карточка, прогноз и вкладка «Коридор» не противоречили друг другу. В режиме
+истории она заменяет «вечный» 0501 мока (двух 0501 не бывает). Через PERIOD
+история начинается заново.
 
 Часы таймлайна — от T0 (старт цикла):
-  −30     прибыл в Актау (по плану отход в −18: на старте задержка 18 ч)
+  −30     прибыл в Алят (по плану отход в −18: на старте задержка 18 ч)
   [−36, 6)  ветер в Актау 15/18 м/с — warning, ждём погрузки на паром; очередь ≈ 12 ч
-  [6, 66)   21/29 м/с — critical, погодный запрет на швартовку; очередь 2–3 дня, до 5
+  [6, 66)   21/29 м/с — critical, погодный запрет на швартовку в Актау; очередь 2–3 дня, до 5
   [66, 90)  11/14 м/с — watch, ветер стихает, снова ждём погрузки
-  70      отход из Актау на пароме «Turkestan» (без AIS — проекция)
-  220     прибыл в Констанцу — доставлен
-  244     следующий цикл
+  70      отход из Алята на пароме «Turkestan» (без AIS — проекция)
+  [90, 148) 6/9 м/с — тихо: в Актау швартуемся без алерта (поле ветра его не перебивает)
+  92      прибыл в Актау; 104 — отход по рельсам
+  114     прибыл в Бейнеу; 120 — отход на Костанай
+  [148, 184) warning следующего цикла (его −36)
+  160     прибыл в Костанай — доставлен
+  184     следующий цикл
 """
 
 import math
@@ -23,7 +29,7 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 
 from app.integrations.mock.clock import MockClock
-from app.integrations.mock.fleet import CARGO_EN, ROUTE_AKTAU
+from app.integrations.mock.fleet import CARGO_EN, EAST_CARGO, EAST_CLIENT, EAST_REF, ROUTE_KOSTANAY
 from app.services.corridor import NODES, segment
 from app.services.delay_breakdown import DelayCause
 from app.services.demo_clock import DemoClockAction, DemoClockState
@@ -33,14 +39,16 @@ from app.services.tracking import EventKind, PlannedLeg, ShipmentPlan, TrackingE
 
 H = timedelta(hours=1)
 
-REF = "MC-26-0398"
-CLIENT = "Steppe Freight KZ"
-CARGO = "3 × 20', полипропилен"
+REF = EAST_REF
+CLIENT = EAST_CLIENT
+CARGO = EAST_CARGO
+ROUTE = ROUTE_KOSTANAY
 FERRY = "Turkestan"  # не из мок-флота: иначе на карте паром был бы в двух местах
-SEA_VESSEL = "Black Sea Link"
-PORT = "AKTAU"
+PORT = "BAKU_ALAT"  # где груз ждёт парома (очередь)
+STORM_PORT = "AKTAU"  # где шторм и запрет на швартовку (ветер подогнан под историю)
+SEA_VESSEL = "Euxine Feeder"  # фидер Амбарлы → Поти
 
-PERIOD = timedelta(hours=244)
+PERIOD = timedelta(hours=184)
 BEAT_SETTLE = timedelta(minutes=1)  # «следующий шаг» встаёт чуть после такта
 ARRIVE_PORT_H = -30.0
 STORM_START_H = 6.0
@@ -53,12 +61,13 @@ STORM_BEAT_LAG_H = 6.0
 WIND_WARNING = (15.0, 18.0)
 WIND_CRITICAL = (21.0, 29.0)
 WIND_CALMING = (11.0, 14.0)
+WIND_CALM = (6.0, 9.0)
 
 QUEUE_POSITION = 4
 QUEUE_PER_DAY = 8.0
 FORECAST_H = 48
 
-_VESSELS = {(PORT, "BAKU_ALAT"): FERRY, ("POTI", "CONSTANTA"): SEA_VESSEL}
+_VESSELS = {("AMBARLI", "POTI"): SEA_VESSEL, (PORT, STORM_PORT): FERRY}
 
 
 def _dwell(code: str) -> float:
@@ -66,19 +75,19 @@ def _dwell(code: str) -> float:
 
 
 def _schedule(port_departure_h: float) -> tuple[dict[str, float], dict[str, float]]:
-    """Часы прибытия и отправления по узлам при отходе из Актау в port_departure_h."""
-    idx = ROUTE_AKTAU.index(PORT)
+    """Часы прибытия и отправления по узлам при отходе из Алята в port_departure_h."""
+    idx = ROUTE.index(PORT)
     arrive: dict[str, float] = {PORT: ARRIVE_PORT_H}
     depart: dict[str, float] = {PORT: port_departure_h}
-    for i in range(idx, 0, -1):  # назад от Актау
-        a, b = ROUTE_AKTAU[i - 1], ROUTE_AKTAU[i]
+    for i in range(idx, 0, -1):  # назад от Алята
+        a, b = ROUTE[i - 1], ROUTE[i]
         depart[a] = arrive[b] - segment(a, b).typical_hours
         if i - 1 > 0:
             arrive[a] = depart[a] - _dwell(a)
-    for i in range(idx, len(ROUTE_AKTAU) - 1):  # вперёд от Актау
-        a, b = ROUTE_AKTAU[i], ROUTE_AKTAU[i + 1]
+    for i in range(idx, len(ROUTE) - 1):  # вперёд от Алята
+        a, b = ROUTE[i], ROUTE[i + 1]
         arrive[b] = depart[a] + segment(a, b).typical_hours
-        if i + 1 < len(ROUTE_AKTAU) - 1:
+        if i + 1 < len(ROUTE) - 1:
             depart[b] = arrive[b] + _dwell(b)
     return arrive, depart
 
@@ -88,7 +97,7 @@ _PLAN_ARRIVE, _PLAN_DEPART = _schedule(ARRIVE_PORT_H + _dwell(PORT))
 
 
 class DemoStory:
-    """История 0398 от момента старта демо; story_start — из MockClock."""
+    """История 0501 от момента старта демо; story_start — из MockClock."""
 
     def __init__(self, story_start: Callable[[], datetime]) -> None:
         self._story_start = story_start
@@ -104,7 +113,7 @@ class DemoStory:
     def aktau_wind(self, ts: datetime) -> tuple[float, float] | None:
         """Ветер (скорость, порывы) в Актау по истории; None — история его не задаёт."""
         t0 = self.cycle_start(ts)
-        for start in (t0, t0 + PERIOD):  # за 12 ч до следующего цикла — уже его warning
+        for start in (t0, t0 + PERIOD):  # за 36 ч до следующего цикла — уже его warning
             h = (ts - start) / H
             if WARNING_FROM_H <= h < STORM_START_H:
                 return WIND_WARNING
@@ -112,27 +121,28 @@ class DemoStory:
                 return WIND_CRITICAL
             if STORM_END_H <= h < CALM_END_H:
                 return WIND_CALMING
+        if ts >= t0 + CALM_END_H * H:  # после шторма — тихо до warning следующего цикла
+            return WIND_CALM
         return None
 
     def beats(self, now: datetime) -> list[datetime]:
-        """Такты «следующего шага»: шторм (+6 ч), отход парома, Алят, отход из Поти, доставлен.
+        """Такты «следующего шага»: шторм (+6 ч), отход парома, Актау, Бейнеу, доставлен.
 
-        Не каждое событие маршрута — иначе до доставки 12 жестов и столько же баннеров.
+        Не каждое событие маршрута — иначе до доставки лишние жесты и столько же баннеров.
         """
         t0 = self.cycle_start(now)
         return [
             # через 6 ч после начала шторма: уведомления те же, а в «почему задержка» уже погода
             t0 + (STORM_START_H + STORM_BEAT_LAG_H) * H,
             t0 + _ACTUAL_DEPART[PORT] * H,
-            t0 + _ACTUAL_ARRIVE["BAKU_ALAT"] * H,
-            t0 + _ACTUAL_DEPART["POTI"] * H,
-            t0 + _ACTUAL_ARRIVE[ROUTE_AKTAU[-1]] * H,
+            t0 + _ACTUAL_ARRIVE[STORM_PORT] * H,
+            t0 + _ACTUAL_ARRIVE["BEINEU"] * H,
+            t0 + _ACTUAL_ARRIVE[ROUTE[-1]] * H,
         ]
 
     def plan(self, now: datetime) -> ShipmentPlan:
         t0 = self.cycle_start(now)
         at = lambda hours: t0 + hours * H  # noqa: E731 — локальный короткий помощник
-        route = ROUTE_AKTAU
         legs = tuple(
             PlannedLeg(
                 from_code=a,
@@ -141,14 +151,14 @@ class DemoStory:
                 arrive_at=at(_PLAN_ARRIVE[b]),
                 vessel=_VESSELS.get((a, b)),
             )
-            for a, b in zip(route, route[1:], strict=False)
+            for a, b in zip(ROUTE, ROUTE[1:], strict=False)
         )
         events: list[TrackingEvent] = []
-        for i, code in enumerate(route):
+        for i, code in enumerate(ROUTE):
             if i > 0:
                 events.append(TrackingEvent(EventKind.arrived, code, at(_ACTUAL_ARRIVE[code])))
-            if i < len(route) - 1:
-                vessel = _VESSELS.get((code, route[i + 1]))
+            if i < len(ROUTE) - 1:
+                vessel = _VESSELS.get((code, ROUTE[i + 1]))
                 note, note_code = None, None
                 if vessel == FERRY:
                     note, note_code = f"погружен на паром «{vessel}»", "loaded_on_ferry"
@@ -165,7 +175,7 @@ class DemoStory:
                     )
                 )
 
-        in_port = now < at(DEPART_PORT_H)  # после отхода — ни запрета, ни очереди Актау
+        in_port = now < at(DEPART_PORT_H)  # после отхода — ни запрета, ни очереди Алята
         storm = at(STORM_START_H) <= now < at(STORM_END_H)
         hold: dict[str, str | None] = {}
         queue: QueueInput | None = None
@@ -173,7 +183,7 @@ class DemoStory:
             hold = {
                 "hold_reason": "Погодный запрет на швартовку: Актау — критический ветер",
                 "hold_code": "weather_ban",
-                "hold_node": PORT,
+                "hold_node": STORM_PORT,
                 "hold_vessel": None,
             }
         elif in_port:
@@ -203,9 +213,9 @@ class DemoStory:
             legs=legs,
             events=tuple(sorted(events, key=lambda e: e.ts)),
             queue=queue,
-            delay_causes=(  # почему опаздывает: паром, шторм, снова паром
+            delay_causes=(  # почему опаздывает: паром, шторм в Актау, снова паром
                 DelayCause("ferry_wait", PORT, at(_PLAN_DEPART[PORT]), at(STORM_START_H)),
-                DelayCause("weather_ban", PORT, at(STORM_START_H), at(STORM_END_H)),
+                DelayCause("weather_ban", STORM_PORT, at(STORM_START_H), at(STORM_END_H)),
                 DelayCause("ferry_wait", PORT, at(STORM_END_H), at(DEPART_PORT_H)),
             ),
             **hold,

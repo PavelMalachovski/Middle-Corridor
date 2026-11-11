@@ -37,7 +37,7 @@ class MockNodeSource:
     ) -> None:
         self._clock = clock
         self._thresholds = thresholds
-        self._story = story  # демо-история: ветер Актау подогнан под 0398
+        self._story = story  # демо-история: ветер Актау подогнан под 0501
         self._hour_cache: dict[tuple[str, datetime], WindHour] = {}
 
     def _story_wind(self, code: str, ts: datetime) -> tuple[float, float] | None:

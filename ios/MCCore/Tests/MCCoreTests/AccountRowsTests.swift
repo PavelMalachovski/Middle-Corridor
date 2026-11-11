@@ -25,7 +25,7 @@ final class AccountRowsTests: XCTestCase {
     func test_merge_sameRefAsLocal_keepsBothRows() throws {
         let mine = try accountShipments()
         let ref = try XCTUnwrap(mine.first?.shipment.ref)
-        let local = [TrackedRow(ref: ref, shipment: try Fixture.shipment("MC-26-0412"))]
+        let local = [TrackedRow(ref: ref, shipment: try Fixture.shipment("MC-26-0431"))]
         let rows = AccountRows.merge(local: local, account: mine)
         XCTAssertEqual(rows.count, 2)
         XCTAssertEqual(Set(rows.map(\.id)).count, 2)

@@ -1,4 +1,4 @@
-import type { AlertLevel, NodeStatus, ShipmentState, Thresholds } from "./api";
+import type { AlertLevel, NodeStatus, Shipment, ShipmentState, Thresholds } from "./api";
 import { getLang, type Key, type Lang, t } from "./i18n";
 
 /**
@@ -134,6 +134,23 @@ export function findNearestNode(
     }
   }
   return best;
+}
+
+/**
+ * Погода для карточки груза: при погодном запрете — порт запрета (груз ждёт в Аляте, а
+ * шторм и запрет на швартовку — в Актау), иначе ближайший к грузу порт с погодой.
+ */
+export function weatherNodeFor(
+  nodes: NodeStatus[],
+  s: Pick<Shipment, "hold_code" | "hold_node" | "position">,
+): NodeStatus | null {
+  if (s.hold_code === "weather_ban" && s.hold_node) {
+    const port = nodes.find(
+      (n) => n.code === s.hold_node && n.kind === "port" && n.is_weather_tracked,
+    );
+    if (port) return port;
+  }
+  return findNearestNode(nodes, s.position.lat, s.position.lon);
 }
 
 const REPORT_KEYS = new Set(["queue", "rate", "border_delay", "note"]);

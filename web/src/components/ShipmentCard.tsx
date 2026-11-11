@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import type { Shipment, Snapshot } from "../api";
 import { checkpointDelays } from "../forecast";
 import {
-  findNearestNode,
   fmtDir,
   fmtHours,
   fmtRelative,
@@ -12,6 +11,7 @@ import {
   LEVEL_TEXT,
   levelLabel,
   levelOf,
+  weatherNodeFor,
 } from "../format";
 import { type Lang, nodeName, nodeNameByCode, useI18n } from "../i18n";
 import { cargoLabel, eventLabel, holdLabel } from "../i18n/labels";
@@ -99,7 +99,7 @@ export function ShipmentCard({
   }, [s.ref]);
   const ref = new Date(snapshot.generated_at);
   const pos = positionText(s, snapshot, t, lang);
-  const near = findNearestNode(snapshot.nodes, s.position.lat, s.position.lon);
+  const near = weatherNodeFor(snapshot.nodes, s);
   const nearLevel = near ? levelOf(near) : "none";
   const hold = holdLabel(s, snapshot.nodes, lang);
   const place = (code: string | undefined, fallback: string) =>
