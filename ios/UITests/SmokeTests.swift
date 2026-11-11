@@ -134,7 +134,7 @@ final class SmokeTests: XCTestCase {
         let weather = element(app, "card.weather")
         if !weather.exists { app.swipeUp() }
         XCTAssertTrue(weather.waitForExistence(timeout: 5))
-        XCTAssertTrue(weather.label.contains("Баку (Алят)"), weather.label)  // погода порта, где груз стоит
+        XCTAssertTrue(weather.label.contains("Актау"), weather.label)  // погода порта запрета, хотя груз ждёт в Аляте
         shot(app, "09-card-weather-ru")
     }
 

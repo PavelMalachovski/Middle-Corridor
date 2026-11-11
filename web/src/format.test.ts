@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { NodeStatus, Thresholds } from "./api";
+import type { NodeStatus, Shipment, Thresholds } from "./api";
 import {
   findNearestNode,
   fmtDir,
@@ -9,6 +9,7 @@ import {
   fmtWind,
   levelForWind,
   levelOf,
+  weatherNodeFor,
 } from "./format";
 
 const REF = new Date("2026-09-04T12:00:00Z");
@@ -110,5 +111,27 @@ describe("findNearestNode", () => {
   it("пустой список — null", () => {
     expect(findNearestNode([], 0, 0)).toBeNull();
     expect(findNearestNode([rail], 42, 50.5)).toBeNull();
+  });
+});
+
+describe("weatherNodeFor", () => {
+  const aktau = node({ code: "AKTAU", kind: "port", lat: 43.65, lon: 51.2 });
+  const alat = node({ code: "BAKU_ALAT", kind: "port", lat: 39.93, lon: 49.41 });
+  const rail = node({ code: "BEINEU", kind: "rail", lat: 45.3, lon: 55.2 });
+  const atAlat = { position: { lat: 39.93, lon: 49.41 } } as Pick<Shipment, "position">;
+
+  it("погодный запрет — погода порта запрета, а не порта, где груз ждёт", () => {
+    const s = { ...atAlat, hold_code: "weather_ban", hold_node: "AKTAU" };
+    expect(weatherNodeFor([aktau, alat], s)?.code).toBe("AKTAU");
+  });
+  it("иначе — ближайший порт с погодой", () => {
+    expect(weatherNodeFor([aktau, alat], { ...atAlat, hold_code: null })?.code).toBe("BAKU_ALAT");
+    const ferry = { ...atAlat, hold_code: "ferry_loading_wait", hold_node: "AKTAU" };
+    expect(weatherNodeFor([aktau, alat], ferry)?.code).toBe("BAKU_ALAT");
+  });
+  it("узел запрета не порт или его нет в снимке — ближайший порт", () => {
+    const s = { ...atAlat, hold_code: "weather_ban", hold_node: "BEINEU" };
+    expect(weatherNodeFor([aktau, alat, rail], s)?.code).toBe("BAKU_ALAT");
+    expect(weatherNodeFor([alat], { ...s, hold_node: "AKTAU" })?.code).toBe("BAKU_ALAT");
   });
 });
