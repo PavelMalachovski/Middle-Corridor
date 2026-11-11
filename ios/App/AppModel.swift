@@ -14,9 +14,15 @@ final class AppModel {
     private(set) var store: TrackedShipments
     /// Клиент текущего сервера (данные — через store, часы демо — через demo).
     private(set) var api: any CorridorAPI
+    /// Аккаунт (вход по коду, грузы компаний); `nil` — сервер аккаунтов в сборке не задан.
+    let account: AccountModel?
     /// Пульт ведущего (скрыт; включается долгим нажатием на версию в настройках).
     @ObservationIgnored lazy var demo = DemoController(model: self, defaults: defaults)
     @ObservationIgnored let notifier = Notifier()
+    /// Push о грузах аккаунта (если есть в сборке, `MCPushEnabled`).
+    let push = PushRegistration()
+    /// Узлы коридора на прошлом обновлении грузов аккаунта — «было» для штормов по ним.
+    @ObservationIgnored private var lastAccountNodes: [NodeStatus] = []
     private(set) var serverURL: String
     var path: [String] = []
     var tab: AppTab = .shipments
@@ -58,8 +64,10 @@ final class AppModel {
         let api = Self.makeAPI(fake: isFake, server: server)
         self.api = api
         store = TrackedShipments(api: api, storage: storage, cache: cache, server: server)
+        account = Self.makeAccount(fake: isFake)
         observe(store)
         notifier.onOpen = { [weak self] ref in self?.show(ref) }
+        account?.onShipmentsChange = { [weak self] old, new in self?.handleAccount(old: old, new: new) }
     }
 
     /// Меняет сервер: список номеров сохраняется, данные перезагрузятся с нового адреса.
@@ -115,10 +123,31 @@ final class AppModel {
         }
     }
 
-    /// Нажатие на уведомление, виджет или Live Activity: карточка этого груза.
+    /// Нажатие на уведомление (локальное или push `{"ref": …}`), виджет или Live Activity:
+    /// карточка этого груза. Груз аккаунта открывается своей карточкой (ключ `acct:`).
     func show(_ ref: String) {
         showSplash = false
         tab = .shipments
+        route(ref, refreshed: false)
+    }
+
+    /// Груз аккаунта — его карточка; номера нет в списке аккаунта (не загружен или устарел:
+    /// новый, открытый клиенту) — сначала обновить список, и только потом — демо-номера.
+    private func route(_ ref: String, refreshed: Bool) {
+        let target = AccountRows.notificationTarget(
+            ref, in: account?.shipments ?? [], signedIn: account?.isSignedIn == true, refreshed: refreshed)
+        switch target {
+        case .account(let key): path = [key]
+        case .tracked(let ref): showTracked(ref)
+        case .refresh:
+            Task {
+                await account?.refresh()
+                route(ref, refreshed: true)
+            }
+        }
+    }
+
+    private func showTracked(_ ref: String) {
         if store.refs.contains(ref) {
             path = [ref]
         } else if let url = URL(string: "mcstatus://s/\(ref)") {
@@ -152,6 +181,22 @@ final class AppModel {
             }
         }
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Грузы аккаунта обновились: то же правило, что у отслеживаемых (`NotificationRules.accountDiff`).
+    /// Устройство зарегистрировано для push — «событие» по ним присылает сервер, локальное молчит.
+    /// Узлы «было» — те, что видели на прошлом обновлении аккаунта: шторм — по их разнице.
+    private func handleAccount(old: [MyShipment], new: [MyShipment]) {
+        let nodes = store.snapshot?.nodes ?? []
+        let oldNodes = lastAccountNodes
+        if !nodes.isEmpty { lastAccountNodes = nodes }  // снимка нет (офлайн) — прежние узлы остаются
+        guard !old.isEmpty else { return }  // первая загрузка после входа — не новость
+        let lang = (LangChoice(rawValue: defaults.string(forKey: LangChoice.key) ?? "") ?? .system).resolved()
+        let notices = NotificationRules.merge(NotificationRules.accountDiff(
+            old: old, new: new, oldNodes: oldNodes, newNodes: nodes,
+            settings: NotifyPrefs.load(defaults), labels: Labels(lang: lang, nodes: nodes),
+            pushRegistered: push.isRegistered))
+        notifier.deliver(notices, after: notifyDelay)
     }
 
     /// Груз только что добавили: флаг санкций — сразу, не дожидаясь обновления по таймеру.
@@ -189,6 +234,32 @@ final class AppModel {
         if !s.contains("://") { s = "http://" + s }
         while s.hasSuffix("/") { s.removeLast() }
         return s
+    }
+
+    /// Обновление по таймеру и при возврате в приложение: коридор и грузы аккаунта.
+    func refreshAll() async {
+        async let local: Void = store.refresh()
+        if let account { await account.refresh() }
+        await local
+    }
+
+    /// Сервер аккаунтов — ключ сборки `MC_ACCOUNT_API_URL` (Info.plist `MCAccountAPIURL`), не адрес
+    /// демо из настроек: карта и демо-номера — публичный сервер, аккаунты — свой (Railway).
+    /// В `-mc-fake-api` — фейк с токеном в памяти: UI-тесты не делят сессию через Keychain.
+    private static func makeAccount(fake: Bool) -> AccountModel? {
+        #if DEBUG
+            if fake {
+                let tokens = InMemoryTokenStore()
+                return AccountModel(api: FakeAccountAPI(tokens: tokens), tokens: tokens)
+            }
+        #endif
+        let raw = (Bundle.main.object(forInfoDictionaryKey: "MCAccountAPIURL") as? String ?? "")
+            .trimmingCharacters(in: .whitespaces)
+        // только полный адрес: «localhost:8000» URL примет со схемой «localhost» — такой не годится
+        guard let url = URL(string: raw), ["http", "https"].contains(url.scheme?.lowercased()), url.host != nil
+        else { return nil }
+        let tokens = KeychainTokenStore()
+        return AccountModel(api: HTTPAccountAPI(baseURL: url, tokens: tokens), tokens: tokens)
     }
 
     private static func makeAPI(fake: Bool, server: String) -> any CorridorAPI {

@@ -3,17 +3,28 @@ import SwiftUI
 
 /// Карточка груза — от ответа к подробностям: статус и ETA, где сейчас и почему стоит, очередь;
 /// почему задержка; Live Activity; карта (нажатие — на весь экран); погода в порту; лента маршрута; груз и клиент.
+/// Груз аккаунта (`accountKey` — ключ `AccountRows`) берётся только из `account`, даже если такой же
+/// номер отслеживается как демо: без Live Activity, «Поделиться» и «Удалить» — он приходит с сервера
+/// аккаунтов и на сайте не открывается.
 struct ShipmentDetailView: View {
     let ref: String
     let store: TrackedShipments
+    let account: AccountModel?
+    let accountKey: String?
     /// «Удалить из списка» из меню «…»: удаляет и закрывает карточку.
     let onRemove: (String) -> Void
     @Environment(\.l10n) private var l
 
     var body: some View {
         Group {
-            if let shipment = store.shipments[ref] {
-                content(shipment, labels: Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? []))
+            if let accountKey {
+                if let account, let mine = account.shipment(key: accountKey) {
+                    content(mine.shipment, labels: labels, mine: (account, mine))
+                } else {
+                    ContentUnavailableView(l("card.missing"), systemImage: "shippingbox")  // вышли из аккаунта
+                }
+            } else if let shipment = store.shipments[ref] {
+                content(shipment, labels: labels, mine: nil)
             } else if store.missing.contains(ref) {
                 ContentUnavailableView(l("add.error.notFound"), systemImage: "shippingbox")
             } else if store.lastError != nil {
@@ -26,13 +37,28 @@ struct ShipmentDetailView: View {
         }
         .navigationTitle(ref)
         .navigationBarTitleDisplayMode(.inline)
-        .refreshable { await store.refresh() }
+        .refreshable {
+            if let account, accountKey != nil {
+                await account.refresh()
+            } else {
+                await store.refresh()
+            }
+        }
     }
 
-    private func content(_ s: Shipment, labels: Labels) -> some View {
+    private var labels: Labels { Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? []) }
+
+    /// `mine` — груз аккаунта (с его правами): действия «Отметить событие», «Изменить», «Открыть клиенту».
+    private func content(_ s: Shipment, labels: Labels, mine: (AccountModel, MyShipment)?) -> some View {
         let nodes = store.snapshot?.nodes ?? []
+        let owned = mine != nil
         return List {
             ShipmentHeroSection(shipment: s, labels: labels)
+
+            if let mine {
+                AccountActionsSection(
+                    account: mine.0, mine: mine.1, segments: store.snapshot?.segments, labels: labels)
+            }
 
             if s.isDelayed, let parts = s.delayBreakdown, !parts.isEmpty {
                 DelaySection(parts: parts, labels: labels)
@@ -43,7 +69,7 @@ struct ShipmentDetailView: View {
                 SanctionsSection(check: check, labels: labels)
             }
 
-            if LiveActivities.enabled {
+            if LiveActivities.enabled, !owned {
                 Section {
                     LiveActivityButton(shipment: s, labels: labels)
                 }
@@ -77,25 +103,29 @@ struct ShipmentDetailView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    ShareLink(
-                        item: AppLinks.share(s.ref),
-                        subject: Text(s.ref),
-                        message: Text(AppLinks.message(s, labels: labels, l: l))
-                    ) {
-                        Label(l("card.share"), systemImage: "square.and.arrow.up")
-                    }
-                    Button(role: .destructive) { onRemove(s.ref) } label: {
-                        Label(l("card.remove"), systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .accessibilityLabel(l("card.actions"))
-                .accessibilityIdentifier("card.menu")
+            if !owned {
+                ToolbarItem(placement: .topBarTrailing) { menu(s, labels: labels) }
             }
         }
+    }
+
+    private func menu(_ s: Shipment, labels: Labels) -> some View {
+        Menu {
+            ShareLink(
+                item: AppLinks.share(s.ref),
+                subject: Text(s.ref),
+                message: Text(AppLinks.message(s, labels: labels, l: l))
+            ) {
+                Label(l("card.share"), systemImage: "square.and.arrow.up")
+            }
+            Button(role: .destructive) { onRemove(s.ref) } label: {
+                Label(l("card.remove"), systemImage: "trash")
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+        }
+        .accessibilityLabel(l("card.actions"))
+        .accessibilityIdentifier("card.menu")
     }
 }
 

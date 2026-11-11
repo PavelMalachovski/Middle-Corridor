@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "kind": "departed",
+    "node_code": "MLADA_BOLESLAV",
+    "occurred_at": "2027-03-01T09:00:00",
+    "hold_code": null,
+    "note": null,
+    "vessel": null,
+    "source": "manual",
+    "created_by": 1,
+    "supersedes_id": null,
+    "created_at": "2027-03-10T12:00:00",
+    "superseded": false
+  },
+  {
+    "id": 2,
+    "kind": "arrived",
+    "node_code": "AKTAU",
+    "occurred_at": "2027-03-08T10:00:00",
+    "hold_code": null,
+    "note": null,
+    "vessel": null,
+    "source": "manual",
+    "created_by": 1,
+    "supersedes_id": null,
+    "created_at": "2027-03-10T12:00:00",
+    "superseded": false
+  },
+  {
+    "id": 3,
+    "kind": "held",
+    "node_code": "AKTAU",
+    "occurred_at": "2027-03-08T12:00:00",
+    "hold_code": "weather_ban",
+    "note": "Шторм",
+    "vessel": null,
+    "source": "manual",
+    "created_by": 1,
+    "supersedes_id": null,
+    "created_at": "2027-03-10T12:00:00",
+    "superseded": false
+  }
+]

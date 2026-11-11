@@ -7,7 +7,7 @@
 
 POST /api/v1/auth/code {email}                 → 202 всегда (письмо — в фоне)
 POST /api/v1/auth/verify {email, code, device_name} → {token, me} | 401
-POST /api/v1/auth/logout                       → 204
+POST /api/v1/auth/logout [{apns_token}]        → 204 (токен устройства — необязателен: отзывает его)
 GET|PATCH /api/v1/me, POST /api/v1/me/devices
 GET /api/v1/orgs/{id}/members|clients, POST …/invitations, DELETE …/members/{user_id}
 POST /api/v1/admin/orgs, …/{id}/links, …/{id}/invitations (только платформа)
@@ -43,6 +43,7 @@ from app.api.routes.accounts_schemas import (
     InviteIn,
     InviteOut,
     LinkIn,
+    LogoutIn,
     MemberOut,
     MembershipOut,
     MeOut,
@@ -176,8 +177,10 @@ async def verify(body: VerifyIn, request: Request, services: Services) -> Verify
 
 
 @router.post("/auth/logout", status_code=204)
-async def logout(caller: CurrentCaller, services: Services) -> Response:
-    await services.auth.logout(caller.token)
+async def logout(
+    caller: CurrentCaller, services: Services, body: LogoutIn | None = None
+) -> Response:
+    await services.auth.logout(caller.token, body.apns_token if body else None)
     return Response(status_code=204)
 
 

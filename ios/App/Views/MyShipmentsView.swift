@@ -3,21 +3,25 @@ import SwiftUI
 
 /// Первый экран — «Мои грузы»; пока список пуст — состояние коридора.
 /// Грузы — по срочности: требуют внимания → в пути → ждут отправления → доставленные.
+/// После входа в те же секции встают грузы аккаунта (с бейджем компании); удалить их из списка
+/// нельзя — они приходят с сервера.
 struct MyShipmentsView: View {
     @Bindable var model: AppModel
     @Environment(\.l10n) private var l
     @State private var showAdd = false
+    @State private var showNew = false
     @State private var showSettings = false
     /// Только что удалённый груз — плашка «Отменить» на несколько секунд.
     @State private var removed: String?
     @State private var addedCount = 0
 
     private var store: TrackedShipments { model.store }
+    private var accountShipments: [MyShipment] { model.account?.shipments ?? [] }
 
     var body: some View {
         NavigationStack(path: $model.path) {
             Group {
-                if store.refs.isEmpty {
+                if store.refs.isEmpty && accountShipments.isEmpty {
                     CorridorSummaryView(store: store) { showAdd = true }
                 } else {
                     list
@@ -30,17 +34,21 @@ struct MyShipmentsView: View {
                         .accessibilityLabel(l("list.settings"))
                         .accessibilityIdentifier("settings")
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showAdd = true } label: { Image(systemName: "plus") }
-                        .accessibilityLabel(l("add.title"))
-                        .accessibilityIdentifier("add")
+                ToolbarItem(placement: .topBarTrailing) { addButton }
+            }
+            .navigationDestination(for: String.self) { value in
+                // груз аккаунта — по ключу `acct:<org>:<номер>`: номер может совпасть с демо-номером
+                if let key = AccountRows.parse(value) {
+                    ShipmentDetailView(ref: key.ref, store: store, account: model.account, accountKey: value) {
+                        remove($0)
+                    }
+                } else {
+                    ShipmentDetailView(ref: value, store: store, account: nil, accountKey: nil) { remove($0) }
                 }
             }
-            .navigationDestination(for: String.self) { ref in
-                ShipmentDetailView(ref: ref, store: store) { remove($0) }
-            }
-            .refreshable { await store.refresh() }
+            .refreshable { await model.refreshAll() }
             .task(id: model.serverURL) { await store.refresh() }
+            .task { await model.account?.refresh() }  // вход сохранён в Keychain — грузы сразу
             .safeAreaInset(edge: .bottom) {
                 if let removed {
                     UndoBanner(text: l("list.removed", ["ref": removed]), action: l("list.undo")) {
@@ -66,6 +74,18 @@ struct MyShipmentsView: View {
                 Task { await model.notifier.requestAuthorizationIfNeeded() }
             }
         }
+        .sheet(isPresented: $showNew) {
+            if let account = model.account {
+                NewShipmentView(
+                    account: account, segments: store.snapshot?.segments,
+                    labels: Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? [])
+                ) { created in
+                    showNew = false
+                    addedCount += 1
+                    model.path = [AccountRows.key(created)]
+                }
+            }
+        }
         .sheet(isPresented: $showSettings) {
             SettingsView(model: model)
         }
@@ -80,10 +100,33 @@ struct MyShipmentsView: View {
         }
     }
 
+    /// «+»: экспедитор (owner/admin) выбирает «Новый груз» или «Отследить по номеру»; остальные —
+    /// сразу добавление номера.
+    @ViewBuilder
+    private var addButton: some View {
+        if model.account?.creatableOrgs.isEmpty == false {
+            Menu {
+                Button { showNew = true } label: { Label(l("new.title"), systemImage: "shippingbox") }
+                    .accessibilityIdentifier("add.new")
+                Button { showAdd = true } label: { Label(l("add.track"), systemImage: "number") }
+                    .accessibilityIdentifier("add.track")
+            } label: {
+                Image(systemName: "plus")
+            }
+            .accessibilityLabel(l("add.menu"))
+            .accessibilityIdentifier("add")
+        } else {
+            Button { showAdd = true } label: { Image(systemName: "plus") }
+                .accessibilityLabel(l("add.title"))
+                .accessibilityIdentifier("add")
+        }
+    }
+
     private var list: some View {
         let labels = Labels(lang: l.lang, nodes: store.snapshot?.nodes ?? [])
         let offline = store.lastError != nil
-        let sections = ShipmentGroup.group(store.rows, nodes: store.snapshot?.nodes ?? [], missing: store.missing)
+        let rows = AccountRows.merge(local: store.rows, account: accountShipments)
+        let sections = ShipmentGroup.group(rows, nodes: store.snapshot?.nodes ?? [], missing: store.missing)
         return List {
             if offline {
                 Section { OfflineBanner(updatedAt: store.updatedAt) }
@@ -91,7 +134,12 @@ struct MyShipmentsView: View {
             ForEach(sections) { section in
                 Section {
                     ForEach(section.rows) { row in
-                        rowLink(row, labels: labels, offline: offline, compact: section.group == .delivered)
+                        let compact = section.group == .delivered
+                        if AccountRows.parse(row.id) != nil {
+                            accountLink(row, labels: labels, offline: offline, compact: compact)
+                        } else {
+                            rowLink(row, labels: labels, offline: offline, compact: compact)
+                        }
                     }
                 } header: {
                     // одна секция — заголовок не нужен: список и так однородный
@@ -134,6 +182,15 @@ struct MyShipmentsView: View {
                 Label(l("list.delete"), systemImage: "trash")
             }
         }
+    }
+
+    /// Груз аккаунта: без «Удалить» и «Поделиться» (ссылка на сайт открывает только демо-номера).
+    private func accountLink(_ row: TrackedRow, labels: Labels, offline: Bool, compact: Bool) -> some View {
+        let org = model.account?.shipment(key: row.id).flatMap { model.account?.orgName($0) }
+        return NavigationLink(value: row.id) {
+            ShipmentRow(row: row, labels: labels, isOffline: offline, isMissing: false, compact: compact, org: org)
+        }
+        .accessibilityIdentifier("account.row.\(row.ref)")
     }
 
     private func header(_ group: ShipmentGroup, count: Int) -> String {

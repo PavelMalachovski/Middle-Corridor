@@ -66,7 +66,7 @@ def _departed_event(e: ShipmentEventRow, ts: datetime) -> TrackingEvent:
 
 def _scan(
     events: list[ShipmentEventRow], route: list[str]
-) -> tuple[list[TrackingEvent], ShipmentEventRow | None, int]:
+) -> tuple[list[TrackingEvent], ShipmentEventRow | None, int, bool]:
     """События проекции, открытая стоянка и дальний достигнутый узел (индекс, -1 — нет).
 
     held — груз в узле: если последнее событие не «прибыл туда», добавляется прибытие.
@@ -109,13 +109,13 @@ def _scan(
             holds[e.node_code] = e
             reached, departed = i, False
     hold = max(holds.values(), key=lambda e: (aware(e.occurred_at), e.id), default=None)
-    return result, hold, reached
+    return result, hold, reached, departed
 
 
 def _replay(
     events: list[ShipmentEventRow], route: list[str]
 ) -> tuple[list[TrackingEvent], ShipmentEventRow | None]:
-    result, hold, _ = _scan(events, route)
+    result, hold, _, _ = _scan(events, route)
     return result, hold
 
 
@@ -127,6 +127,12 @@ def open_hold(events: list[ShipmentEventRow], route: list[str]) -> ShipmentEvent
 def furthest_reached(events: list[ShipmentEventRow], route: list[str]) -> int:
     """Индекс дальнего узла маршрута, достигнутого живыми событиями (-1 — ни одного)."""
     return _scan(_ordered(events, route), route)[2]
+
+
+def reach_state(events: list[ShipmentEventRow], route: list[str]) -> tuple[int, bool]:
+    """Дальний достигнутый узел и убыл ли груз из него (тот же `_scan`)."""
+    _, _, reached, departed = _scan(_ordered(events, route), route)
+    return reached, departed
 
 
 def build_db_plan(row: ShipmentRow, client: str, events: list[ShipmentEventRow]) -> ShipmentPlan:

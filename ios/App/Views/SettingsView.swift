@@ -21,6 +21,10 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                if let account = model.account {
+                    AccountSection(account: account, nodes: model.store.snapshot?.nodes ?? [])
+                }
+
                 Section {
                     if notificationsDenied {
                         Button(action: openNotificationSettings) {
@@ -83,6 +87,7 @@ struct SettingsView: View {
                         model.setServer(server)
                         dismiss()
                     }
+                    .accessibilityIdentifier("settings.done")
                 }
             }
             .onAppear { server = model.serverURL }
@@ -157,10 +162,10 @@ struct SettingsView: View {
     /// Ошибка проверки связи словами, а не `String(describing:)`.
     static func message(for error: APIError, _ l: L10n) -> String {
         switch error {
-        case .offline: l("settings.fail.offline")
+        case .offline, .unauthorized: l("settings.fail.offline")
         case .notFound: l("settings.fail.notFound")
         case .http(let code): l("settings.fail.http", ["code": String(code)])
-        case .decoding: l("settings.fail.decoding")
+        case .decoding, .rejected: l("settings.fail.decoding")
         }
     }
 
@@ -169,6 +174,74 @@ struct SettingsView: View {
         let short = info?["CFBundleShortVersionString"] as? String ?? "?"
         let build = info?["CFBundleVersion"] as? String ?? "?"
         return "\(short) (\(build))"
+    }
+}
+
+/// Аккаунт: «Войти» (экран кода) или кто вошёл, в каких компаниях и «Выйти».
+private struct AccountSection: View {
+    let account: AccountModel
+    /// Узлы коридора — имена узлов агента.
+    let nodes: [NodeStatus]
+    @Environment(\.l10n) private var l
+
+    var body: some View {
+        Section {
+            if account.isSignedIn {
+                if let me = account.me {
+                    LabeledContent(l("account.signedInAs"), value: me.email)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("account.email")
+                    ForEach(me.memberships, id: \.orgId) { membership in
+                        if AccountAccess.canManageMembers(me, orgId: membership.orgId) {
+                            // owner/admin — «Команда»: люди компании и приглашения
+                            NavigationLink {
+                                OrgMembersView(
+                                    account: account, org: membership, labels: Labels(lang: l.lang, nodes: nodes),
+                                    nodeCodes: nodes.map(\.code))
+                            } label: {
+                                LabeledContent(membership.orgName, value: role(membership))
+                            }
+                            .accessibilityIdentifier("account.org.\(membership.orgId)")
+                        } else {
+                            LabeledContent(membership.orgName, value: role(membership))
+                        }
+                    }
+                } else {
+                    // токен есть, «кто я» ещё не пришёл (старт без сети)
+                    Text(l(account.lastError == nil ? "list.loading" : "list.noData"))
+                        .foregroundStyle(.secondary)
+                }
+                Button(l("account.logout"), role: .destructive) {
+                    Task { await account.logout() }
+                }
+                .accessibilityIdentifier("account.logout")
+            } else {
+                NavigationLink {
+                    LoginView(account: account)
+                } label: {
+                    Label(l("account.login"), systemImage: "person.crop.circle")
+                }
+                .accessibilityIdentifier("account.login")
+                if account.sessionExpired {
+                    Text(l("account.expired"))
+                        .font(.footnote)
+                        .foregroundStyle(Theme.warning)
+                        .accessibilityIdentifier("account.expired")
+                }
+            }
+        } header: {
+            Text(l("account.title"))
+        } footer: {
+            if !account.isSignedIn { Text(l("account.hint")) }
+        }
+    }
+
+    /// Роль словами; у агента — его узлы.
+    private func role(_ m: MembershipInfo) -> String {
+        let role = m.role.known.map { l("account.role.\($0.rawValue)") } ?? m.role.raw
+        guard !m.nodeCodes.isEmpty else { return role }
+        let labels = Labels(lang: l.lang, nodes: nodes)
+        return "\(role) · " + m.nodeCodes.map { labels.node($0) ?? $0 }.joined(separator: ", ")
     }
 }
 

@@ -44,6 +44,10 @@ public struct AppNotice: Sendable, Equatable, Identifiable {
 
 /// Что изменилось между двумя обновлениями — и о чём стоит сказать.
 /// Первая загрузка груза (старых данных нет) уведомлений не даёт.
+/// `pushManagedRefs` — номера грузов аккаунта, о которых сервер шлёт push (устройство
+/// зарегистрировано). Push покрывает только события чекпоинтов и смену маршрута, поэтому
+/// по этим грузам пропускается лишь локальное «событие»; шторм, задержка, очередь и санкции
+/// работают как прежде.
 public enum NotificationRules {
     /// Задержка выросла хотя бы на столько часов.
     public static let delayStepHours = 3.0
@@ -56,7 +60,8 @@ public enum NotificationRules {
         oldNodes: [NodeStatus],
         newNodes: [NodeStatus],
         settings: NotifySettings,
-        labels: Labels
+        labels: Labels,
+        pushManagedRefs: Set<String> = []
     ) -> [AppNotice] {
         let oldLevels = levels(oldNodes)
         let newByCode = Dictionary(newNodes.map { ($0.code, $0) }, uniquingKeysWith: { first, _ in first })
@@ -67,7 +72,7 @@ public enum NotificationRules {
             if settings.storm, !oldNodes.isEmpty {
                 notices += storms(now, oldLevels: oldLevels, newNodes: newByCode, labels: labels)
             }
-            if settings.event, isNewEvent(now, than: before) {
+            if settings.event, !pushManagedRefs.contains(ref), isNewEvent(now, than: before) {
                 let stamp = Int(now.lastEventAt?.timeIntervalSince1970 ?? 0)
                 notices.append(
                     AppNotice(
@@ -94,6 +99,22 @@ public enum NotificationRules {
             }
         }
         return notices
+    }
+
+    /// Грузы аккаунта — то же правило по номерам. Узлы — «было» с прошлого обновления аккаунта и
+    /// «стало» сейчас (иначе шторм не виден: push о нём не приходит). `pushRegistered` — о событиях
+    /// грузов аккаунта шлёт сервер, локальное «событие» по ним молчит.
+    public static func accountDiff(
+        old: [MyShipment], new: [MyShipment], oldNodes: [NodeStatus], newNodes: [NodeStatus],
+        settings: NotifySettings, labels: Labels, pushRegistered: Bool
+    ) -> [AppNotice] {
+        func byRef(_ list: [MyShipment]) -> [String: Shipment] {
+            Dictionary(list.map { ($0.shipment.ref, $0.shipment) }, uniquingKeysWith: { first, _ in first })
+        }
+        let newByRef = byRef(new)
+        return diff(
+            old: byRef(old), new: newByRef, oldNodes: oldNodes, newNodes: newNodes, settings: settings,
+            labels: labels, pushManagedRefs: pushRegistered ? Set(newByRef.keys) : [])
     }
 
     /// Санкции — по текущему состоянию, а не по разнице «было → стало»: груз `flagged` или

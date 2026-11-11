@@ -61,6 +61,10 @@ class DeviceIn(BaseModel):
     environment: Literal["sandbox", "production"]
 
 
+class LogoutIn(BaseModel):
+    apns_token: str | None = Field(default=None, max_length=256)
+
+
 class MemberOut(BaseModel):
     user_id: int
     email: str

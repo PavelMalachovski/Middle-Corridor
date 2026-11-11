@@ -493,3 +493,44 @@ async def test_value_error_422_only_for_codes(session_factory) -> None:
         )
         assert r.status_code == 500
         assert "secret" not in r.text
+
+
+async def test_logout_revokes_own_device_only(env: Env, session_factory) -> None:
+    from sqlalchemy import select
+
+    from app.db.models import Device
+
+    fwd = await _forwarder(env)
+    await env.acc.orgs.invite(None, fwd, "second@x.test", Role.owner, [])
+    first, second = await env.login("owner@x.test"), await env.login("second@x.test")
+    for token, apns in ((first, "aa" * 32), (second, "bb" * 32)):
+        r = await env.client.post(
+            "/api/v1/me/devices",
+            headers=bearer(token),
+            json={"apns_token": apns, "environment": "sandbox"},
+        )
+        assert r.status_code == 204
+
+    async def revoked() -> dict[str, bool]:
+        async with session_factory() as s:
+            rows = (await s.execute(select(Device))).scalars().all()
+            return {d.apns_token: d.revoked_at is not None for d in rows}
+
+    # чужой токен устройства при выходе игнорируется
+    r = await env.client.post(
+        "/api/v1/auth/logout", headers=bearer(first), json={"apns_token": "bb" * 32}
+    )
+    assert r.status_code == 204
+    assert await revoked() == {"aa" * 32: False, "bb" * 32: False}
+    assert (await env.client.get("/api/v1/me", headers=bearer(first))).status_code == 401
+
+    # свой — отзывается; без тела выход по-прежнему 204
+    first = await env.login("owner@x.test")
+    r = await env.client.post(
+        "/api/v1/auth/logout", headers=bearer(first), json={"apns_token": "aa" * 32}
+    )
+    assert r.status_code == 204
+    assert await revoked() == {"aa" * 32: True, "bb" * 32: False}
+    r = await env.client.post("/api/v1/auth/logout", headers=bearer(second))
+    assert r.status_code == 204
+    assert await revoked() == {"aa" * 32: True, "bb" * 32: False}

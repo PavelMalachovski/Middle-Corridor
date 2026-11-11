@@ -52,17 +52,22 @@ struct RootView: View {
             if !visible { model.showSplash = false }
         }
         .task { await model.demo.probe() }
+        .task(id: model.account?.isSignedIn) {
+            // вошли (или старт с сохранённым входом) — разрешение на уведомления и push-токен
+            guard let account = model.account, account.isSignedIn else { return model.push.reset() }
+            await model.push.start(account: account, notifier: model.notifier, askPermission: !model.isFake)
+        }
         .task {
-            // на переднем плане — обновление раз в минуту: изменения → уведомления, Live Activity
+            // на переднем плане — обновление раз в минуту (и грузы аккаунта): изменения → уведомления
             // без проверки scenePhase: в долгой задаче это копия на момент её старта (могла
             // быть не .active — и таймер молчал бы всегда); в фоне приложение и так стоит
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(60))
-                if !Task.isCancelled { await model.store.refresh() }
+                if !Task.isCancelled { await model.refreshAll() }
             }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await model.store.refresh() } }
+            if phase == .active { Task { await model.refreshAll() } }
         }
     }
 }

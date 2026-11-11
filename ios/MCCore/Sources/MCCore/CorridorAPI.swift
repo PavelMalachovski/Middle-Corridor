@@ -43,6 +43,11 @@ public enum APIError: Error, Equatable, Sendable {
     /// Нет связи с сервером: сеть, таймаут, Мак спит, другая Wi‑Fi.
     case offline
     case decoding(String)
+    /// Нет входа или сессия кончилась (401): токен стёрт, нужен новый код.
+    case unauthorized
+    /// Сервер отклонил запрос по существу (422): код причины — `node_not_allowed`, `bad_container`…
+    /// Ошибка формы запроса (не код) — `invalid`.
+    case rejected(String)
 
     /// Любая ошибка клиента → APIError (URLError — это «нет связи»).
     public static func from(_ error: any Error) -> APIError {

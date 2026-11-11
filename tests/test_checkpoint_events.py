@@ -167,6 +167,23 @@ async def test_note_vessel_limits_and_backwards(svc, world):
     )
 
 
+async def test_held_after_departed_same_node_is_backwards(svc, world, session):
+    ref, owner = world["ref"], world["owner"]
+    await svc.add(owner, ref, kind=K.arrived, node_code="POTI", occurred_at=H(5))
+    dep = await svc.add(owner, ref, kind=K.departed, node_code="POTI", occurred_at=H(4))
+    late = svc.add(
+        owner, ref, kind=K.held, node_code="POTI", hold_code="weather_ban", occurred_at=H(3)
+    )
+    assert await code(late) == "backwards"
+    # исправление «убыл» снимает событие — стоянка там снова возможна
+    await svc.add(
+        owner, ref, kind=K.arrived, node_code="POTI", occurred_at=H(4), supersedes_id=dep.id
+    )
+    await svc.add(
+        owner, ref, kind=K.held, node_code="POTI", hold_code="weather_ban", occurred_at=H(3)
+    )
+
+
 async def _plan(session_factory, world):
     from app.db.repositories.accounts import AccountsRepository
 
