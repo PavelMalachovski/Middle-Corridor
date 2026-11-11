@@ -18,9 +18,9 @@ describe("parseView / formatView", () => {
 describe("parseUrlState", () => {
   it("полная ссылка", () => {
     const st = parseUrlState(
-      "?s=mc-26-0412&view=6/43.5/50.5&basemap=light&at=2026-09-05T12:00:00Z",
+      "?s=mc-26-0501&view=6/43.5/50.5&basemap=light&at=2026-09-05T12:00:00Z",
     );
-    expect(st.s).toBe("MC-26-0412");
+    expect(st.s).toBe("MC-26-0501");
     expect(st.view).toEqual({ zoom: 6, lat: 43.5, lon: 50.5 });
     expect(st.basemap).toBe("light");
     expect(st.at?.toISOString()).toBe("2026-09-05T12:00:00.000Z");
@@ -41,16 +41,16 @@ describe("buildSearch", () => {
     expect(buildSearch({ basemap: "dark" })).toBe("");
     expect(
       buildSearch({
-        s: "MC-26-0412",
+        s: "MC-26-0501",
         view: { zoom: 6, lat: 43.5, lon: 50.5 },
         basemap: "light",
         at: new Date("2026-09-05T12:00:00.000Z"),
       }),
-    ).toBe("s=MC-26-0412&view=6/43.5/50.5&basemap=light&at=2026-09-05T12:00:00Z");
+    ).toBe("s=MC-26-0501&view=6/43.5/50.5&basemap=light&at=2026-09-05T12:00:00Z");
   });
   it("круг: parse(build(x)) == x", () => {
     const x = {
-      s: "MC-26-0351",
+      s: "MC-26-0431",
       view: { zoom: 4.25, lat: 41.1234, lon: 49.5 },
       basemap: "satellite" as const,
       at: null,
