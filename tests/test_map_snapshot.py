@@ -520,7 +520,10 @@ def test_mock_0501_waits_for_shahdag_in_alat(before_h: int, code: str, ferry_at_
 
 
 async def test_mock_0501_never_jumps_back() -> None:
-    """Цикл 0501 — только вперёд по маршруту; назад в Алят — лишь после «доставлен»."""
+    """Цикл 0501 — только вперёд; назад в Алят — лишь перезапуск на плече Бейнеу → Костанай.
+
+    «Доставлен» в публичном демо не бывает: иначе фильтр «с задержкой» в e2e пустеет.
+    """
     source = MockShipmentSource(lambda: NOW)
     prev: tuple[int, ShipmentState] | None = None
     restarts = 0
@@ -529,10 +532,11 @@ async def test_mock_0501_never_jumps_back() -> None:
         plan = next(p for p in await source.list_plans(ts) if p.ref == "MC-26-0501")
         s = project_shipment(plan, ts)
         idx = ROUTE_KOSTANAY.index(s.position.from_code or "")
-        if s.state != ShipmentState.delivered:
-            assert s.delay_hours >= 10, ts  # фильтр «с задержкой» в e2e
+        assert s.state != ShipmentState.delivered, ts
+        assert s.delay_hours >= 10, ts  # фильтр «с задержкой» в e2e
         if prev is not None and idx < prev[0]:
-            assert prev[1] == ShipmentState.delivered, (ts, prev, idx)
+            assert prev == (ROUTE_KOSTANAY.index("BEINEU"), ShipmentState.in_transit), ts
+            assert idx == ROUTE_KOSTANAY.index("BAKU_ALAT"), ts
             restarts += 1
         prev = (idx, s.state)
     assert restarts == 3
