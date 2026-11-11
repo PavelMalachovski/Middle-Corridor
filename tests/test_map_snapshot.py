@@ -1,5 +1,6 @@
 """Тесты снимка карты: мок-источники, JSON-API, адаптер боевых источников."""
 
+import dataclasses
 import re
 from datetime import UTC, datetime, timedelta
 
@@ -11,13 +12,32 @@ from app.api.main import create_app
 from app.config import Settings
 from app.db.models import CorridorLeg, NewsItem, Port, Vessel, WeatherSnapshot
 from app.integrations.mock.clock import MockClock
-from app.integrations.mock.fleet import FERRIES, MockShipmentSource, list_ferry_states
+from app.integrations.mock.fleet import (
+    EAST_FERRY,
+    FERRIES,
+    ROUTE_KOSTANAY,
+    ROUTE_KURYK,
+    FerryState,
+    MockShipmentSource,
+    build_plan,
+    east_plan,
+    list_ferry_states,
+)
 from app.integrations.mock.wind import MockWindField, wind_at
 from app.main import build_map_service
 from app.services.corridor import COAST_TOLERANCE_DEG, NODES, NodeKind, sea_at, sea_grid
 from app.services.map_snapshot import CorridorStatusAdapter, DbNewsSource, MapSnapshotService
+from app.services.queue_forecast import QueueInput
+from app.services.sanctions import PackingLine, PackingList
 from app.services.status_aggregator import CorridorStatus, StatusAggregatorService
-from app.services.tracking import CheckpointState, PositionSource, ShipmentState, project_shipment
+from app.services.tracking import (
+    CheckpointState,
+    EventKind,
+    PositionSource,
+    Shipment,
+    ShipmentState,
+    project_shipment,
+)
 from app.services.weather_predictor import WindThresholds, evaluate_level
 
 NOW = datetime(2026, 9, 4, 12, 0, tzinfo=UTC)
@@ -55,10 +75,8 @@ async def test_mock_snapshot_is_internally_consistent(mock_service: MapSnapshotS
         else:  # честное «нет данных»
             assert not vessel.has_recent_data and vessel.lat is None and vessel.route is None
 
-    assert len(snap.shipments) >= 8
-    assert len({s.ref for s in snap.shipments}) == len(snap.shipments)
-    states = {s.state for s in snap.shipments}
-    assert {ShipmentState.in_transit, ShipmentState.waiting, ShipmentState.delivered} <= states
+    # публичное демо — ровно два груза: восточный 0501 и пример санкционки 0431
+    assert [s.ref for s in snap.shipments] == ["MC-26-0501", "MC-26-0431"]
     for shipment in snap.shipments:
         assert len(shipment.track) >= 2 and len(shipment.checkpoints) >= 2
         current = [cp for cp in shipment.checkpoints if cp.state == CheckpointState.current]
@@ -69,10 +87,11 @@ async def test_mock_snapshot_is_internally_consistent(mock_service: MapSnapshotS
         if shipment.position.source == PositionSource.ais:
             vessel = by_name[shipment.position.on_vessel]
             assert (shipment.position.lat, shipment.position.lon) == (vessel.lat, vessel.lon)
-    on_ferry = next(s for s in snap.shipments if s.position.source == PositionSource.ais)
-    assert on_ferry.state == ShipmentState.in_transit and on_ferry.position.mode == "sea"
-    weather_hold = next(s for s in snap.shipments if s.ref == "MC-26-0398")
-    assert weather_hold.state == ShipmentState.waiting and weather_hold.delay_hours >= 18
+    east, steppe = snap.shipments
+    # 0501 опаздывает всегда (в демо есть груз «с задержкой»), 0431 идёт по плану
+    assert east.state in {ShipmentState.in_transit, ShipmentState.waiting}
+    assert east.delay_hours >= 10
+    assert steppe.state == ShipmentState.in_transit and steppe.delay_hours < 1
 
     assert snap.segments and snap.news and snap.reports
     assert snap.thresholds.critical_wind == thresholds.critical_wind
@@ -100,8 +119,12 @@ async def test_snapshot_carries_codes_and_english_names(mock_service: MapSnapsho
             }
         if s.hold_reason:
             assert s.hold_code, s.ref
-    weather = next(s for s in snap.shipments if s.ref == "MC-26-0398")
-    assert weather.hold_code == "weather_ban" and weather.hold_node == "AKTAU"
+    east = next(s for s in snap.shipments if s.ref == "MC-26-0501")
+    if east.state == ShipmentState.waiting:
+        assert east.hold_code in {"ferry_loading_wait", "ferry_return_wait"}
+        assert east.hold_vessel == EAST_FERRY
+    else:
+        assert east.last_event_note_code == "loaded_on_ferry"
     for v in snap.vessels:
         if v.has_recent_data:
             assert v.from_code in NODES and v.to_code in NODES
@@ -219,13 +242,14 @@ async def test_api_endpoints(mock_service: MapSnapshotService) -> None:
         body = snapshot.json()
         assert body["mock"] is True
         assert {"nodes", "vessels", "shipments", "segments", "news", "reports"} <= body.keys()
-        assert body["shipments"][0]["track"][0] == [NODES["XIAN"].lon, NODES["XIAN"].lat]
+        origin = NODES["MLADA_BOLESLAV"]
+        assert body["shipments"][0]["track"][0] == [origin.lon, origin.lat]
 
         wind = await client.get("/api/v1/wind")
         assert wind.status_code == 200 and len(wind.json()["points"]) > 60
 
-        one = await client.get("/api/v1/shipments/mc-26-0412")
-        assert one.status_code == 200 and one.json()["ref"] == "MC-26-0412"
+        one = await client.get("/api/v1/shipments/mc-26-0501")
+        assert one.status_code == 200 and one.json()["ref"] == "MC-26-0501"
         assert (await client.get("/api/v1/shipments/NOPE")).status_code == 404
         assert (await client.get("/health")).json()["mock"] is True
 
@@ -296,7 +320,8 @@ async def test_replay_at_is_deterministic_and_windowed(mock_service: MapSnapshot
         # тот же момент — тот же снимок; другой момент — другие позиции
         again = (await client.get("/api/v1/snapshot", params={"at": at.isoformat()})).json()
         assert again["shipments"] == body["shipments"]
-        assert body["shipments"][2]["position"] != live["shipments"][2]["position"]
+        assert body["shipments"][1]["position"] != live["shipments"][1]["position"]
+        assert [v["lat"] for v in body["vessels"]] != [v["lat"] for v in live["vessels"]]
         # ветер на момент at и с мелкой сеткой
         wind = await client.get("/api/v1/wind", params={"at": at.isoformat(), "step": 0.5})
         assert wind.status_code == 200 and len(wind.json()["points"]) > 300
@@ -441,31 +466,122 @@ async def test_adapter_hits_aggregator_once_per_snapshot() -> None:
     assert status.calls == 2  # TTL истёк — свежий статус
 
 
-async def test_mock_0398_has_queue(mock_service: MapSnapshotService) -> None:
-    snap = await mock_service.snapshot()
-    hold = next(s for s in snap.shipments if s.ref == "MC-26-0398")
+def test_mock_build_plan_weather_queue() -> None:
+    """Груз ждёт в Актау под погодным запретом: build_plan с очередью даёт прогноз выхода."""
+    plan = build_plan(
+        "T-Q",
+        "c",
+        "1 × 40' HC, автозапчасти",
+        ROUTE_KURYK[:7] + ["AKTAU", "BAKU_ALAT"],
+        EventKind.arrived,
+        "AKTAU",
+        NOW - timedelta(hours=30),
+        hold_reason="Погодный запрет на швартовку: Актау — критический ветер",
+        hold_code="weather_ban",
+        hold_node="AKTAU",
+        queue=QueueInput("AKTAU", 4, 8.0, 48.0, "weather_ban"),
+    )
+    hold = project_shipment(plan, NOW)
+    assert hold.state == ShipmentState.waiting and hold.delay_hours >= 18
     assert hold.queue is not None
     assert hold.queue.p50_hours == 60.0
     assert hold.queue.basis_code == "weather_ban"
 
 
+def _shahdag_at(eastbound_sailing: bool, at_alat: bool = False) -> tuple[datetime, FerryState]:
+    """Ближайший к NOW час, когда «Shahdag» идёт Алят → Актау (или стоит / грузится в Аляте)."""
+    for hour in range(56):
+        ts = NOW + timedelta(hours=hour)
+        state = next(f for f in list_ferry_states(ts) if f.spec.name == EAST_FERRY)
+        sailing_east = state.sailing and not state.westbound
+        loading = not state.sailing and not state.westbound
+        if (eastbound_sailing and sailing_east) or (
+            not eastbound_sailing and not sailing_east and loading == at_alat
+        ):
+            return ts, state
+    raise AssertionError("цикл парома без нужной фазы")
+
+
+def test_mock_0501_rides_shahdag_with_ais() -> None:
+    """0501 на AIS-пароме: позиция — с парома, плечо Алят → Актау, задержка видна."""
+    ts, state = _shahdag_at(eastbound_sailing=True)
+    ferries = {f.spec.name: f for f in list_ferry_states(ts)}
+    plan = east_plan(ts, ferries)
+    s = project_shipment(plan, ts, {EAST_FERRY: (state.lat, state.lon)})
+    assert s.state == ShipmentState.in_transit
+    assert s.position.source == PositionSource.ais and s.position.on_vessel == EAST_FERRY
+    assert (s.position.lat, s.position.lon) == (state.lat, state.lon)
+    assert (s.position.from_code, s.position.to_code, s.position.mode) == (
+        "BAKU_ALAT",
+        "AKTAU",
+        "sea",
+    )
+    assert s.last_event_note_code == "loaded_on_ferry" and s.delay_hours >= 10
+
+
+@pytest.mark.parametrize(
+    ("at_alat", "code"), [(True, "ferry_loading_wait"), (False, "ferry_return_wait")]
+)
+def test_mock_0501_waits_for_shahdag_in_alat(at_alat: bool, code: str) -> None:
+    ts, _ = _shahdag_at(eastbound_sailing=False, at_alat=at_alat)
+    ferries = {f.spec.name: f for f in list_ferry_states(ts)}
+    s = project_shipment(east_plan(ts, ferries), ts)
+    assert s.state == ShipmentState.waiting and s.position.from_code == "BAKU_ALAT"
+    assert s.hold_code == code and s.hold_vessel == EAST_FERRY
+    assert s.delay_hours >= 10
+
+
 # --- санкции: пакинг-листы демо-грузов -------------------------------------------
 
 SANCTIONS_EXPECTED = {
-    "MC-26-0431": "flagged",
-    "MC-26-0412": "review",
-    "MC-26-0447": "missing",
-    "MC-26-0455": "pending",
-    "MC-26-0502": "review",  # восток: разъёмы из CHPL, получатель в Казахстане
+    "MC-26-0431": "flagged",  # сталь RU среди автозапчастей
+    "MC-26-0501": "clear",  # автокомплекты Škoda в Казахстан
 }
 
 
 async def test_mock_sanctions_statuses(mock_service: MapSnapshotService) -> None:
     snap = await mock_service.snapshot()
     statuses = {s.ref: s.sanctions.status for s in snap.shipments if s.sanctions}
-    assert len(statuses) == len(snap.shipments) == 12
-    for ref, status in statuses.items():
-        assert status == SANCTIONS_EXPECTED.get(ref, "clear"), ref
+    assert len(statuses) == len(snap.shipments) == 2
+    assert statuses == SANCTIONS_EXPECTED
+
+
+def _review_plan(lines: tuple[PackingLine, ...], consignee: str, route: list[str]) -> Shipment:
+    """План с пакинг-листом вне демо: статус «проверить вручную» в публичном демо не показан."""
+    plan = build_plan(
+        "T-R", "c", "x", route, EventKind.departed, route[2], NOW - timedelta(hours=1)
+    )
+    packing = PackingList(
+        received_at=NOW - timedelta(days=4),
+        lines=lines,
+        consignee_country=consignee,
+        destination_country=consignee,
+    )
+    return project_shipment(dataclasses.replace(plan, packing_list=packing), NOW)
+
+
+# бывшие демо-грузы: процессоры из CHPL в Венгрию; разъёмы из CHPL в Казахстан
+PROCESSORS = (
+    PackingLine(1, "8542310001", "Микросхемы-процессоры", "Processor integrated circuits", "CN"),
+    PackingLine(2, "8471300000", "Ноутбуки", "Laptops", "CN"),
+    PackingLine(3, "8517130000", "Смартфоны", "Smartphones", "CN"),
+)
+CONNECTORS = (
+    PackingLine(1, "8536699008", "Разъёмы электрические", "Electrical connectors", "DE", 4000, 380),
+    PackingLine(2, "8544429009", "Жгуты проводов", "Wiring harnesses", "CZ", 300, 2900),
+    PackingLine(3, "8512200009", "Фары", "Headlamps", "CZ", 120, 320),
+)
+
+
+def test_sanctions_review_cases_outside_demo() -> None:
+    west = _review_plan(PROCESSORS, "HU", ROUTE_KURYK)
+    assert west.sanctions is not None and west.sanctions.status == "review"
+    assert [m.line_no for m in west.sanctions.matches] == [1]  # процессоры CHPL
+    east = _review_plan(CONNECTORS, "KZ", ROUTE_KOSTANAY)
+    assert east.sanctions is not None and east.sanctions.status == "review"
+    assert [(x.line_no, x.list_id, x.reason_code) for x in east.sanctions.matches] == [
+        (1, "chpl", "code_only")
+    ]
 
 
 async def test_mock_packing_codes_exist_in_lists(mock_service: MapSnapshotService) -> None:
@@ -503,7 +619,10 @@ async def test_api_exposes_only_status_driving_lines(mock_service: MapSnapshotSe
     """Наружу — только позиции, из-за которых статус: справочные совпадения не раскрывают лист."""
     snap = await mock_service.snapshot()
     by_ref = {s.ref: s.sanctions for s in snap.shipments if s.sanctions}
-    assert [m.line_no for m in by_ref["MC-26-0412"].matches] == [1]  # процессоры CHPL
+    review = _review_plan(PROCESSORS, "HU", ROUTE_KURYK).sanctions
+    assert review is not None
+    by_ref["review"] = review
+    assert [m.line_no for m in by_ref["review"].matches] == [1]  # процессоры CHPL
     assert [m.line_no for m in by_ref["MC-26-0431"].matches] == [3]  # сталь RU
     for ref, check in by_ref.items():
         if check.status == "clear":
@@ -514,27 +633,24 @@ async def test_api_exposes_only_status_driving_lines(mock_service: MapSnapshotSe
         ), ref
 
 
-async def test_mock_eastbound_shipments(mock_service: MapSnapshotService) -> None:
-    """Европа → Казахстан: 0501 на пароме Баку → Актау («чисто»), 0502 в Чёрном море."""
+async def test_mock_eastbound_shipment(mock_service: MapSnapshotService) -> None:
+    """Европа → Казахстан: 0501 на линии Алят — Актау, «чисто»."""
     snap = await mock_service.snapshot()
-    by_ref = {s.ref: s for s in snap.shipments}
-    ferry, black_sea = by_ref["MC-26-0501"], by_ref["MC-26-0502"]
-    for s in (ferry, black_sea):
-        assert s.origin_code == "MLADA_BOLESLAV" and s.destination_code == "KOSTANAY"
-    assert ferry.position.mode == "sea" and ferry.position.from_code == "BAKU_ALAT"
-    assert black_sea.position.mode == "sea" and black_sea.position.from_code == "AMBARLI"
-    assert ferry.sanctions and ferry.sanctions.status == "clear" and ferry.sanctions.matches == []
-    m = black_sea.sanctions.matches if black_sea.sanctions else []
-    assert [(x.line_no, x.list_id, x.reason_code) for x in m] == [(1, "chpl", "code_only")]
+    east = {s.ref: s for s in snap.shipments}["MC-26-0501"]
+    assert east.origin_code == "MLADA_BOLESLAV" and east.destination_code == "KOSTANAY"
+    assert east.position.from_code == "BAKU_ALAT"
+    assert east.position.mode == ("sea" if east.state == ShipmentState.in_transit else None)
+    assert east.sanctions and east.sanctions.status == "clear" and east.sanctions.matches == []
 
 
 async def test_mock_eastbound_cargo_details(mock_service: MapSnapshotService) -> None:
-    """Блок «Груз» у восточных демо-грузов: контейнер, места, вес, опасный груз, главные позиции."""
+    """Блок «Груз» у восточного демо-груза: контейнер, места, вес, опасный груз, главные позиции."""
     app = create_app(settings=_settings(), map_service=mock_service)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         body = (await client.get("/api/v1/shipments/MC-26-0501")).json()
     cargo = body["cargo_details"]
+    assert cargo["container_no"] == "DEMU5010012"
     assert cargo["container_type"] == "40' HC" and cargo["packages"] == 14
     assert [(g["un_number"], g["hazard_class"]) for g in cargo["dangerous"]] == [("2800", "8")]
     assert len(cargo["top_items"]) == 5 and cargo["more_items"] == 4
@@ -542,5 +658,7 @@ async def test_mock_eastbound_cargo_details(mock_service: MapSnapshotService) ->
     assert "value" not in str(cargo).lower() and "price" not in str(cargo).lower()
     snap = await mock_service.snapshot()
     with_cargo = {s.ref for s in snap.shipments if s.cargo_details}
-    assert {"MC-26-0501", "MC-26-0502"} <= with_cargo  # плюс западные — по пакинг-листу
-    assert not {"MC-26-0447", "MC-26-0455"} & with_cargo  # ни листа, ни сведений
+    assert with_cargo == {"MC-26-0501", "MC-26-0431"}  # 0431 — по пакинг-листу
+    # ни листа, ни сведений — блока «Груз» нет
+    bare = build_plan("T-B", "c", "x", ROUTE_KURYK, EventKind.departed, "XIAN", NOW)
+    assert project_shipment(bare, NOW).cargo_details is None

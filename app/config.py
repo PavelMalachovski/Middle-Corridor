@@ -68,7 +68,7 @@ class Settings(BaseSettings):
     # и внешних API; MOCK_TIME_SCALE=60 — час мок-времени за минуту (демо).
     mock_data: bool = False
     mock_time_scale: float = 1.0
-    # Пульт демо: /api/v1/demo/clock переводит мок-часы, MC-26-0398 идёт по
+    # Пульт демо: /api/v1/demo/clock переводит мок-часы, MC-26-0501 идёт по
     # истории от старта демо. Только локальное демо с MOCK_DATA — не на Vercel:
     # там кто угодно сдвинул бы время всем зрителям.
     demo_control: bool = False

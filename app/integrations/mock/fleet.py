@@ -5,9 +5,11 @@
 любой момент кто-то в море, кто-то у причала. Два парома намеренно «вне
 AIS» — как в жизни на Каспии: у них нет позиции, а не «стоят».
 
-Отправки строятся относительно текущего момента: у каждой — сценарий
-(в море на пароме, ждёт погоды в Актау, на рельсах в степи, на таможне…),
-план и подтверждённые события. Положение считает services.tracking.
+Отправок в публичном демо две, обе строятся относительно текущего момента:
+MC-26-0501 — настоящий маршрут автокомплектов Škoda Млада-Болеслав → … → Алят →
+Актау → Костанай (данные обезличены), привязан к циклу парома «Shahdag»;
+MC-26-0431 — пример «возможна санкционка» на рельсах в степи. Под DEMO_CONTROL
+0501 заменяет история (story.py). Положение считает services.tracking.
 """
 
 import hashlib
@@ -174,18 +176,10 @@ ROUTE_KURYK = [
     "XIAN", "URUMQI", "KHORGOS", "ALMATY", "SHYMKENT", "KYZYLORDA", "BEINEU", "KURYK",
     "BAKU_ALAT", "GANJA", "BOYUK_KASIK", "TBILISI", "POTI", "CONSTANTA", "BUCHAREST", "BUDAPEST",
 ]  # fmt: skip
-ROUTE_AKTAU = [
-    "XIAN", "URUMQI", "KHORGOS", "ALMATY", "SHYMKENT", "KYZYLORDA", "BEINEU", "AKTAU",
-    "BAKU_ALAT", "GANJA", "BOYUK_KASIK", "TBILISI", "POTI", "CONSTANTA",
-]  # fmt: skip
 # Европа → Казахстан (на восток): завод → порт Копер → перевалка в Амбарлы → Поти → … → Костанай
 ROUTE_KOSTANAY = [
     "MLADA_BOLESLAV", "KOPER", "AMBARLI", "POTI", "TBILISI", "BOYUK_KASIK", "GANJA",
     "BAKU_ALAT", "AKTAU", "BEINEU", "KOSTANAY",
-]  # fmt: skip
-ROUTE_BATUMI = [
-    "URUMQI", "KHORGOS", "ALMATY", "SHYMKENT", "KYZYLORDA", "BEINEU", "KURYK", "BAKU_ALAT",
-    "GANJA", "BOYUK_KASIK", "TBILISI", "BATUMI", "CONSTANTA", "BUCHAREST",
 ]  # fmt: skip
 
 
@@ -198,19 +192,15 @@ def _jitter_h(ref: str, code: str, kind: str) -> float:
 
 # Описания грузов мока по-английски: карта в EN показывает их вместо русских
 CARGO_EN: dict[str, str] = {
-    "2 × 40' HC, электроника": "2 × 40' HC, electronics",
-    "3 × 20', полипропилен": "3 × 20', polypropylene",
     "1 × 40' HC, автозапчасти": "1 × 40' HC, auto parts",
-    "2 × 40', солнечные панели": "2 × 40', solar panels",
-    "1 × 40' reefer, продукты питания": "1 × 40' reefer, foodstuffs",
-    "4 × 40' HC, бытовая техника": "4 × 40' HC, home appliances",
-    "1 × 40' HC, текстиль": "1 × 40' HC, textiles",
-    "2 × 40' HC, станки": "2 × 40' HC, machine tools",
-    "3 × 40' HC, аккумуляторы": "3 × 40' HC, batteries",
-    "2 × 20', ферросплавы": "2 × 20', ferroalloys",
     "1 × 40' HC, автокомплекты": "1 × 40' HC, car assembly kits",
-    "1 × 40' HC, электрооборудование": "1 × 40' HC, electrical parts",
 }
+
+EAST_REF = "MC-26-0501"
+EAST_CLIENT = "Steppe Auto Assembly"
+EAST_CARGO = "1 × 40' HC, автокомплекты"
+EAST_FERRY = "Shahdag"  # единственный AIS-паром мок-флота на линии Алят — Актау
+EAST_DELAY_H = 10.0  # паром из Алята ушёл позже плана: в демо есть груз «с задержкой»
 
 
 def build_plan(  # noqa: PLR0913 — сценарий описывается параметрами
@@ -300,47 +290,63 @@ def build_plan(  # noqa: PLR0913 — сценарий описывается п�
     )
 
 
+def east_plan(now: datetime, ferries: dict[str, FerryState]) -> ShipmentPlan:
+    """MC-26-0501 (Škoda → Костанай, данные обезличены) — на пароме «Shahdag» или ждёт его в Аляте.
+
+    Груз привязан к настоящему циклу парома: пока тот идёт Алят → Актау, позиция груза —
+    AIS парома; в остальное время груз стоит в Аляте и ждёт погрузки или возвращения парома.
+    """
+    ferry = ferries[EAST_FERRY]
+    vessels = {("BAKU_ALAT", "AKTAU"): EAST_FERRY}
+    if ferry.sailing and not ferry.westbound:
+        return build_plan(
+            EAST_REF,
+            EAST_CLIENT,
+            EAST_CARGO,
+            ROUTE_KOSTANAY,
+            EventKind.departed,
+            "BAKU_ALAT",
+            ferry.sail_start,
+            delay_hours=EAST_DELAY_H,
+            vessels=vessels,
+        )
+    at_alat = not ferry.sailing and not ferry.westbound  # паром у причала в Аляте, грузится
+    return build_plan(
+        EAST_REF,
+        EAST_CLIENT,
+        EAST_CARGO,
+        ROUTE_KOSTANAY,
+        EventKind.arrived,
+        "BAKU_ALAT",
+        now - timedelta(hours=14),
+        hold_reason=(
+            f"Ожидание погрузки на паром «{EAST_FERRY}»"
+            if at_alat
+            else f"Ожидание парома «{EAST_FERRY}» с обратного рейса"
+        ),
+        hold_code="ferry_loading_wait" if at_alat else "ferry_return_wait",
+        hold_vessel=EAST_FERRY,
+        delay_hours=EAST_DELAY_H,
+        vessels=vessels,
+    )
+
+
 class MockShipmentSource:
+    """Публичное демо — два груза: 0501 (восток, на Костанай) и 0431 (пример санкционки)."""
+
     def __init__(self, clock: Callable[[], datetime], story: "DemoStory | None" = None) -> None:
         self._clock = clock
-        self._story = story  # демо-история 0398 (DEMO_CONTROL) вместо «вечного» сценария
+        self._story = story  # демо-история 0501 (DEMO_CONTROL) вместо «вечного» сценария
 
     async def list_plans(self, at: datetime | None = None) -> list[ShipmentPlan]:
         now = at or self._clock()
-        h = timedelta(hours=1)
         ferries = {state.spec.name: state for state in list_ferry_states(now)}
 
-        # 1. На AIS-пароме посреди Каспия: самый «продвинутый» западный рейс
-        west = [f for f in ferries.values() if f.sailing and f.westbound and f.spec.has_ais]
-        f1 = min(west, key=lambda f: f.sail_start)
-        route1 = ROUTE_KURYK if f1.spec.east_port == "KURYK" else ROUTE_AKTAU
-        on_ferry = build_plan(
-            "MC-26-0412",
-            "Silk Road Forwarders",
-            "2 × 40' HC, электроника",
-            route1,
-            EventKind.departed,
-            f1.from_code,
-            f1.sail_start,
-            vessels={(f1.from_code, "BAKU_ALAT"): f1.spec.name},
-        )
+        # 1. Восток: в демо-режиме — история с бурей в Актау, иначе — привязка к «Shahdag»
+        east = self._story.plan(now) if self._story is not None else east_plan(now, ferries)
 
-        # 2. Ждёт погоды в Актау: план предполагал отход 18 ч назад
-        weather_hold = build_plan(
-            "MC-26-0398",
-            "Steppe Freight KZ",
-            "3 × 20', полипропилен",
-            ROUTE_AKTAU,
-            EventKind.arrived,
-            "AKTAU",
-            now - 30 * h,
-            hold_reason="Погодный запрет на швартовку: Актау — критический ветер",
-            hold_code="weather_ban",
-            hold_node="AKTAU",
-            queue=QueueInput("AKTAU", 4, 8.0, 48.0, "weather_ban"),
-        )
-
-        # 3. Рельсы в степи: Кызылорда → Бейнеу, 16 ч из 26 в пути
+        # 2. Рельсы в степи: Кызылорда → Бейнеу, 16 ч из 26 в пути; в пакинг-листе — сталь
+        #    российского происхождения → «возможна санкционка»
         steppe = build_plan(
             "MC-26-0431",
             "Nomad Express",
@@ -348,151 +354,6 @@ class MockShipmentSource:
             ROUTE_KURYK,
             EventKind.departed,
             "KYZYLORDA",
-            now - 16 * h,
+            now - timedelta(hours=16),
         )
-
-        # 4. Таможня на границе AZ/GE
-        customs = build_plan(
-            "MC-26-0377",
-            "Kür Logistics",
-            "2 × 40', солнечные панели",
-            ROUTE_KURYK,
-            EventKind.arrived,
-            "BOYUK_KASIK",
-            now - 20 * h,
-            hold_reason="Таможенное оформление AZ/GE — ожидание досмотра",
-            hold_code="customs_wait",
-            hold_node="BOYUK_KASIK",
-        )
-
-        # 5. Поти, ждёт ро-ро на Констанцу по плану (отход через ~2 ч)
-        poti = build_plan(
-            "MC-26-0365",
-            "TransCaspian Logistics",
-            "1 × 40' reefer, продукты питания",
-            ROUTE_KURYK,
-            EventKind.arrived,
-            "POTI",
-            now - 10 * h,
-        )
-
-        # 6. Чёрное море: ро-ро, которого нет в нашем AIS-списке — только проекция
-        black_sea = build_plan(
-            "MC-26-0351",
-            "Danube Cargo SRL",
-            "4 × 40' HC, бытовая техника",
-            ROUTE_BATUMI,
-            EventKind.departed,
-            "BATUMI",
-            now - 30 * h,
-            vessels={("BATUMI", "CONSTANTA"): "Black Sea Link"},
-        )
-
-        # 7. Доставлен в Будапешт
-        delivered = build_plan(
-            "MC-26-0322",
-            "EuroAsia Rail",
-            "1 × 40' HC, текстиль",
-            ROUTE_KURYK,
-            EventKind.arrived,
-            "BUDAPEST",
-            now - 30 * h,
-        )
-
-        # 8. Только что покинул Хоргос после перегруза на широкую колею
-        khorgos = build_plan(
-            "MC-26-0447",
-            "Tianshan Trade",
-            "2 × 40' HC, станки",
-            ROUTE_KURYK,
-            EventKind.departed,
-            "KHORGOS",
-            now - 2 * h,
-            delay_hours=6.0,
-            pivot_note="перегруз на колею 1520 завершён",
-            pivot_note_code="gauge_change_done",
-        )
-
-        # 9. Ещё в Китае: Сиань → Урумчи
-        china = build_plan(
-            "MC-26-0455",
-            "Silk Road Forwarders",
-            "3 × 40' HC, аккумуляторы",
-            ROUTE_KURYK,
-            EventKind.departed,
-            "XIAN",
-            now - 20 * h,
-        )
-
-        # 11–12. На восток, в Костанай (по образцу автокомплектов Škoda, данные обезличены):
-        #     на пароме Баку → Актау и в Чёрном море на фидере Амбарлы → Поти
-        east_ferry = build_plan(
-            "MC-26-0501",
-            "Steppe Auto Assembly",
-            "1 × 40' HC, автокомплекты",
-            ROUTE_KOSTANAY,
-            EventKind.departed,
-            "BAKU_ALAT",
-            now - 8 * h,
-            vessels={("BAKU_ALAT", "AKTAU"): "Shahdag"},
-        )
-        east_sea = build_plan(
-            "MC-26-0502",
-            "Steppe Auto Assembly",
-            "1 × 40' HC, электрооборудование",
-            ROUTE_KOSTANAY,
-            EventKind.departed,
-            "AMBARLI",
-            now - 40 * h,
-            vessels={("AMBARLI", "POTI"): "Euxine Feeder"},
-        )
-
-        # 10. Привязан к парому «Azerbaijan» вне AIS: в море — проекция,
-        #     в порту — ждёт погрузки/возвращения парома
-        az = ferries["Azerbaijan"]
-        if az.sailing and az.westbound:
-            no_ais = build_plan(
-                "MC-26-0405",
-                "Steppe Freight KZ",
-                "2 × 20', ферросплавы",
-                ROUTE_AKTAU,
-                EventKind.departed,
-                "AKTAU",
-                az.sail_start,
-                vessels={("AKTAU", "BAKU_ALAT"): az.spec.name},
-            )
-        else:
-            reason = (
-                "Ожидание погрузки на паром «Azerbaijan»"
-                if az.westbound
-                else "Ожидание парома «Azerbaijan» с обратного рейса"
-            )
-            no_ais = build_plan(
-                "MC-26-0405",
-                "Steppe Freight KZ",
-                "2 × 20', ферросплавы",
-                ROUTE_AKTAU,
-                EventKind.arrived,
-                "AKTAU",
-                min(now - 14 * h, az.sail_start - 14 * h),
-                vessels={("AKTAU", "BAKU_ALAT"): az.spec.name},
-                hold_reason=reason,
-                hold_code="ferry_loading_wait" if az.westbound else "ferry_return_wait",
-                hold_vessel=az.spec.name,
-            )
-
-        plans = [
-            on_ferry,
-            self._story.plan(now) if self._story is not None else weather_hold,
-            steppe,
-            customs,
-            poti,
-            black_sea,
-            delivered,
-            khorgos,
-            china,
-            no_ais,
-            east_ferry,
-            east_sea,
-        ]
-        return [with_packing(p, now) for p in plans]
+        return [with_packing(p, now) for p in (east, steppe)]

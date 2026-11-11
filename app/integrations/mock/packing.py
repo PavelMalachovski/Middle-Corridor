@@ -4,10 +4,9 @@
 статус проверки груза в replay не меняется — так же, как его положение.
 
 Сценарии: 0431 — среди автозапчастей стальной прокат российского происхождения
-(прил. XVII 833/2014) → «возможна санкционка»; 0412 — процессоры из CHPL, получатель в
-Венгрии → «проверить вручную»; 0447 и 0455 — листа нет (прошёл Хоргос / ещё в Китае).
-Остальные — чистые: совпадения с запретами ввоза при известном не-РФ происхождении
-идут только справкой.
+(прил. XVII 833/2014) → «возможна санкционка»; 0501 — автокомплекты Škoda в Казахстан
+(коды настоящей декларации, данные обезличены) → «чисто». Статусы «проверить вручную»,
+«нет листа» и «ожидается» в демо не показываются — их держат тесты на своих планах.
 """
 
 import dataclasses
@@ -18,7 +17,7 @@ from app.services.cargo import CargoManifest, DangerousGoods
 from app.services.sanctions import PackingLine, PackingList
 from app.services.tracking import ShipmentPlan
 
-_DEST_COUNTRY = {"BUDAPEST": "HU", "CONSTANTA": "RO", "BUCHAREST": "RO", "KOSTANAY": "KZ"}
+_DEST_COUNTRY = {"BUDAPEST": "HU", "KOSTANAY": "KZ"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,20 +40,6 @@ def _l(
 
 
 DEMO_PACKING: dict[str, DemoPacking] = {
-    "MC-26-0412": DemoPacking(
-        timedelta(days=6),
-        (
-            _l(1, "8542310001", "Микросхемы-процессоры", "Processor integrated circuits", "CN"),
-            _l(2, "8471300000", "Ноутбуки", "Laptops", "CN"),
-            _l(3, "8517130000", "Смартфоны", "Smartphones", "CN"),
-        ),
-        "HU",
-    ),
-    "MC-26-0398": DemoPacking(
-        timedelta(days=5),
-        (_l(1, "3902100000", "Полипропилен в гранулах", "Polypropylene granules", "KZ"),),
-        "RO",
-    ),
     "MC-26-0431": DemoPacking(
         timedelta(hours=20),
         (
@@ -66,32 +51,9 @@ DEMO_PACKING: dict[str, DemoPacking] = {
         ),
         "HU",
     ),
-    "MC-26-0377": DemoPacking(
-        timedelta(days=4),
-        (_l(1, "8541430000", "Фотоэлектрические модули", "Photovoltaic modules", "CN"),),
-        "HU",
-    ),
-    "MC-26-0365": DemoPacking(
-        timedelta(days=5),
-        (_l(1, "0811909500", "Ягоды замороженные", "Frozen berries", "CN"),),
-        "HU",
-    ),
-    "MC-26-0351": DemoPacking(
-        timedelta(days=7),
-        (
-            _l(1, "8418102001", "Холодильники бытовые", "Household refrigerators", "CN"),
-            _l(2, "8450111100", "Стиральные машины", "Washing machines", "CN"),
-        ),
-        "RO",
-    ),
-    "MC-26-0322": DemoPacking(
-        timedelta(days=12),
-        (_l(1, "6109100000", "Футболки хлопковые", "Cotton T-shirts", "CN"),),
-        "HU",
-    ),
     # Восток: коды — из настоящей экспортной декларации автокомплектов (данные обезличены).
     # Чешский крепёж и запчасти в Казахстан — не запрет ввоза в ЕС и не прил. XXIII без
-    # связи с РФ → «чисто»; разъёмы из CHPL → «проверить вручную» (риск реэкспорта).
+    # связи с РФ → «чисто».
     "MC-26-0501": DemoPacking(
         timedelta(days=9),
         (
@@ -114,20 +76,6 @@ DEMO_PACKING: dict[str, DemoPacking] = {
             _l(9, "8708923599", "Глушитель", "Exhaust silencer", "CZ", 14, 165),
         ),
         "KZ",
-    ),
-    "MC-26-0502": DemoPacking(
-        timedelta(days=4),
-        (
-            _l(1, "8536699008", "Разъёмы электрические", "Electrical connectors", "DE", 4000, 380),
-            _l(2, "8544429009", "Жгуты проводов", "Wiring harnesses", "CZ", 300, 2900),
-            _l(3, "8512200009", "Фары", "Headlamps", "CZ", 120, 320),
-        ),
-        "KZ",
-    ),
-    "MC-26-0405": DemoPacking(
-        timedelta(days=3),
-        (_l(1, "7202410000", "Феррохром", "Ferro-chromium", "KZ"),),
-        "RO",
     ),
 }
 
@@ -154,17 +102,6 @@ DEMO_MANIFEST: dict[str, CargoManifest] = {
                 273,
             ),
         ),
-    ),
-    "MC-26-0502": CargoManifest(
-        container_no="DEMU5020027",
-        container_type="40' HC",
-        packages=6,
-        package_kind="поддоны",
-        package_kind_en="pallets",
-        gross_kg=4210,
-        net_kg=3600,
-        description="Электрооборудование для сборки автомобилей",
-        description_en="Electrical parts for car assembly",
     ),
 }
 

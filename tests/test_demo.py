@@ -1,4 +1,4 @@
-"""Демо-режим мока: часы со сдвигом, история MC-26-0398, /api/v1/demo/clock."""
+"""Демо-режим мока: часы со сдвигом, история MC-26-0501, /api/v1/demo/clock."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -62,7 +62,7 @@ def test_story_start_defaults_to_creation() -> None:
     assert clock.story_start == NOW
 
 
-# --- история MC-26-0398 -------------------------------------------------------
+# --- история MC-26-0501 -------------------------------------------------------
 
 T0 = NOW
 THRESHOLDS = WindThresholds.from_settings(Settings(_env_file=None))
@@ -79,22 +79,26 @@ def _at(hours: float):
 
 def test_story_start_waits_for_ferry() -> None:
     s = _at(0)
-    assert s.ref == "MC-26-0398"
+    assert s.ref == "MC-26-0501"
     assert s.state == ShipmentState.waiting
+    assert s.position.from_code == "BAKU_ALAT"  # ждёт парома в Аляте
+    assert (s.origin_code, s.destination_code) == ("MLADA_BOLESLAV", "KOSTANAY")
     assert s.hold_code == "ferry_loading_wait"
     assert s.hold_vessel == "Turkestan"
     assert s.queue is not None
     # до шторма — короткая очередь: только погрузка, без погоды
     assert (s.queue.p50_hours, s.queue.p90_hours) == (12.0, 24.0)
     assert s.queue.basis_code == "ferry_wait"
-    assert s.delay_hours == 18.0  # ~30 ч в Актау, по плану ушёл бы 18 ч назад
+    assert s.delay_hours == 18.0  # ~30 ч в Аляте, по плану ушёл бы 18 ч назад
 
 
 def test_story_storm() -> None:
     s = _at(6)
     assert s.hold_code == "weather_ban"
-    assert s.hold_node == "AKTAU"
+    assert s.hold_node == "AKTAU"  # запрет на швартовку — в Актау…
+    assert s.position.from_code == "BAKU_ALAT"  # …а груз ждёт в Аляте
     assert s.queue is not None
+    assert s.queue.port_code == "BAKU_ALAT"
     assert (s.queue.p50_hours, s.queue.p90_hours) == (60.0, 120.0)
     assert s.queue.basis_code == "weather_ban"
     assert s.delay_hours == 24.0  # +6 ч к старту — пуш «задержка растёт» (порог 3 ч)
@@ -108,12 +112,24 @@ def test_story_aktau_levels() -> None:
         assert wind is not None
         return evaluate_level(*wind, THRESHOLDS)
 
-    assert level(-30) == "warning"  # с прибытия в Актау — «риск шторма», а не поле ветра
+    assert level(-30) == "warning"  # с прибытия в Алят — «риск шторма», а не поле ветра
     assert level(0) == "warning"
     assert level(6) == "critical"
     assert level(65) == "critical"
     assert level(66) == "watch"
-    assert story.aktau_wind(T0 + 100 * H) is None
+    assert level(92) is None  # прибыл в Актау — тихо, без алерта поля ветра
+    assert level(147) is None
+    assert level(148) == "warning"  # −36 ч следующего цикла
+    assert story.aktau_wind(T0 - 40 * H) is None  # до истории — обычное поле ветра
+
+
+async def test_mock_nodes_quiet_when_0501_arrives_in_aktau() -> None:
+    """Карточка «прибыл в Актау» и вкладка «Коридор» не спорят: в Актау нет алерта."""
+    for hours in (92, 104, 114):
+        now = T0 + hours * H
+        nodes = await MockNodeSource(lambda now=now: now, THRESHOLDS, story=_story()).list_nodes()
+        aktau = next(n for n in nodes if n.code == "AKTAU")
+        assert aktau.alert_level is None, hours
 
 
 def test_story_after_storm_waits_for_ferry_again() -> None:
@@ -123,7 +139,7 @@ def test_story_after_storm_waits_for_ferry_again() -> None:
 
 
 def test_story_no_aktau_hold_or_queue_after_departure() -> None:
-    for hours in (93, 112, 123, 144, 160):  # Алят, Гянджа, Бёюк-Кясик, Тбилиси, Поти
+    for hours in (93, 103, 115, 119):  # Актау, Бейнеу
         s = _at(hours)
         assert s.state == ShipmentState.waiting, hours
         assert s.hold_code is None, hours
@@ -134,25 +150,31 @@ def test_story_departs_on_ferry() -> None:
     s = _at(71)
     assert s.state == ShipmentState.in_transit
     assert s.position.on_vessel == "Turkestan"
+    assert (s.position.from_code, s.position.to_code) == ("BAKU_ALAT", "AKTAU")
+    assert s.position.mode == "sea"
     assert s.position.confirmed is False
     assert s.last_event_note_code == "loaded_on_ferry"
     assert s.queue is None
 
 
 def test_story_delivered_then_cycles() -> None:
-    assert _at(219).state == ShipmentState.in_transit
-    assert _at(220).state == ShipmentState.delivered
-    again = _at(244)
+    rail = _at(130)
+    assert rail.state == ShipmentState.in_transit
+    assert (rail.position.from_code, rail.position.mode) == ("BEINEU", "rail")
+    assert _at(159).state == ShipmentState.in_transit
+    done = _at(160)
+    assert done.state == ShipmentState.delivered and done.destination_code == "KOSTANAY"
+    again = _at(184)
     assert again.state == ShipmentState.waiting
     assert again.hold_code == "ferry_loading_wait"
 
 
 def test_story_beats_are_coarse() -> None:
-    """Пять шагов на всю историю: ведущему не нужно 12 жестов и 12 баннеров до доставки."""
+    """Пять шагов на всю историю: ведущему не нужен жест на каждое событие маршрута."""
     beats = _story().beats(T0)
-    # шторм (через 6 ч после начала — в «почему задержка» уже видна погода), паром, Алят, Поти,
-    # доставлен
-    assert beats == [T0 + h * H for h in (12, 70, 92, 172, 220)]
+    # шторм (через 6 ч после начала — в «почему задержка» уже видна погода), паром из Алята,
+    # Актау, Бейнеу, доставлен в Костанай
+    assert beats == [T0 + h * H for h in (12, 70, 92, 114, 160)]
 
 
 def test_story_before_start_is_first_cycle() -> None:
@@ -176,15 +198,18 @@ async def test_mock_nodes_follow_story() -> None:
 async def test_mock_shipments_use_story() -> None:
     now = T0
     plans = await MockShipmentSource(lambda: now, story=_story()).list_plans()
-    plan = next(p for p in plans if p.ref == "MC-26-0398")
-    assert project_shipment(plan, now).hold_code == "ferry_loading_wait"
+    assert [p.ref for p in plans].count("MC-26-0501") == 1  # история заменяет «вечный» 0501
+    plan = next(p for p in plans if p.ref == "MC-26-0501")
+    assert project_shipment(plan, now).hold_vessel == "Turkestan"
+    assert plan.cargo_manifest is not None and plan.packing_list is not None
 
 
-async def test_no_story_keeps_0398() -> None:
+async def test_no_story_keeps_static_0501() -> None:
     now = T0
     plans = await MockShipmentSource(lambda: now).list_plans()
-    plan = next(p for p in plans if p.ref == "MC-26-0398")
-    assert project_shipment(plan, now).hold_code == "weather_ban"
+    assert [p.ref for p in plans] == ["MC-26-0501", "MC-26-0431"]
+    plan = next(p for p in plans if p.ref == "MC-26-0501")
+    assert "Turkestan" not in {leg.vessel for leg in plan.legs}  # без истории — паром мок-флота
 
 
 # --- /api/v1/demo/clock ---------------------------------------------------------
@@ -221,7 +246,7 @@ async def test_demo_advance_moves_snapshot() -> None:
         assert state.status_code == 200
         body = state.json()
         assert body["offset_hours"] == 24
-        assert body["story_ref"] == "MC-26-0398"
+        assert body["story_ref"] == "MC-26-0501"
         snap = (await client.get("/api/v1/snapshot")).json()
         server_time = datetime.fromisoformat(snap["server_time"])
         assert abs(server_time - (datetime.now(UTC) + 24 * H)) < timedelta(minutes=1)
@@ -230,10 +255,13 @@ async def test_demo_advance_moves_snapshot() -> None:
 async def test_demo_next_beat_storm_then_ferry() -> None:
     async with _client(_demo_settings()) as client:
         await client.post("/api/v1/demo/clock", json={"action": "reset"})
-        first = (await client.get("/api/v1/shipments/MC-26-0398")).json()
+        refs = [s["ref"] for s in (await client.get("/api/v1/snapshot")).json()["shipments"]]
+        assert sorted(refs) == ["MC-26-0431", "MC-26-0501"]  # ни второго 0501, ни старых грузов
+        first = (await client.get("/api/v1/shipments/MC-26-0501")).json()
         assert first["hold_code"] == "ferry_loading_wait"
+        assert first["cargo_details"]["container_no"] == "DEMU5010012"
         await client.post("/api/v1/demo/clock", json={"action": "next_beat"})
-        storm = (await client.get("/api/v1/shipments/MC-26-0398")).json()
+        storm = (await client.get("/api/v1/shipments/MC-26-0501")).json()
         assert storm["hold_code"] == "weather_ban"
         aktau = next(
             n
@@ -242,19 +270,31 @@ async def test_demo_next_beat_storm_then_ferry() -> None:
         )
         assert aktau["alert_level"] == "critical"
         await client.post("/api/v1/demo/clock", json={"action": "next_beat"})
-        sailing = (await client.get("/api/v1/shipments/MC-26-0398")).json()
+        sailing = (await client.get("/api/v1/shipments/MC-26-0501")).json()
         assert sailing["last_event_kind"] == "departed"
         assert sailing["last_event_note_code"] == "loaded_on_ferry"
+        await client.post("/api/v1/demo/clock", json={"action": "next_beat"})
+        aktau_arrival = (await client.get("/api/v1/shipments/MC-26-0501")).json()
+        assert (aktau_arrival["last_event_kind"], aktau_arrival["last_event_node"]) == (
+            "arrived",
+            "AKTAU",
+        )
+        await client.post("/api/v1/demo/clock", json={"action": "next_beat"})
+        beineu = (await client.get("/api/v1/shipments/MC-26-0501")).json()
+        assert beineu["last_event_node"] == "BEINEU"
+        await client.post("/api/v1/demo/clock", json={"action": "next_beat"})
+        done = (await client.get("/api/v1/shipments/MC-26-0501")).json()
+        assert done["state"] == "delivered" and done["destination_code"] == "KOSTANAY"
 
 
 async def test_demo_next_beat_wraps() -> None:
     async with _client(_demo_settings()) as client:
         await client.post("/api/v1/demo/clock", json={"action": "reset"})
-        await client.post("/api/v1/demo/clock", json={"action": "advance", "hours": 221})
-        done = (await client.get("/api/v1/shipments/MC-26-0398")).json()
+        await client.post("/api/v1/demo/clock", json={"action": "advance", "hours": 161})
+        done = (await client.get("/api/v1/shipments/MC-26-0501")).json()
         assert done["state"] == "delivered"
         await client.post("/api/v1/demo/clock", json={"action": "next_beat"})
-        again = (await client.get("/api/v1/shipments/MC-26-0398")).json()
+        again = (await client.get("/api/v1/shipments/MC-26-0501")).json()
         assert again["state"] == "waiting"
         assert again["hold_code"] == "ferry_loading_wait"
 
@@ -297,7 +337,7 @@ def test_story_storm_eta_range_covers_actual() -> None:
     s = _at(6)
     assert s.eta is not None and s.eta_latest is not None
     assert s.eta < s.eta_latest
-    assert s.eta_latest >= T0 + 220 * H  # фактическое прибытие в Констанцу
+    assert s.eta_latest >= T0 + 160 * H  # фактическое прибытие в Костанай
 
 
 def test_story_storm_beat_shows_weather_in_breakdown() -> None:
@@ -311,8 +351,8 @@ def test_story_storm_beat_shows_weather_in_breakdown() -> None:
 async def test_story_packing_list_clear_on_every_beat() -> None:
     story = _story()
     source = MockShipmentSource(lambda: T0, story=story)
-    for hours in (0, 30, 71, 150, 230):
+    for hours in (0, 30, 71, 93, 150, 170):
         now = T0 + timedelta(hours=hours)
-        plan = next(p for p in await source.list_plans(now) if p.ref == "MC-26-0398")
+        plan = next(p for p in await source.list_plans(now) if p.ref == "MC-26-0501")
         sanctions = project_shipment(plan, now).sanctions
         assert sanctions is not None and sanctions.status == "clear", hours
