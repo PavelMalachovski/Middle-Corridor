@@ -17,9 +17,9 @@ from app.integrations.mock.fleet import (
     FERRIES,
     ROUTE_KOSTANAY,
     ROUTE_KURYK,
-    FerryState,
     MockShipmentSource,
     build_plan,
+    east_departure,
     east_plan,
     list_ferry_states,
 )
@@ -120,11 +120,11 @@ async def test_snapshot_carries_codes_and_english_names(mock_service: MapSnapsho
         if s.hold_reason:
             assert s.hold_code, s.ref
     east = next(s for s in snap.shipments if s.ref == "MC-26-0501")
-    if east.state == ShipmentState.waiting:
+    if east.position.from_code == "BAKU_ALAT" and east.state == ShipmentState.waiting:
         assert east.hold_code in {"ferry_loading_wait", "ferry_return_wait"}
         assert east.hold_vessel == EAST_FERRY
-    else:
-        assert east.last_event_note_code == "loaded_on_ferry"
+    else:  # после Алята — ни стоянки по парому, ни очереди
+        assert east.hold_code is None and east.queue is None
     for v in snap.vessels:
         if v.has_recent_data:
             assert v.from_code in NODES and v.to_code in NODES
@@ -488,26 +488,12 @@ def test_mock_build_plan_weather_queue() -> None:
     assert hold.queue.basis_code == "weather_ban"
 
 
-def _shahdag_at(eastbound_sailing: bool, at_alat: bool = False) -> tuple[datetime, FerryState]:
-    """Ближайший к NOW час, когда «Shahdag» идёт Алят → Актау (или стоит / грузится в Аляте)."""
-    for hour in range(56):
-        ts = NOW + timedelta(hours=hour)
-        state = next(f for f in list_ferry_states(ts) if f.spec.name == EAST_FERRY)
-        sailing_east = state.sailing and not state.westbound
-        loading = not state.sailing and not state.westbound
-        if (eastbound_sailing and sailing_east) or (
-            not eastbound_sailing and not sailing_east and loading == at_alat
-        ):
-            return ts, state
-    raise AssertionError("цикл парома без нужной фазы")
-
-
 def test_mock_0501_rides_shahdag_with_ais() -> None:
     """0501 на AIS-пароме: позиция — с парома, плечо Алят → Актау, задержка видна."""
-    ts, state = _shahdag_at(eastbound_sailing=True)
-    ferries = {f.spec.name: f for f in list_ferry_states(ts)}
-    plan = east_plan(ts, ferries)
-    s = project_shipment(plan, ts, {EAST_FERRY: (state.lat, state.lon)})
+    ts = east_departure(NOW) + timedelta(hours=5)
+    state = next(f for f in list_ferry_states(ts) if f.spec.name == EAST_FERRY)
+    assert state.sailing and not state.westbound  # отход груза = восточный рейс «Shahdag»
+    s = project_shipment(east_plan(ts), ts, {EAST_FERRY: (state.lat, state.lon)})
     assert s.state == ShipmentState.in_transit
     assert s.position.source == PositionSource.ais and s.position.on_vessel == EAST_FERRY
     assert (s.position.lat, s.position.lon) == (state.lat, state.lon)
@@ -520,15 +506,36 @@ def test_mock_0501_rides_shahdag_with_ais() -> None:
 
 
 @pytest.mark.parametrize(
-    ("at_alat", "code"), [(True, "ferry_loading_wait"), (False, "ferry_return_wait")]
+    ("before_h", "code", "ferry_at_alat"),
+    [(4, "ferry_loading_wait", True), (12, "ferry_return_wait", False)],
 )
-def test_mock_0501_waits_for_shahdag_in_alat(at_alat: bool, code: str) -> None:
-    ts, _ = _shahdag_at(eastbound_sailing=False, at_alat=at_alat)
-    ferries = {f.spec.name: f for f in list_ferry_states(ts)}
-    s = project_shipment(east_plan(ts, ferries), ts)
+def test_mock_0501_waits_for_shahdag_in_alat(before_h: int, code: str, ferry_at_alat: bool) -> None:
+    ts = east_departure(NOW + timedelta(hours=60)) - timedelta(hours=before_h)
+    state = next(f for f in list_ferry_states(ts) if f.spec.name == EAST_FERRY)
+    assert (not state.sailing and not state.westbound) == ferry_at_alat
+    s = project_shipment(east_plan(ts), ts)
     assert s.state == ShipmentState.waiting and s.position.from_code == "BAKU_ALAT"
     assert s.hold_code == code and s.hold_vessel == EAST_FERRY
     assert s.delay_hours >= 10
+
+
+async def test_mock_0501_never_jumps_back() -> None:
+    """Цикл 0501 — только вперёд по маршруту; назад в Алят — лишь после «доставлен»."""
+    source = MockShipmentSource(lambda: NOW)
+    prev: tuple[int, ShipmentState] | None = None
+    restarts = 0
+    for minutes in range(0, (3 * 112 + 1) * 60, 30):  # три цикла груза, шаг 30 мин
+        ts = NOW + timedelta(minutes=minutes)
+        plan = next(p for p in await source.list_plans(ts) if p.ref == "MC-26-0501")
+        s = project_shipment(plan, ts)
+        idx = ROUTE_KOSTANAY.index(s.position.from_code or "")
+        if s.state != ShipmentState.delivered:
+            assert s.delay_hours >= 10, ts  # фильтр «с задержкой» в e2e
+        if prev is not None and idx < prev[0]:
+            assert prev[1] == ShipmentState.delivered, (ts, prev, idx)
+            restarts += 1
+        prev = (idx, s.state)
+    assert restarts == 3
 
 
 # --- санкции: пакинг-листы демо-грузов -------------------------------------------
@@ -638,8 +645,7 @@ async def test_mock_eastbound_shipment(mock_service: MapSnapshotService) -> None
     snap = await mock_service.snapshot()
     east = {s.ref: s for s in snap.shipments}["MC-26-0501"]
     assert east.origin_code == "MLADA_BOLESLAV" and east.destination_code == "KOSTANAY"
-    assert east.position.from_code == "BAKU_ALAT"
-    assert east.position.mode == ("sea" if east.state == ShipmentState.in_transit else None)
+    assert east.position.from_code in ROUTE_KOSTANAY[ROUTE_KOSTANAY.index("BAKU_ALAT") :]
     assert east.sanctions and east.sanctions.status == "clear" and east.sanctions.matches == []
 
 

@@ -7,12 +7,15 @@ AIS» — как в жизни на Каспии: у них нет позици�
 
 Отправок в публичном демо две, обе строятся относительно текущего момента:
 MC-26-0501 — настоящий маршрут автокомплектов Škoda Млада-Болеслав → … → Алят →
-Актау → Костанай (данные обезличены), привязан к циклу парома «Shahdag»;
+Актау → Костанай (данные обезличены), цикл 112 ч на рейсах парома «Shahdag»
+(только вперёд: Алят → паром → Актау → Бейнеу → Костанай → заново);
 MC-26-0431 — пример «возможна санкционка» на рельсах в степи. Под DEMO_CONTROL
 0501 заменяет история (story.py). Положение считает services.tracking.
 """
 
+import dataclasses
 import hashlib
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -290,45 +293,75 @@ def build_plan(  # noqa: PLR0913 — сценарий описывается п�
     )
 
 
-def east_plan(now: datetime, ferries: dict[str, FerryState]) -> ShipmentPlan:
-    """MC-26-0501 (Škoda → Костанай, данные обезличены) — на пароме «Shahdag» или ждёт его в Аляте.
+EAST_WAIT_H = 16.0  # ждёт в Аляте до отхода парома (начало цикла груза)
+EAST_CYCLE_H = 2 * CYCLE_H  # Алят → Костанай (≈ 88 ч) не влезает в один рейс парома
+# После отхода из Алята: паром (рейс «Shahdag»), стоянка в Актау, рельсы, Бейнеу, Костанай
+_EAST_AFTER = (
+    (EventKind.arrived, "AKTAU", SAIL_H),
+    (EventKind.departed, "AKTAU", SAIL_H + 12.0),
+    (EventKind.arrived, "BEINEU", SAIL_H + 22.0),
+    (EventKind.departed, "BEINEU", SAIL_H + 28.0),
+    (EventKind.arrived, "KOSTANAY", SAIL_H + 68.0),
+)
 
-    Груз привязан к настоящему циклу парома: пока тот идёт Алят → Актау, позиция груза —
-    AIS парома; в остальное время груз стоит в Аляте и ждёт погрузки или возвращения парома.
+
+def east_departure(now: datetime) -> datetime:
+    """Отход «Shahdag» из Алята, к которому привязан текущий цикл 0501.
+
+    Цикл груза — два цикла парома (112 ч): [отход − 16 ч, отход + 96 ч). Берём каждый
+    второй восточный рейс, поэтому за цикл груз проходит путь только вперёд: Алят →
+    паром → Актау → Бейнеу → Костанай (доставлен ~8 ч) → новый цикл.
     """
-    ferry = ferries[EAST_FERRY]
-    vessels = {("BAKU_ALAT", "AKTAU"): EAST_FERRY}
-    if ferry.sailing and not ferry.westbound:
-        return build_plan(
-            EAST_REF,
-            EAST_CLIENT,
-            EAST_CARGO,
-            ROUTE_KOSTANAY,
-            EventKind.departed,
-            "BAKU_ALAT",
-            ferry.sail_start,
-            delay_hours=EAST_DELAY_H,
-            vessels=vessels,
-        )
-    at_alat = not ferry.sailing and not ferry.westbound  # паром у причала в Аляте, грузится
-    return build_plan(
+    spec = next(f for f in FERRIES if f.name == EAST_FERRY)
+    first = _EPOCH + timedelta(hours=_AT_ALAT_END - spec.offset_h)  # отход на восток
+    hours = (now - first).total_seconds() / 3600.0 + EAST_WAIT_H
+    return first + timedelta(hours=math.floor(hours / EAST_CYCLE_H) * EAST_CYCLE_H)
+
+
+def east_plan(now: datetime) -> ShipmentPlan:
+    """MC-26-0501 (Škoda → Костанай, данные обезличены) на цикле парома «Shahdag».
+
+    Ждёт парома в Аляте → на «Shahdag» (позиция — AIS парома) → Актау → рельсы на
+    Бейнеу → Костанай; задержка ≥ 10 ч на всём пути (в демо есть груз «с задержкой»).
+    """
+    depart = east_departure(now)
+    arrive_alat = depart - timedelta(hours=EAST_WAIT_H)
+    hold: dict[str, str | None] = {}
+    if now < depart:
+        at_alat = depart - now <= timedelta(hours=_AT_ALAT_END - _SAIL_WEST_END)
+        hold = {
+            "hold_reason": (
+                f"Ожидание погрузки на паром «{EAST_FERRY}»"
+                if at_alat
+                else f"Ожидание парома «{EAST_FERRY}» с обратного рейса"
+            ),
+            "hold_code": "ferry_loading_wait" if at_alat else "ferry_return_wait",
+            "hold_vessel": EAST_FERRY,
+        }
+    plan = build_plan(
         EAST_REF,
         EAST_CLIENT,
         EAST_CARGO,
         ROUTE_KOSTANAY,
         EventKind.arrived,
         "BAKU_ALAT",
-        now - timedelta(hours=14),
-        hold_reason=(
-            f"Ожидание погрузки на паром «{EAST_FERRY}»"
-            if at_alat
-            else f"Ожидание парома «{EAST_FERRY}» с обратного рейса"
-        ),
-        hold_code="ferry_loading_wait" if at_alat else "ferry_return_wait",
-        hold_vessel=EAST_FERRY,
+        arrive_alat,
         delay_hours=EAST_DELAY_H,
-        vessels=vessels,
+        vessels={("BAKU_ALAT", "AKTAU"): EAST_FERRY},
+        **hold,
     )
+    after = [
+        TrackingEvent(
+            EventKind.departed,
+            "BAKU_ALAT",
+            depart,
+            f"погружен на паром «{EAST_FERRY}»",
+            note_code="loaded_on_ferry",
+            note_vessel=EAST_FERRY,
+        ),
+        *(TrackingEvent(kind, code, depart + timedelta(hours=h)) for kind, code, h in _EAST_AFTER),
+    ]
+    return dataclasses.replace(plan, events=plan.events + tuple(after))
 
 
 class MockShipmentSource:
@@ -340,10 +373,9 @@ class MockShipmentSource:
 
     async def list_plans(self, at: datetime | None = None) -> list[ShipmentPlan]:
         now = at or self._clock()
-        ferries = {state.spec.name: state for state in list_ferry_states(now)}
 
-        # 1. Восток: в демо-режиме — история с бурей в Актау, иначе — привязка к «Shahdag»
-        east = self._story.plan(now) if self._story is not None else east_plan(now, ferries)
+        # 1. Восток: в демо-режиме — история с бурей в Актау, иначе — цикл на «Shahdag»
+        east = self._story.plan(now) if self._story is not None else east_plan(now)
 
         # 2. Рельсы в степи: Кызылорда → Бейнеу, 16 ч из 26 в пути; в пакинг-листе — сталь
         #    российского происхождения → «возможна санкционка»
