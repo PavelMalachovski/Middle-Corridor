@@ -1,7 +1,7 @@
 {
  "generated_at": "2026-10-31T11:08:54.312620Z",
  "server_time": "2026-10-31T11:08:54.312620Z",
- "replay": false,
+ "replay": true,
  "mock": true,
  "live": {
   "stream": true,
@@ -145,6 +145,25 @@
    "forecast": null
   },
   {
+   "code": "KOSTANAY",
+   "name": "Костанай",
+   "country": "Казахстан",
+   "name_en": "Kostanay",
+   "country_en": "Kazakhstan",
+   "leg": "rail_cis",
+   "kind": "rail",
+   "lat": 53.21,
+   "lon": 63.62,
+   "is_weather_tracked": false,
+   "alert_level": null,
+   "alert_message": null,
+   "wind_speed": null,
+   "wind_gust": null,
+   "wind_dir": null,
+   "weather_ts": null,
+   "forecast": null
+  },
+  {
    "code": "AKTAU",
    "name": "Актау",
    "country": "Казахстан",
@@ -156,340 +175,340 @@
    "lon": 51.25,
    "is_weather_tracked": true,
    "alert_level": "critical",
-   "alert_message": "Ветер 21 м/с, порывы до 28 м/с",
-   "wind_speed": 20.7,
-   "wind_gust": 28.5,
+   "alert_message": "Ветер 21 м/с, порывы до 29 м/с",
+   "wind_speed": 21.0,
+   "wind_gust": 29.0,
    "wind_dir": 236.0,
    "weather_ts": "2026-10-31T11:00:00Z",
    "forecast": [
     {
      "ts": "2026-10-31T05:00:00Z",
-     "speed": 19.6,
-     "gust": 27.0,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T06:00:00Z",
-     "speed": 19.9,
-     "gust": 27.4,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T07:00:00Z",
-     "speed": 20.1,
-     "gust": 27.6,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T08:00:00Z",
-     "speed": 20.3,
-     "gust": 27.9,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T09:00:00Z",
-     "speed": 20.4,
-     "gust": 28.1,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T10:00:00Z",
-     "speed": 20.6,
-     "gust": 28.3,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T11:00:00Z",
-     "speed": 20.7,
-     "gust": 28.5,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T12:00:00Z",
-     "speed": 20.9,
-     "gust": 28.6,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T13:00:00Z",
      "speed": 21.0,
-     "gust": 28.8,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T14:00:00Z",
-     "speed": 21.2,
+     "speed": 21.0,
      "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T15:00:00Z",
-     "speed": 21.3,
-     "gust": 29.2,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T16:00:00Z",
-     "speed": 21.4,
-     "gust": 29.3,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T17:00:00Z",
-     "speed": 21.5,
-     "gust": 29.4,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T18:00:00Z",
-     "speed": 21.5,
-     "gust": 29.5,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T19:00:00Z",
-     "speed": 21.5,
-     "gust": 29.4,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T20:00:00Z",
-     "speed": 21.3,
-     "gust": 29.2,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T21:00:00Z",
-     "speed": 21.1,
-     "gust": 28.9,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T22:00:00Z",
-     "speed": 20.7,
-     "gust": 28.4,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-10-31T23:00:00Z",
-     "speed": 20.1,
-     "gust": 27.7,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T00:00:00Z",
-     "speed": 19.4,
-     "gust": 26.8,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T01:00:00Z",
-     "speed": 18.6,
-     "gust": 25.7,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T02:00:00Z",
-     "speed": 17.7,
-     "gust": 24.5,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T03:00:00Z",
-     "speed": 16.8,
-     "gust": 23.3,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T04:00:00Z",
-     "speed": 15.9,
-     "gust": 22.2,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T05:00:00Z",
-     "speed": 15.3,
-     "gust": 21.4,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T06:00:00Z",
-     "speed": 15.0,
-     "gust": 21.0,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T07:00:00Z",
-     "speed": 15.0,
-     "gust": 21.0,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T08:00:00Z",
-     "speed": 15.3,
-     "gust": 21.3,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T09:00:00Z",
-     "speed": 15.8,
-     "gust": 22.0,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T10:00:00Z",
-     "speed": 16.5,
-     "gust": 22.9,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T11:00:00Z",
-     "speed": 17.2,
-     "gust": 23.8,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T12:00:00Z",
-     "speed": 17.8,
-     "gust": 24.7,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T13:00:00Z",
-     "speed": 18.4,
-     "gust": 25.4,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T14:00:00Z",
-     "speed": 18.9,
-     "gust": 26.1,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T15:00:00Z",
-     "speed": 19.3,
-     "gust": 26.5,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T16:00:00Z",
-     "speed": 19.5,
-     "gust": 26.9,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T17:00:00Z",
-     "speed": 19.7,
-     "gust": 27.1,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T18:00:00Z",
-     "speed": 19.8,
-     "gust": 27.2,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T19:00:00Z",
-     "speed": 19.8,
-     "gust": 27.3,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T20:00:00Z",
-     "speed": 19.9,
-     "gust": 27.3,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T21:00:00Z",
-     "speed": 19.9,
-     "gust": 27.3,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T22:00:00Z",
-     "speed": 19.9,
-     "gust": 27.3,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-01T23:00:00Z",
-     "speed": 19.9,
-     "gust": 27.4,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-02T00:00:00Z",
-     "speed": 19.9,
-     "gust": 27.4,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-02T01:00:00Z",
-     "speed": 20.0,
-     "gust": 27.5,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-02T02:00:00Z",
-     "speed": 20.1,
-     "gust": 27.7,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-02T03:00:00Z",
-     "speed": 20.3,
-     "gust": 27.8,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-02T04:00:00Z",
-     "speed": 20.4,
-     "gust": 28.0,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-02T05:00:00Z",
-     "speed": 20.6,
-     "gust": 28.2,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-02T06:00:00Z",
-     "speed": 20.7,
-     "gust": 28.4,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-02T07:00:00Z",
-     "speed": 20.8,
-     "gust": 28.5,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-02T08:00:00Z",
-     "speed": 20.8,
-     "gust": 28.5,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-02T09:00:00Z",
-     "speed": 20.7,
-     "gust": 28.3,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-02T10:00:00Z",
-     "speed": 20.4,
-     "gust": 28.0,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     },
     {
      "ts": "2026-11-02T11:00:00Z",
-     "speed": 20.0,
-     "gust": 27.5,
+     "speed": 21.0,
+     "gust": 29.0,
      "level": "critical"
     }
    ]
@@ -2338,6 +2357,725 @@
    "wind_dir": null,
    "weather_ts": null,
    "forecast": null
+  },
+  {
+   "code": "MLADA_BOLESLAV",
+   "name": "Млада-Болеслав",
+   "country": "Чехия",
+   "name_en": "Mladá Boleslav",
+   "country_en": "Czechia",
+   "leg": "europe",
+   "kind": "rail",
+   "lat": 50.41,
+   "lon": 14.9,
+   "is_weather_tracked": false,
+   "alert_level": null,
+   "alert_message": null,
+   "wind_speed": null,
+   "wind_gust": null,
+   "wind_dir": null,
+   "weather_ts": null,
+   "forecast": null
+  },
+  {
+   "code": "KOPER",
+   "name": "Копер",
+   "country": "Словения",
+   "name_en": "Koper",
+   "country_en": "Slovenia",
+   "leg": "europe",
+   "kind": "port",
+   "lat": 45.55,
+   "lon": 13.73,
+   "is_weather_tracked": true,
+   "alert_level": null,
+   "alert_message": null,
+   "wind_speed": 4.4,
+   "wind_gust": 7.2,
+   "wind_dir": 275.0,
+   "weather_ts": "2026-10-31T11:00:00Z",
+   "forecast": [
+    {
+     "ts": "2026-10-31T05:00:00Z",
+     "speed": 3.4,
+     "gust": 5.9,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T06:00:00Z",
+     "speed": 3.6,
+     "gust": 6.1,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T07:00:00Z",
+     "speed": 3.7,
+     "gust": 6.4,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T08:00:00Z",
+     "speed": 3.9,
+     "gust": 6.6,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T09:00:00Z",
+     "speed": 4.1,
+     "gust": 6.8,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T10:00:00Z",
+     "speed": 4.2,
+     "gust": 7.0,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T11:00:00Z",
+     "speed": 4.4,
+     "gust": 7.2,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T12:00:00Z",
+     "speed": 4.5,
+     "gust": 7.4,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T13:00:00Z",
+     "speed": 4.6,
+     "gust": 7.5,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T14:00:00Z",
+     "speed": 4.7,
+     "gust": 7.6,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T15:00:00Z",
+     "speed": 4.8,
+     "gust": 7.7,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T16:00:00Z",
+     "speed": 4.8,
+     "gust": 7.7,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T17:00:00Z",
+     "speed": 4.8,
+     "gust": 7.7,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T18:00:00Z",
+     "speed": 4.8,
+     "gust": 7.7,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T19:00:00Z",
+     "speed": 4.7,
+     "gust": 7.7,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T20:00:00Z",
+     "speed": 4.7,
+     "gust": 7.6,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T21:00:00Z",
+     "speed": 4.6,
+     "gust": 7.5,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T22:00:00Z",
+     "speed": 4.5,
+     "gust": 7.3,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T23:00:00Z",
+     "speed": 4.4,
+     "gust": 7.2,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T00:00:00Z",
+     "speed": 4.2,
+     "gust": 7.0,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T01:00:00Z",
+     "speed": 4.1,
+     "gust": 6.8,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T02:00:00Z",
+     "speed": 3.9,
+     "gust": 6.6,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T03:00:00Z",
+     "speed": 3.8,
+     "gust": 6.4,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T04:00:00Z",
+     "speed": 3.6,
+     "gust": 6.2,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T05:00:00Z",
+     "speed": 3.4,
+     "gust": 6.0,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T06:00:00Z",
+     "speed": 3.3,
+     "gust": 5.8,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T07:00:00Z",
+     "speed": 3.2,
+     "gust": 5.6,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T08:00:00Z",
+     "speed": 3.0,
+     "gust": 5.4,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T09:00:00Z",
+     "speed": 2.9,
+     "gust": 5.3,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T10:00:00Z",
+     "speed": 2.9,
+     "gust": 5.2,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T11:00:00Z",
+     "speed": 2.8,
+     "gust": 5.1,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T12:00:00Z",
+     "speed": 2.8,
+     "gust": 5.1,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T13:00:00Z",
+     "speed": 2.7,
+     "gust": 5.1,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T14:00:00Z",
+     "speed": 2.7,
+     "gust": 5.1,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T15:00:00Z",
+     "speed": 2.8,
+     "gust": 5.1,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T16:00:00Z",
+     "speed": 2.8,
+     "gust": 5.1,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T17:00:00Z",
+     "speed": 2.8,
+     "gust": 5.2,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T18:00:00Z",
+     "speed": 2.9,
+     "gust": 5.3,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T19:00:00Z",
+     "speed": 3.0,
+     "gust": 5.4,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T20:00:00Z",
+     "speed": 3.1,
+     "gust": 5.5,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T21:00:00Z",
+     "speed": 3.2,
+     "gust": 5.6,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T22:00:00Z",
+     "speed": 3.3,
+     "gust": 5.8,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T23:00:00Z",
+     "speed": 3.4,
+     "gust": 5.9,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T00:00:00Z",
+     "speed": 3.5,
+     "gust": 6.1,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T01:00:00Z",
+     "speed": 3.6,
+     "gust": 6.2,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T02:00:00Z",
+     "speed": 3.8,
+     "gust": 6.4,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T03:00:00Z",
+     "speed": 3.9,
+     "gust": 6.6,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T04:00:00Z",
+     "speed": 4.1,
+     "gust": 6.8,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T05:00:00Z",
+     "speed": 4.2,
+     "gust": 6.9,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T06:00:00Z",
+     "speed": 4.3,
+     "gust": 7.1,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T07:00:00Z",
+     "speed": 4.4,
+     "gust": 7.3,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T08:00:00Z",
+     "speed": 4.5,
+     "gust": 7.4,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T09:00:00Z",
+     "speed": 4.6,
+     "gust": 7.5,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T10:00:00Z",
+     "speed": 4.7,
+     "gust": 7.6,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T11:00:00Z",
+     "speed": 4.7,
+     "gust": 7.7,
+     "level": null
+    }
+   ]
+  },
+  {
+   "code": "AMBARLI",
+   "name": "Амбарлы (Стамбул)",
+   "country": "Турция",
+   "name_en": "Ambarlı (Istanbul)",
+   "country_en": "Türkiye",
+   "leg": "black_sea",
+   "kind": "port",
+   "lat": 40.97,
+   "lon": 28.68,
+   "is_weather_tracked": true,
+   "alert_level": null,
+   "alert_message": null,
+   "wind_speed": 5.1,
+   "wind_gust": 8.1,
+   "wind_dir": 304.0,
+   "weather_ts": "2026-10-31T11:00:00Z",
+   "forecast": [
+    {
+     "ts": "2026-10-31T05:00:00Z",
+     "speed": 6.3,
+     "gust": 9.6,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T06:00:00Z",
+     "speed": 6.1,
+     "gust": 9.4,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T07:00:00Z",
+     "speed": 5.9,
+     "gust": 9.1,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T08:00:00Z",
+     "speed": 5.7,
+     "gust": 8.9,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T09:00:00Z",
+     "speed": 5.5,
+     "gust": 8.6,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T10:00:00Z",
+     "speed": 5.3,
+     "gust": 8.4,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T11:00:00Z",
+     "speed": 5.1,
+     "gust": 8.1,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T12:00:00Z",
+     "speed": 4.9,
+     "gust": 7.9,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T13:00:00Z",
+     "speed": 4.7,
+     "gust": 7.6,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T14:00:00Z",
+     "speed": 4.5,
+     "gust": 7.4,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T15:00:00Z",
+     "speed": 4.4,
+     "gust": 7.2,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T16:00:00Z",
+     "speed": 4.2,
+     "gust": 7.0,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T17:00:00Z",
+     "speed": 4.1,
+     "gust": 6.8,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T18:00:00Z",
+     "speed": 4.0,
+     "gust": 6.7,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T19:00:00Z",
+     "speed": 3.9,
+     "gust": 6.5,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T20:00:00Z",
+     "speed": 3.8,
+     "gust": 6.4,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T21:00:00Z",
+     "speed": 3.8,
+     "gust": 6.4,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T22:00:00Z",
+     "speed": 3.7,
+     "gust": 6.3,
+     "level": null
+    },
+    {
+     "ts": "2026-10-31T23:00:00Z",
+     "speed": 3.7,
+     "gust": 6.3,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T00:00:00Z",
+     "speed": 3.8,
+     "gust": 6.4,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T01:00:00Z",
+     "speed": 3.8,
+     "gust": 6.4,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T02:00:00Z",
+     "speed": 3.9,
+     "gust": 6.6,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T03:00:00Z",
+     "speed": 4.0,
+     "gust": 6.7,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T04:00:00Z",
+     "speed": 4.1,
+     "gust": 6.9,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T05:00:00Z",
+     "speed": 4.3,
+     "gust": 7.1,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T06:00:00Z",
+     "speed": 4.5,
+     "gust": 7.4,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T07:00:00Z",
+     "speed": 4.7,
+     "gust": 7.6,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T08:00:00Z",
+     "speed": 5.0,
+     "gust": 8.0,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T09:00:00Z",
+     "speed": 5.2,
+     "gust": 8.3,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T10:00:00Z",
+     "speed": 5.5,
+     "gust": 8.7,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T11:00:00Z",
+     "speed": 5.8,
+     "gust": 9.1,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T12:00:00Z",
+     "speed": 6.1,
+     "gust": 9.5,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T13:00:00Z",
+     "speed": 6.5,
+     "gust": 9.9,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T14:00:00Z",
+     "speed": 6.8,
+     "gust": 10.3,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T15:00:00Z",
+     "speed": 7.1,
+     "gust": 10.7,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T16:00:00Z",
+     "speed": 7.4,
+     "gust": 11.1,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T17:00:00Z",
+     "speed": 7.7,
+     "gust": 11.5,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T18:00:00Z",
+     "speed": 7.9,
+     "gust": 11.8,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T19:00:00Z",
+     "speed": 8.2,
+     "gust": 12.2,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T20:00:00Z",
+     "speed": 8.4,
+     "gust": 12.4,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T21:00:00Z",
+     "speed": 8.6,
+     "gust": 12.7,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T22:00:00Z",
+     "speed": 8.8,
+     "gust": 12.9,
+     "level": null
+    },
+    {
+     "ts": "2026-11-01T23:00:00Z",
+     "speed": 8.9,
+     "gust": 13.1,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T00:00:00Z",
+     "speed": 9.1,
+     "gust": 13.3,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T01:00:00Z",
+     "speed": 9.1,
+     "gust": 13.4,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T02:00:00Z",
+     "speed": 9.2,
+     "gust": 13.4,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T03:00:00Z",
+     "speed": 9.2,
+     "gust": 13.5,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T04:00:00Z",
+     "speed": 9.2,
+     "gust": 13.5,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T05:00:00Z",
+     "speed": 9.2,
+     "gust": 13.4,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T06:00:00Z",
+     "speed": 9.1,
+     "gust": 13.3,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T07:00:00Z",
+     "speed": 9.0,
+     "gust": 13.2,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T08:00:00Z",
+     "speed": 8.9,
+     "gust": 13.1,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T09:00:00Z",
+     "speed": 8.8,
+     "gust": 12.9,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T10:00:00Z",
+     "speed": 8.6,
+     "gust": 12.7,
+     "level": null
+    },
+    {
+     "ts": "2026-11-02T11:00:00Z",
+     "speed": 8.4,
+     "gust": 12.5,
+     "level": null
+    }
+   ]
   }
  ],
  "vessels": [
@@ -2349,7 +3087,7 @@
    "lon": 51.65,
    "sog": 0.0,
    "cog": 0.0,
-   "ts": "2026-10-31T11:05:54.312645Z",
+   "ts": "2026-10-31T11:05:54.312620Z",
    "has_recent_data": true,
    "route": "Курык → Баку (Алят)",
    "phase": "в порту Курык",
@@ -2366,7 +3104,7 @@
    "lon": 51.3221,
    "sog": 10.9,
    "cog": 190.0,
-   "ts": "2026-10-31T11:01:54.312645Z",
+   "ts": "2026-10-31T11:01:54.312620Z",
    "has_recent_data": true,
    "route": "Курык → Баку (Алят)",
    "phase": "в море",
@@ -2374,777 +3112,143 @@
    "to_code": "BAKU_ALAT",
    "phase_code": "at_sea",
    "phase_node": null
+  },
+  {
+   "name": "Azerbaijan",
+   "operator": "ASCO",
+   "mmsi": null,
+   "lat": null,
+   "lon": null,
+   "sog": null,
+   "cog": null,
+   "ts": null,
+   "has_recent_data": false,
+   "route": null,
+   "phase": null,
+   "from_code": null,
+   "to_code": null,
+   "phase_code": null,
+   "phase_node": null
+  },
+  {
+   "name": "Barda",
+   "operator": "ASCO",
+   "mmsi": 423123004,
+   "lat": 40.071,
+   "lon": 50.1419,
+   "sog": 10.4,
+   "cog": 237.0,
+   "ts": "2026-10-31T11:00:54.312620Z",
+   "has_recent_data": true,
+   "route": "Курык → Баку (Алят)",
+   "phase": "в море",
+   "from_code": "KURYK",
+   "to_code": "BAKU_ALAT",
+   "phase_code": "at_sea",
+   "phase_node": null
+  },
+  {
+   "name": "Balaken",
+   "operator": "ASCO",
+   "mmsi": null,
+   "lat": null,
+   "lon": null,
+   "sog": null,
+   "cog": null,
+   "ts": null,
+   "has_recent_data": false,
+   "route": null,
+   "phase": null,
+   "from_code": null,
+   "to_code": null,
+   "phase_code": null,
+   "phase_node": null
+  },
+  {
+   "name": "Shahdag",
+   "operator": "ASCO",
+   "mmsi": 423123006,
+   "lat": 39.9374,
+   "lon": 49.4523,
+   "sog": 10.6,
+   "cog": 77.0,
+   "ts": "2026-10-31T11:00:54.312620Z",
+   "has_recent_data": true,
+   "route": "Баку (Алят) → Актау",
+   "phase": "в море",
+   "from_code": "BAKU_ALAT",
+   "to_code": "AKTAU",
+   "phase_code": "at_sea",
+   "phase_node": null
+  },
+  {
+   "name": "Fikret Amirov",
+   "operator": "ASCO",
+   "mmsi": 423123007,
+   "lat": 41.4202,
+   "lon": 51.197,
+   "sog": 11.0,
+   "cog": 10.0,
+   "ts": "2026-10-31T11:05:54.312620Z",
+   "has_recent_data": true,
+   "route": "Баку (Алят) → Курык",
+   "phase": "в море",
+   "from_code": "BAKU_ALAT",
+   "to_code": "KURYK",
+   "phase_code": "at_sea",
+   "phase_node": null
   }
  ],
  "shipments": [
   {
-   "ref": "MC-26-0412",
-   "client": "Silk Road Forwarders",
-   "cargo": "2 × 40' HC, электроника",
-   "cargo_en": "2 × 40' HC, electronics",
-   "origin": "Сиань",
-   "destination": "Будапешт",
-   "origin_code": "XIAN",
-   "destination_code": "BUDAPEST",
-   "state": "in_transit",
-   "hold_reason": null,
-   "hold_code": null,
-   "hold_node": null,
-   "hold_vessel": null,
-   "delay_hours": 0.0,
-   "last_event": "Отправление: Курык — погружен на паром «Barda»",
-   "last_event_kind": "departed",
-   "last_event_node": "KURYK",
-   "last_event_note_code": "loaded_on_ferry",
-   "last_event_note_vessel": "Barda",
-   "last_event_at": "2026-10-30T18:00:00Z",
-   "eta": "2026-11-07T22:00:00Z",
-   "position": {
-    "lat": 40.071,
-    "lon": 50.1419,
-    "heading": 237.02978893649578,
-    "confirmed": true,
-    "source": "ais",
-    "on_vessel": "Barda",
-    "mode": "sea",
-    "from_code": "KURYK",
-    "to_code": "BAKU_ALAT",
-    "leg_progress": 0.857421008611111
-   },
-   "progress": 0.6766,
-   "checkpoints": [
-    {
-     "code": "XIAN",
-     "name": "Сиань",
-     "lat": 34.34,
-     "lon": 108.94,
-     "planned_at": "2026-10-22T00:00:00Z",
-     "actual_at": "2026-10-22T00:00:00Z",
-     "state": "done"
-    },
-    {
-     "code": "URUMQI",
-     "name": "Урумчи",
-     "lat": 43.83,
-     "lon": 87.62,
-     "planned_at": "2026-10-24T12:00:00Z",
-     "actual_at": "2026-10-24T11:00:00Z",
-     "state": "done"
-    },
-    {
-     "code": "KHORGOS",
-     "name": "Хоргос / Алтынколь",
-     "lat": 44.19,
-     "lon": 80.1,
-     "planned_at": "2026-10-25T08:00:00Z",
-     "actual_at": "2026-10-25T08:30:00Z",
-     "state": "done"
-    },
-    {
-     "code": "ALMATY",
-     "name": "Алматы",
-     "lat": 43.24,
-     "lon": 76.95,
-     "planned_at": "2026-10-26T14:00:00Z",
-     "actual_at": "2026-10-26T12:30:00Z",
-     "state": "done"
-    },
-    {
-     "code": "SHYMKENT",
-     "name": "Шымкент",
-     "lat": 42.32,
-     "lon": 69.6,
-     "planned_at": "2026-10-27T10:00:00Z",
-     "actual_at": "2026-10-27T10:30:00Z",
-     "state": "done"
-    },
-    {
-     "code": "KYZYLORDA",
-     "name": "Кызылорда",
-     "lat": 44.85,
-     "lon": 65.51,
-     "planned_at": "2026-10-28T04:00:00Z",
-     "actual_at": "2026-10-28T03:00:00Z",
-     "state": "done"
-    },
-    {
-     "code": "BEINEU",
-     "name": "Бейнеу",
-     "lat": 45.32,
-     "lon": 55.19,
-     "planned_at": "2026-10-29T12:00:00Z",
-     "actual_at": "2026-10-29T11:30:00Z",
-     "state": "done"
-    },
-    {
-     "code": "KURYK",
-     "name": "Курык",
-     "lat": 43.19,
-     "lon": 51.65,
-     "planned_at": "2026-10-30T06:00:00Z",
-     "actual_at": "2026-10-30T06:00:00Z",
-     "state": "done"
-    },
-    {
-     "code": "BAKU_ALAT",
-     "name": "Баку (Алят)",
-     "lat": 39.93,
-     "lon": 49.41,
-     "planned_at": "2026-10-31T14:00:00Z",
-     "actual_at": null,
-     "state": "current"
-    },
-    {
-     "code": "GANJA",
-     "name": "Гянджа",
-     "lat": 40.68,
-     "lon": 46.36,
-     "planned_at": "2026-11-01T10:00:00Z",
-     "actual_at": null,
-     "state": "planned"
-    },
-    {
-     "code": "BOYUK_KASIK",
-     "name": "Бёюк-Кясик / Гардабани",
-     "lat": 41.44,
-     "lon": 45.1,
-     "planned_at": "2026-11-01T21:00:00Z",
-     "actual_at": null,
-     "state": "planned"
-    },
-    {
-     "code": "TBILISI",
-     "name": "Тбилиси",
-     "lat": 41.72,
-     "lon": 44.8,
-     "planned_at": "2026-11-02T18:00:00Z",
-     "actual_at": null,
-     "state": "planned"
-    },
-    {
-     "code": "POTI",
-     "name": "Поти",
-     "lat": 42.15,
-     "lon": 41.65,
-     "planned_at": "2026-11-03T10:00:00Z",
-     "actual_at": null,
-     "state": "planned"
-    },
-    {
-     "code": "CONSTANTA",
-     "name": "Констанца",
-     "lat": 44.17,
-     "lon": 28.65,
-     "planned_at": "2026-11-05T22:00:00Z",
-     "actual_at": null,
-     "state": "planned"
-    },
-    {
-     "code": "BUCHAREST",
-     "name": "Бухарест",
-     "lat": 44.43,
-     "lon": 26.1,
-     "planned_at": "2026-11-06T16:00:00Z",
-     "actual_at": null,
-     "state": "planned"
-    },
-    {
-     "code": "BUDAPEST",
-     "name": "Будапешт",
-     "lat": 47.5,
-     "lon": 19.05,
-     "planned_at": "2026-11-07T22:00:00Z",
-     "actual_at": null,
-     "state": "planned"
-    }
-   ],
-   "track": [
-    [
-     108.94,
-     34.34
-    ],
-    [
-     103.83,
-     36.06
-    ],
-    [
-     98.5,
-     39.75
-    ],
-    [
-     93.5,
-     42.83
-    ],
-    [
-     87.62,
-     43.83
-    ],
-    [
-     82.9,
-     44.6
-    ],
-    [
-     80.1,
-     44.19
-    ],
-    [
-     79.0,
-     44.15
-    ],
-    [
-     76.95,
-     43.24
-    ],
-    [
-     73.75,
-     43.6
-    ],
-    [
-     71.4,
-     42.9
-    ],
-    [
-     69.6,
-     42.32
-    ],
-    [
-     68.25,
-     43.3
-    ],
-    [
-     65.51,
-     44.85
-    ],
-    [
-     61.66,
-     46.78
-    ],
-    [
-     58.0,
-     46.3
-    ],
-    [
-     55.19,
-     45.32
-    ],
-    [
-     52.1,
-     44.17
-    ],
-    [
-     51.9,
-     43.55
-    ],
-    [
-     51.65,
-     43.19
-    ],
-    [
-     51.4,
-     42.3
-    ],
-    [
-     51.1,
-     41.0
-    ],
-    [
-     50.9,
-     40.45
-    ],
-    [
-     50.1,
-     40.05
-    ],
-    [
-     49.41,
-     39.93
-    ],
-    [
-     48.15,
-     40.34
-    ],
-    [
-     47.15,
-     40.62
-    ],
-    [
-     46.36,
-     40.68
-    ],
-    [
-     45.63,
-     40.99
-    ],
-    [
-     45.1,
-     41.44
-    ],
-    [
-     45.09,
-     41.46
-    ],
-    [
-     44.8,
-     41.72
-    ],
-    [
-     44.11,
-     41.98
-    ],
-    [
-     43.6,
-     41.99
-    ],
-    [
-     43.05,
-     42.11
-    ],
-    [
-     42.34,
-     42.16
-    ],
-    [
-     41.65,
-     42.15
-    ],
-    [
-     38.0,
-     43.2
-    ],
-    [
-     33.0,
-     43.6
-    ],
-    [
-     28.65,
-     44.17
-    ],
-    [
-     26.1,
-     44.43
-    ],
-    [
-     25.6,
-     45.66
-    ],
-    [
-     23.6,
-     46.77
-    ],
-    [
-     21.93,
-     47.07
-    ],
-    [
-     19.05,
-     47.5
-    ]
-   ],
-   "sanctions": {
-    "status": "review",
-    "checked_at": "2026-10-25T11:08:54.312620Z",
-    "lists": [
-     {
-      "code": "chpl",
-      "name": "CHPL — общий список приоритетных товаров (прил. XL к 833/2014)",
-      "name_en": "Common High Priority List (Annex XL to Regulation 833/2014)",
-      "as_of": "2026-07-24",
-      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
-      "review_code_only": true
-     },
-     {
-      "code": "eu_833_2014",
-      "name": "ЕС 833/2014 — запреты ввоза из РФ (прил. XVII, XXI)",
-      "name_en": "EU Regulation 833/2014 — import bans on Russian goods (Annexes XVII, XXI)",
-      "as_of": "2026-07-24",
-      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
-      "review_code_only": false
-     },
-     {
-      "code": "eu_833_2014_export",
-      "name": "ЕС 833/2014 — запрет экспорта в РФ (прил. XXIII)",
-      "name_en": "EU Regulation 833/2014 — export ban to Russia (Annex XXIII)",
-      "as_of": "2026-07-24",
-      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
-      "review_code_only": false
-     }
-    ],
-    "matches": [
-     {
-      "line_no": 1,
-      "hs_code": "8542310001",
-      "description": "Микросхемы-процессоры",
-      "description_en": "Processor integrated circuits",
-      "origin_country": "CN",
-      "list_id": "chpl",
-      "list_code": "854231",
-      "ref": "Tier 1",
-      "measure": "export_ban",
-      "strong": false,
-      "reason_code": "code_only"
-     }
-    ]
-   },
-   "cargo_details": {
-    "container_no": null,
-    "container_type": null,
-    "packages": null,
-    "package_kind": null,
-    "package_kind_en": null,
-    "gross_kg": null,
-    "net_kg": null,
-    "description": null,
-    "description_en": null,
-    "top_items": [
-     {
-      "description": "Микросхемы-процессоры",
-      "description_en": "Processor integrated circuits",
-      "hs_code": "8542310001",
-      "quantity": null,
-      "net_kg": null
-     },
-     {
-      "description": "Ноутбуки",
-      "description_en": "Laptops",
-      "hs_code": "8471300000",
-      "quantity": null,
-      "net_kg": null
-     },
-     {
-      "description": "Смартфоны",
-      "description_en": "Smartphones",
-      "hs_code": "8517130000",
-      "quantity": null,
-      "net_kg": null
-     }
-    ],
-    "more_items": 0,
-    "dangerous": []
-   }
-  },
-  {
-   "ref": "MC-26-0398",
-   "client": "Steppe Freight KZ",
-   "cargo": "3 × 20', полипропилен",
-   "cargo_en": "3 × 20', polypropylene",
-   "origin": "Сиань",
-   "destination": "Констанца",
-   "origin_code": "XIAN",
-   "destination_code": "CONSTANTA",
+   "ref": "MC-26-0501",
+   "client": "Steppe Auto Assembly",
+   "cargo": "1 × 40' HC, автокомплекты",
+   "cargo_en": "1 × 40' HC, car assembly kits",
+   "origin": "Млада-Болеслав",
+   "destination": "Костанай",
+   "origin_code": "MLADA_BOLESLAV",
+   "destination_code": "KOSTANAY",
    "state": "waiting",
    "hold_reason": "Погодный запрет на швартовку: Актау — критический ветер",
    "hold_code": "weather_ban",
    "hold_node": "AKTAU",
    "hold_vessel": null,
-   "delay_hours": 18.0,
-   "last_event": "Прибытие: Актау",
+   "delay_hours": 30.1,
+   "last_event": "Прибытие: Баку (Алят)",
    "last_event_kind": "arrived",
-   "last_event_node": "AKTAU",
+   "last_event_node": "BAKU_ALAT",
    "last_event_note_code": null,
    "last_event_note_vessel": null,
-   "last_event_at": "2026-10-30T05:08:54.315320Z",
+   "last_event_at": "2026-10-29T17:00:00Z",
    "eta": "2026-11-06T17:08:54.312620Z",
+   "eta_latest": "2026-11-09T05:08:54.312620Z",
+   "delay_breakdown": [
+    {
+     "code": "ferry_wait",
+     "node_code": "BAKU_ALAT",
+     "hours": 24.0
+    },
+    {
+     "code": "weather_ban",
+     "node_code": "AKTAU",
+     "hours": 6.1
+    }
+   ],
    "position": {
-    "lat": 43.63,
-    "lon": 51.25,
+    "lat": 39.93,
+    "lon": 49.41,
     "heading": null,
     "confirmed": true,
     "source": "event",
     "on_vessel": null,
     "mode": null,
-    "from_code": "AKTAU",
-    "to_code": "BAKU_ALAT",
+    "from_code": "BAKU_ALAT",
+    "to_code": "AKTAU",
     "leg_progress": 0.0
    },
-   "progress": 0.7003,
-   "checkpoints": [
-    {
-     "code": "XIAN",
-     "name": "Сиань",
-     "lat": 34.34,
-     "lon": 108.94,
-     "planned_at": "2026-10-22T01:08:54.315320Z",
-     "actual_at": "2026-10-22T00:38:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "URUMQI",
-     "name": "Урумчи",
-     "lat": 43.83,
-     "lon": 87.62,
-     "planned_at": "2026-10-24T13:08:54.315320Z",
-     "actual_at": "2026-10-24T13:38:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "KHORGOS",
-     "name": "Хоргос / Алтынколь",
-     "lat": 44.19,
-     "lon": 80.1,
-     "planned_at": "2026-10-25T09:08:54.315320Z",
-     "actual_at": "2026-10-25T07:38:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "ALMATY",
-     "name": "Алматы",
-     "lat": 43.24,
-     "lon": 76.95,
-     "planned_at": "2026-10-26T15:08:54.315320Z",
-     "actual_at": "2026-10-26T15:08:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "SHYMKENT",
-     "name": "Шымкент",
-     "lat": 42.32,
-     "lon": 69.6,
-     "planned_at": "2026-10-27T11:08:54.315320Z",
-     "actual_at": "2026-10-27T10:38:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "KYZYLORDA",
-     "name": "Кызылорда",
-     "lat": 44.85,
-     "lon": 65.51,
-     "planned_at": "2026-10-28T05:08:54.315320Z",
-     "actual_at": "2026-10-28T04:08:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "BEINEU",
-     "name": "Бейнеу",
-     "lat": 45.32,
-     "lon": 55.19,
-     "planned_at": "2026-10-29T13:08:54.315320Z",
-     "actual_at": "2026-10-29T13:08:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "AKTAU",
-     "name": "Актау",
-     "lat": 43.63,
-     "lon": 51.25,
-     "planned_at": "2026-10-30T05:08:54.315320Z",
-     "actual_at": "2026-10-30T05:08:54.315320Z",
-     "state": "current"
-    },
-    {
-     "code": "BAKU_ALAT",
-     "name": "Баку (Алят)",
-     "lat": 39.93,
-     "lon": 49.41,
-     "planned_at": "2026-10-31T15:08:54.315320Z",
-     "actual_at": null,
-     "state": "planned"
-    },
-    {
-     "code": "GANJA",
-     "name": "Гянджа",
-     "lat": 40.68,
-     "lon": 46.36,
-     "planned_at": "2026-11-01T11:08:54.315320Z",
-     "actual_at": null,
-     "state": "planned"
-    },
-    {
-     "code": "BOYUK_KASIK",
-     "name": "Бёюк-Кясик / Гардабани",
-     "lat": 41.44,
-     "lon": 45.1,
-     "planned_at": "2026-11-01T22:08:54.315320Z",
-     "actual_at": null,
-     "state": "planned"
-    },
-    {
-     "code": "TBILISI",
-     "name": "Тбилиси",
-     "lat": 41.72,
-     "lon": 44.8,
-     "planned_at": "2026-11-02T19:08:54.315320Z",
-     "actual_at": null,
-     "state": "planned"
-    },
-    {
-     "code": "POTI",
-     "name": "Поти",
-     "lat": 42.15,
-     "lon": 41.65,
-     "planned_at": "2026-11-03T11:08:54.315320Z",
-     "actual_at": null,
-     "state": "planned"
-    },
-    {
-     "code": "CONSTANTA",
-     "name": "Констанца",
-     "lat": 44.17,
-     "lon": 28.65,
-     "planned_at": "2026-11-05T23:08:54.315320Z",
-     "actual_at": null,
-     "state": "planned"
-    }
-   ],
-   "track": [
-    [
-     108.94,
-     34.34
-    ],
-    [
-     103.83,
-     36.06
-    ],
-    [
-     98.5,
-     39.75
-    ],
-    [
-     93.5,
-     42.83
-    ],
-    [
-     87.62,
-     43.83
-    ],
-    [
-     82.9,
-     44.6
-    ],
-    [
-     80.1,
-     44.19
-    ],
-    [
-     79.0,
-     44.15
-    ],
-    [
-     76.95,
-     43.24
-    ],
-    [
-     73.75,
-     43.6
-    ],
-    [
-     71.4,
-     42.9
-    ],
-    [
-     69.6,
-     42.32
-    ],
-    [
-     68.25,
-     43.3
-    ],
-    [
-     65.51,
-     44.85
-    ],
-    [
-     61.66,
-     46.78
-    ],
-    [
-     58.0,
-     46.3
-    ],
-    [
-     55.19,
-     45.32
-    ],
-    [
-     52.1,
-     44.17
-    ],
-    [
-     51.25,
-     43.63
-    ],
-    [
-     51.2,
-     42.8
-    ],
-    [
-     51.1,
-     41.0
-    ],
-    [
-     50.9,
-     40.45
-    ],
-    [
-     50.1,
-     40.05
-    ],
-    [
-     49.41,
-     39.93
-    ],
-    [
-     48.15,
-     40.34
-    ],
-    [
-     47.15,
-     40.62
-    ],
-    [
-     46.36,
-     40.68
-    ],
-    [
-     45.63,
-     40.99
-    ],
-    [
-     45.1,
-     41.44
-    ],
-    [
-     45.09,
-     41.46
-    ],
-    [
-     44.8,
-     41.72
-    ],
-    [
-     44.11,
-     41.98
-    ],
-    [
-     43.6,
-     41.99
-    ],
-    [
-     43.05,
-     42.11
-    ],
-    [
-     42.34,
-     42.16
-    ],
-    [
-     41.65,
-     42.15
-    ],
-    [
-     38.0,
-     43.2
-    ],
-    [
-     33.0,
-     43.6
-    ],
-    [
-     28.65,
-     44.17
-    ]
-   ],
    "queue": {
-    "port_code": "AKTAU",
+    "port_code": "BAKU_ALAT",
     "position": 4,
     "per_day": 8.0,
     "weather_hours": 48.0,
@@ -3152,17 +3256,9 @@
     "p90_hours": 120.0,
     "basis_code": "weather_ban"
    },
-   "delay_breakdown": [
-    {
-     "code": "weather_ban",
-     "node_code": "AKTAU",
-     "hours": 18.0
-    }
-   ],
-   "eta_latest": "2026-11-09T05:08:54Z",
    "sanctions": {
     "status": "clear",
-    "checked_at": "2026-10-26T11:08:54.312620Z",
+    "checked_at": "2026-10-22T11:08:54.312620Z",
     "lists": [
      {
       "code": "chpl",
@@ -3192,170 +3288,90 @@
     "matches": []
    },
    "cargo_details": {
-    "container_no": null,
-    "container_type": null,
-    "packages": null,
-    "package_kind": null,
-    "package_kind_en": null,
-    "gross_kg": null,
-    "net_kg": null,
-    "description": null,
-    "description_en": null,
+    "container_no": "DEMU5010012",
+    "container_type": "40' HC",
+    "packages": 14,
+    "package_kind": "поддоны",
+    "package_kind_en": "pallets",
+    "gross_kg": 12449.0,
+    "net_kg": 9551.0,
+    "description": "Автокомплекты для промышленной сборки",
+    "description_en": "Car assembly kits",
     "top_items": [
      {
-      "description": "Полипропилен в гранулах",
-      "description_en": "Polypropylene granules",
-      "hs_code": "3902100000",
-      "quantity": null,
-      "net_kg": null
+      "description": "Агрегат: двигатель и КПП",
+      "description_en": "Engine and gearbox unit",
+      "hs_code": "8708999740",
+      "quantity": 14.0,
+      "net_kg": 5481.0
+     },
+     {
+      "description": "Колесо в сборе",
+      "description_en": "Wheel with tyre",
+      "hs_code": "8708705099",
+      "quantity": 70.0,
+      "net_kg": 1813.0
+     },
+     {
+      "description": "Мост задний ведущий",
+      "description_en": "Rear drive axle",
+      "hs_code": "8708509140",
+      "quantity": 14.0,
+      "net_kg": 1680.0
+     },
+     {
+      "description": "Аккумуляторы",
+      "description_en": "Batteries",
+      "hs_code": "8507100000",
+      "quantity": 14.0,
+      "net_kg": 259.0
+     },
+     {
+      "description": "Глушитель",
+      "description_en": "Exhaust silencer",
+      "hs_code": "8708923599",
+      "quantity": 14.0,
+      "net_kg": 165.0
      }
     ],
-    "more_items": 0,
-    "dangerous": []
-   }
-  },
-  {
-   "ref": "MC-26-0322",
-   "client": "EuroAsia Rail",
-   "cargo": "1 × 40' HC, текстиль",
-   "cargo_en": "1 × 40' HC, textiles",
-   "origin": "Сиань",
-   "destination": "Будапешт",
-   "origin_code": "XIAN",
-   "destination_code": "BUDAPEST",
-   "state": "delivered",
-   "hold_reason": null,
-   "hold_code": null,
-   "hold_node": null,
-   "hold_vessel": null,
-   "delay_hours": 0.0,
-   "last_event": "Прибытие: Будапешт",
-   "last_event_kind": "arrived",
-   "last_event_node": "BUDAPEST",
-   "last_event_note_code": null,
-   "last_event_note_vessel": null,
-   "last_event_at": "2026-10-30T05:08:54.315320Z",
-   "eta": "2026-10-30T05:08:54.315320Z",
-   "position": {
-    "lat": 47.5,
-    "lon": 19.05,
-    "heading": null,
-    "confirmed": true,
-    "source": "event",
-    "on_vessel": null,
-    "mode": null,
-    "from_code": "BUDAPEST",
-    "to_code": null,
-    "leg_progress": 0.0
+    "more_items": 4,
+    "dangerous": [
+     {
+      "un_number": "2800",
+      "hazard_class": "8",
+      "description": "Аккумуляторы с электролитом, непроливные",
+      "description_en": "Batteries, wet, non-spillable",
+      "gross_kg": 273.0
+     }
+    ]
    },
-   "progress": 1.0,
+   "progress": 0.695,
    "checkpoints": [
     {
-     "code": "XIAN",
-     "name": "Сиань",
-     "lat": 34.34,
-     "lon": 108.94,
-     "planned_at": "2026-10-13T07:08:54.315320Z",
-     "actual_at": "2026-10-13T06:38:54.315320Z",
+     "code": "MLADA_BOLESLAV",
+     "name": "Млада-Болеслав",
+     "lat": 50.41,
+     "lon": 14.9,
+     "planned_at": "2026-10-17T11:00:00Z",
+     "actual_at": "2026-10-17T11:00:00Z",
      "state": "done"
     },
     {
-     "code": "URUMQI",
-     "name": "Урумчи",
-     "lat": 43.83,
-     "lon": 87.62,
-     "planned_at": "2026-10-15T19:08:54.315320Z",
-     "actual_at": "2026-10-15T19:08:54.315320Z",
+     "code": "KOPER",
+     "name": "Копер",
+     "lat": 45.55,
+     "lon": 13.73,
+     "planned_at": "2026-10-18T17:00:00Z",
+     "actual_at": "2026-10-18T17:00:00Z",
      "state": "done"
     },
     {
-     "code": "KHORGOS",
-     "name": "Хоргос / Алтынколь",
-     "lat": 44.19,
-     "lon": 80.1,
-     "planned_at": "2026-10-16T15:08:54.315320Z",
-     "actual_at": "2026-10-16T16:08:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "ALMATY",
-     "name": "Алматы",
-     "lat": 43.24,
-     "lon": 76.95,
-     "planned_at": "2026-10-17T21:08:54.315320Z",
-     "actual_at": "2026-10-17T22:38:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "SHYMKENT",
-     "name": "Шымкент",
-     "lat": 42.32,
-     "lon": 69.6,
-     "planned_at": "2026-10-18T17:08:54.315320Z",
-     "actual_at": "2026-10-18T15:38:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "KYZYLORDA",
-     "name": "Кызылорда",
-     "lat": 44.85,
-     "lon": 65.51,
-     "planned_at": "2026-10-19T11:08:54.315320Z",
-     "actual_at": "2026-10-19T11:38:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "BEINEU",
-     "name": "Бейнеу",
-     "lat": 45.32,
-     "lon": 55.19,
-     "planned_at": "2026-10-20T19:08:54.315320Z",
-     "actual_at": "2026-10-20T18:38:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "KURYK",
-     "name": "Курык",
-     "lat": 43.19,
-     "lon": 51.65,
-     "planned_at": "2026-10-21T13:08:54.315320Z",
-     "actual_at": "2026-10-21T13:38:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "BAKU_ALAT",
-     "name": "Баку (Алят)",
-     "lat": 39.93,
-     "lon": 49.41,
-     "planned_at": "2026-10-22T21:08:54.315320Z",
-     "actual_at": "2026-10-22T21:38:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "GANJA",
-     "name": "Гянджа",
-     "lat": 40.68,
-     "lon": 46.36,
-     "planned_at": "2026-10-23T17:08:54.315320Z",
-     "actual_at": "2026-10-23T16:38:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "BOYUK_KASIK",
-     "name": "Бёюк-Кясик / Гардабани",
-     "lat": 41.44,
-     "lon": 45.1,
-     "planned_at": "2026-10-24T04:08:54.315320Z",
-     "actual_at": "2026-10-24T02:38:54.315320Z",
-     "state": "done"
-    },
-    {
-     "code": "TBILISI",
-     "name": "Тбилиси",
-     "lat": 41.72,
-     "lon": 44.8,
-     "planned_at": "2026-10-25T01:08:54.315320Z",
-     "actual_at": "2026-10-25T00:38:54.315320Z",
+     "code": "AMBARLI",
+     "name": "Амбарлы (Стамбул)",
+     "lat": 40.97,
+     "lon": 28.68,
+     "planned_at": "2026-10-22T05:00:00Z",
+     "actual_at": "2026-10-22T05:00:00Z",
      "state": "done"
     },
     {
@@ -3363,273 +3379,320 @@
      "name": "Поти",
      "lat": 42.15,
      "lon": 41.65,
-     "planned_at": "2026-10-25T17:08:54.315320Z",
-     "actual_at": "2026-10-25T18:08:54.315320Z",
+     "planned_at": "2026-10-26T21:00:00Z",
+     "actual_at": "2026-10-26T21:00:00Z",
      "state": "done"
     },
     {
-     "code": "CONSTANTA",
-     "name": "Констанца",
-     "lat": 44.17,
-     "lon": 28.65,
-     "planned_at": "2026-10-28T05:08:54.315320Z",
-     "actual_at": "2026-10-28T04:38:54.315320Z",
+     "code": "TBILISI",
+     "name": "Тбилиси",
+     "lat": 41.72,
+     "lon": 44.8,
+     "planned_at": "2026-10-27T19:00:00Z",
+     "actual_at": "2026-10-27T19:00:00Z",
      "state": "done"
     },
     {
-     "code": "BUCHAREST",
-     "name": "Бухарест",
-     "lat": 44.43,
-     "lon": 26.1,
-     "planned_at": "2026-10-28T23:08:54.315320Z",
-     "actual_at": "2026-10-28T21:38:54.315320Z",
+     "code": "BOYUK_KASIK",
+     "name": "Бёюк-Кясик / Гардабани",
+     "lat": 41.44,
+     "lon": 45.1,
+     "planned_at": "2026-10-28T04:00:00Z",
+     "actual_at": "2026-10-28T04:00:00Z",
      "state": "done"
     },
     {
-     "code": "BUDAPEST",
-     "name": "Будапешт",
-     "lat": 47.5,
-     "lon": 19.05,
-     "planned_at": "2026-10-30T05:08:54.315320Z",
-     "actual_at": "2026-10-30T05:08:54.315320Z",
+     "code": "GANJA",
+     "name": "Гянджа",
+     "lat": 40.68,
+     "lon": 46.36,
+     "planned_at": "2026-10-29T03:00:00Z",
+     "actual_at": "2026-10-29T03:00:00Z",
      "state": "done"
+    },
+    {
+     "code": "BAKU_ALAT",
+     "name": "Баку (Алят)",
+     "lat": 39.93,
+     "lon": 49.41,
+     "planned_at": "2026-10-29T17:00:00Z",
+     "actual_at": "2026-10-29T17:00:00Z",
+     "state": "current"
+    },
+    {
+     "code": "AKTAU",
+     "name": "Актау",
+     "lat": 43.63,
+     "lon": 51.25,
+     "planned_at": "2026-10-31T03:00:00Z",
+     "actual_at": null,
+     "state": "planned"
+    },
+    {
+     "code": "BEINEU",
+     "name": "Бейнеу",
+     "lat": 45.32,
+     "lon": 55.19,
+     "planned_at": "2026-11-01T01:00:00Z",
+     "actual_at": null,
+     "state": "planned"
+    },
+    {
+     "code": "KOSTANAY",
+     "name": "Костанай",
+     "lat": 53.21,
+     "lon": 63.62,
+     "planned_at": "2026-11-02T23:00:00Z",
+     "actual_at": null,
+     "state": "planned"
     }
    ],
    "track": [
     [
-     108.94,
-     34.34
+     14.9,
+     50.41
     ],
     [
-     103.83,
-     36.06
+     14.43,
+     50.08
     ],
     [
-     98.5,
-     39.75
+     14.47,
+     48.97
     ],
     [
-     93.5,
-     42.83
+     14.29,
+     48.3
     ],
     [
-     87.62,
-     43.83
+     15.44,
+     47.07
     ],
     [
-     82.9,
-     44.6
+     14.51,
+     46.05
     ],
     [
-     80.1,
-     44.19
+     13.73,
+     45.55
     ],
     [
-     79.0,
-     44.15
+     13.3,
+     45.2
     ],
     [
-     76.95,
-     43.24
+     14.5,
+     44.0
     ],
     [
-     73.75,
-     43.6
+     16.3,
+     42.7
     ],
     [
-     71.4,
-     42.9
+     17.9,
+     41.6
     ],
     [
-     69.6,
-     42.32
+     18.9,
+     40.3
     ],
     [
-     68.25,
-     43.3
+     19.6,
+     39.3
     ],
     [
-     65.51,
-     44.85
+     20.4,
+     37.9
     ],
     [
-     61.66,
-     46.78
+     21.6,
+     36.5
     ],
     [
-     58.0,
-     46.3
+     22.9,
+     36.25
     ],
     [
-     55.19,
-     45.32
+     24.5,
+     36.9
     ],
     [
-     52.1,
-     44.17
+     25.0,
+     37.9
     ],
     [
-     51.9,
-     43.55
+     25.6,
+     39.3
     ],
     [
-     51.65,
-     43.19
-    ],
-    [
-     51.4,
-     42.3
-    ],
-    [
-     51.1,
-     41.0
-    ],
-    [
-     50.9,
-     40.45
-    ],
-    [
-     50.1,
+     26.15,
      40.05
     ],
     [
-     49.41,
-     39.93
+     26.7,
+     40.4
     ],
     [
-     48.15,
-     40.34
+     27.7,
+     40.75
     ],
     [
-     47.15,
-     40.62
+     28.5,
+     40.93
     ],
     [
-     46.36,
-     40.68
+     28.68,
+     40.97
     ],
     [
-     45.63,
-     40.99
+     28.95,
+     40.98
     ],
     [
-     45.1,
-     41.44
+     29.06,
+     41.08
     ],
     [
-     45.09,
-     41.46
+     29.12,
+     41.23
     ],
     [
-     44.8,
-     41.72
+     30.5,
+     41.45
     ],
     [
-     44.11,
-     41.98
+     32.5,
+     41.75
     ],
     [
-     43.6,
-     41.99
+     35.0,
+     42.1
     ],
     [
-     43.05,
-     42.11
+     37.5,
+     41.9
     ],
     [
-     42.34,
-     42.16
+     39.5,
+     41.6
+    ],
+    [
+     41.2,
+     41.9
     ],
     [
      41.65,
      42.15
     ],
     [
-     38.0,
-     43.2
+     42.34,
+     42.16
     ],
     [
-     33.0,
-     43.6
+     43.05,
+     42.11
     ],
     [
-     28.65,
+     43.6,
+     41.99
+    ],
+    [
+     44.11,
+     41.98
+    ],
+    [
+     44.8,
+     41.72
+    ],
+    [
+     45.09,
+     41.46
+    ],
+    [
+     45.1,
+     41.44
+    ],
+    [
+     45.63,
+     40.99
+    ],
+    [
+     46.36,
+     40.68
+    ],
+    [
+     47.15,
+     40.62
+    ],
+    [
+     48.15,
+     40.34
+    ],
+    [
+     49.41,
+     39.93
+    ],
+    [
+     50.1,
+     40.05
+    ],
+    [
+     50.9,
+     40.45
+    ],
+    [
+     51.1,
+     41.0
+    ],
+    [
+     51.2,
+     42.8
+    ],
+    [
+     51.25,
+     43.63
+    ],
+    [
+     52.1,
      44.17
     ],
     [
-     26.1,
-     44.43
+     55.19,
+     45.32
     ],
     [
-     25.6,
-     45.66
+     55.8,
+     47.1
     ],
     [
-     23.6,
-     46.77
+     57.0,
+     48.6
     ],
     [
-     21.93,
-     47.07
+     57.42,
+     49.47
     ],
     [
-     19.05,
-     47.5
+     57.17,
+     50.28
+    ],
+    [
+     58.45,
+     50.25
+    ],
+    [
+     60.6,
+     51.4
+    ],
+    [
+     62.4,
+     52.4
+    ],
+    [
+     63.62,
+     53.21
     ]
-   ],
-   "sanctions": {
-    "status": "clear",
-    "checked_at": "2026-10-19T11:08:54.312620Z",
-    "lists": [
-     {
-      "code": "chpl",
-      "name": "CHPL — общий список приоритетных товаров (прил. XL к 833/2014)",
-      "name_en": "Common High Priority List (Annex XL to Regulation 833/2014)",
-      "as_of": "2026-07-24",
-      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
-      "review_code_only": true
-     },
-     {
-      "code": "eu_833_2014",
-      "name": "ЕС 833/2014 — запреты ввоза из РФ (прил. XVII, XXI)",
-      "name_en": "EU Regulation 833/2014 — import bans on Russian goods (Annexes XVII, XXI)",
-      "as_of": "2026-07-24",
-      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
-      "review_code_only": false
-     },
-     {
-      "code": "eu_833_2014_export",
-      "name": "ЕС 833/2014 — запрет экспорта в РФ (прил. XXIII)",
-      "name_en": "EU Regulation 833/2014 — export ban to Russia (Annex XXIII)",
-      "as_of": "2026-07-24",
-      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
-      "review_code_only": false
-     }
-    ],
-    "matches": []
-   },
-   "cargo_details": {
-    "container_no": null,
-    "container_type": null,
-    "packages": null,
-    "package_kind": null,
-    "package_kind_en": null,
-    "gross_kg": null,
-    "net_kg": null,
-    "description": null,
-    "description_en": null,
-    "top_items": [
-     {
-      "description": "Футболки хлопковые",
-      "description_en": "Cotton T-shirts",
-      "hs_code": "6109100000",
-      "quantity": null,
-      "net_kg": null
-     }
-    ],
-    "more_items": 0,
-    "dangerous": []
-   }
+   ]
   },
   {
    "ref": "MC-26-0431",
@@ -3712,6 +3775,56 @@
       "reason_code": "origin_ru"
      }
     ]
+   },
+   "cargo_details": {
+    "container_no": null,
+    "container_type": null,
+    "packages": null,
+    "package_kind": null,
+    "package_kind_en": null,
+    "gross_kg": null,
+    "net_kg": null,
+    "description": null,
+    "description_en": null,
+    "top_items": [
+     {
+      "description": "Тормозные колодки",
+      "description_en": "Brake pads",
+      "hs_code": "8708301000",
+      "quantity": null,
+      "net_kg": null
+     },
+     {
+      "description": "Амортизаторы",
+      "description_en": "Shock absorbers",
+      "hs_code": "8708809900",
+      "quantity": null,
+      "net_kg": null
+     },
+     {
+      "description": "Прокат плоский горячекатаный",
+      "description_en": "Hot-rolled flat steel",
+      "hs_code": "7208511000",
+      "quantity": null,
+      "net_kg": null
+     },
+     {
+      "description": "Шины легковые",
+      "description_en": "Passenger car tyres",
+      "hs_code": "4011100003",
+      "quantity": null,
+      "net_kg": null
+     },
+     {
+      "description": "Фары",
+      "description_en": "Headlamps",
+      "hs_code": "8512200009",
+      "quantity": null,
+      "net_kg": null
+     }
+    ],
+    "more_items": 0,
+    "dangerous": []
    },
    "progress": 0.5451,
    "checkpoints": [
@@ -4040,531 +4153,6 @@
     [
      19.05,
      47.5
-    ]
-   ],
-   "cargo_details": {
-    "container_no": null,
-    "container_type": null,
-    "packages": null,
-    "package_kind": null,
-    "package_kind_en": null,
-    "gross_kg": null,
-    "net_kg": null,
-    "description": null,
-    "description_en": null,
-    "top_items": [
-     {
-      "description": "Тормозные колодки",
-      "description_en": "Brake pads",
-      "hs_code": "8708301000",
-      "quantity": null,
-      "net_kg": null
-     },
-     {
-      "description": "Амортизаторы",
-      "description_en": "Shock absorbers",
-      "hs_code": "8708809900",
-      "quantity": null,
-      "net_kg": null
-     },
-     {
-      "description": "Прокат плоский горячекатаный",
-      "description_en": "Hot-rolled flat steel",
-      "hs_code": "7208511000",
-      "quantity": null,
-      "net_kg": null
-     },
-     {
-      "description": "Шины легковые",
-      "description_en": "Passenger car tyres",
-      "hs_code": "4011100003",
-      "quantity": null,
-      "net_kg": null
-     },
-     {
-      "description": "Фары",
-      "description_en": "Headlamps",
-      "hs_code": "8512200009",
-      "quantity": null,
-      "net_kg": null
-     }
-    ],
-    "more_items": 0,
-    "dangerous": []
-   }
-  },
-  {
-   "ref": "MC-26-0501",
-   "client": "Steppe Auto Assembly",
-   "cargo": "1 × 40' HC, автокомплекты",
-   "cargo_en": "1 × 40' HC, car assembly kits",
-   "origin": "Млада-Болеслав",
-   "destination": "Костанай",
-   "origin_code": "MLADA_BOLESLAV",
-   "destination_code": "KOSTANAY",
-   "state": "in_transit",
-   "hold_reason": null,
-   "hold_code": null,
-   "hold_node": null,
-   "hold_vessel": null,
-   "delay_hours": 0.0,
-   "last_event": "Отправление: Баку (Алят) — погружен на паром «Shahdag»",
-   "last_event_kind": "departed",
-   "last_event_node": "BAKU_ALAT",
-   "last_event_note_code": "loaded_on_ferry",
-   "last_event_note_vessel": "Shahdag",
-   "last_event_at": "2026-10-31T03:08:54.312620Z",
-   "eta": "2026-11-03T21:08:54.312620Z",
-   "eta_latest": "2026-11-04T05:20:54.312620Z",
-   "delay_breakdown": [],
-   "position": {
-    "lat": 40.79242931092542,
-    "lon": 51.02451974942743,
-    "heading": 15.342060956713055,
-    "confirmed": false,
-    "source": "projection",
-    "on_vessel": "Shahdag",
-    "mode": "sea",
-    "from_code": "BAKU_ALAT",
-    "to_code": "AKTAU",
-    "leg_progress": 0.36363636363636365
-   },
-   "queue": null,
-   "sanctions": {
-    "status": "clear",
-    "checked_at": "2026-10-22T11:08:54.312620Z",
-    "lists": [
-     {
-      "code": "chpl",
-      "name": "CHPL — общий список приоритетных товаров (прил. XL к 833/2014)",
-      "name_en": "Common High Priority List (Annex XL to Regulation 833/2014)",
-      "as_of": "2026-07-24",
-      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
-      "review_code_only": true
-     },
-     {
-      "code": "eu_833_2014",
-      "name": "ЕС 833/2014 — запреты ввоза из РФ (прил. XVII, XXI)",
-      "name_en": "EU Regulation 833/2014 — import bans on Russian goods (Annexes XVII, XXI)",
-      "as_of": "2026-07-24",
-      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
-      "review_code_only": false
-     },
-     {
-      "code": "eu_833_2014_export",
-      "name": "ЕС 833/2014 — запрет экспорта в РФ (прил. XXIII)",
-      "name_en": "EU Regulation 833/2014 — export ban to Russia (Annex XXIII)",
-      "as_of": "2026-07-24",
-      "source_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02014R0833-20260724",
-      "review_code_only": false
-     }
-    ],
-    "matches": []
-   },
-   "cargo_details": {
-    "container_no": "DEMU5010012",
-    "container_type": "40' HC",
-    "packages": 14,
-    "package_kind": "поддоны",
-    "package_kind_en": "pallets",
-    "gross_kg": 12449.0,
-    "net_kg": 9551.0,
-    "description": "Автокомплекты для промышленной сборки",
-    "description_en": "Car assembly kits",
-    "top_items": [
-     {
-      "description": "Агрегат: двигатель и КПП",
-      "description_en": "Engine and gearbox unit",
-      "hs_code": "8708999740",
-      "quantity": 14.0,
-      "net_kg": 5481.0
-     },
-     {
-      "description": "Колесо в сборе",
-      "description_en": "Wheel with tyre",
-      "hs_code": "8708705099",
-      "quantity": 70.0,
-      "net_kg": 1813.0
-     },
-     {
-      "description": "Мост задний ведущий",
-      "description_en": "Rear drive axle",
-      "hs_code": "8708509140",
-      "quantity": 14.0,
-      "net_kg": 1680.0
-     },
-     {
-      "description": "Аккумуляторы",
-      "description_en": "Batteries",
-      "hs_code": "8507100000",
-      "quantity": 14.0,
-      "net_kg": 259.0
-     },
-     {
-      "description": "Глушитель",
-      "description_en": "Exhaust silencer",
-      "hs_code": "8708923599",
-      "quantity": 14.0,
-      "net_kg": 165.0
-     }
-    ],
-    "more_items": 4,
-    "dangerous": [
-     {
-      "un_number": "2800",
-      "hazard_class": "8",
-      "description": "Аккумуляторы с электролитом, непроливные",
-      "description_en": "Batteries, wet, non-spillable",
-      "gross_kg": 273.0
-     }
-    ]
-   },
-   "progress": 0.7223,
-   "checkpoints": [
-    {
-     "code": "MLADA_BOLESLAV",
-     "name": "Млада-Болеслав",
-     "lat": 50.41,
-     "lon": 14.9,
-     "planned_at": "2026-10-18T09:08:54.312620Z",
-     "actual_at": "2026-10-18T09:38:54.312620Z",
-     "state": "done"
-    },
-    {
-     "code": "KOPER",
-     "name": "Копер",
-     "lat": 45.55,
-     "lon": 13.73,
-     "planned_at": "2026-10-19T15:08:54.312620Z",
-     "actual_at": "2026-10-19T16:08:54.312620Z",
-     "state": "done"
-    },
-    {
-     "code": "AMBARLI",
-     "name": "Амбарлы (Стамбул)",
-     "lat": 40.97,
-     "lon": 28.68,
-     "planned_at": "2026-10-23T03:08:54.312620Z",
-     "actual_at": "2026-10-23T03:38:54.312620Z",
-     "state": "done"
-    },
-    {
-     "code": "POTI",
-     "name": "Поти",
-     "lat": 42.15,
-     "lon": 41.65,
-     "planned_at": "2026-10-27T19:08:54.312620Z",
-     "actual_at": "2026-10-27T20:38:54.312620Z",
-     "state": "done"
-    },
-    {
-     "code": "TBILISI",
-     "name": "Тбилиси",
-     "lat": 41.72,
-     "lon": 44.8,
-     "planned_at": "2026-10-28T17:08:54.312620Z",
-     "actual_at": "2026-10-28T16:38:54.312620Z",
-     "state": "done"
-    },
-    {
-     "code": "BOYUK_KASIK",
-     "name": "Бёюк-Кясик / Гардабани",
-     "lat": 41.44,
-     "lon": 45.1,
-     "planned_at": "2026-10-29T02:08:54.312620Z",
-     "actual_at": "2026-10-29T03:38:54.312620Z",
-     "state": "done"
-    },
-    {
-     "code": "GANJA",
-     "name": "Гянджа",
-     "lat": 40.68,
-     "lon": 46.36,
-     "planned_at": "2026-10-30T01:08:54.312620Z",
-     "actual_at": "2026-10-30T00:08:54.312620Z",
-     "state": "done"
-    },
-    {
-     "code": "BAKU_ALAT",
-     "name": "Баку (Алят)",
-     "lat": 39.93,
-     "lon": 49.41,
-     "planned_at": "2026-10-30T15:08:54.312620Z",
-     "actual_at": "2026-10-30T15:08:54.312620Z",
-     "state": "done"
-    },
-    {
-     "code": "AKTAU",
-     "name": "Актау",
-     "lat": 43.63,
-     "lon": 51.25,
-     "planned_at": "2026-11-01T01:08:54.312620Z",
-     "actual_at": null,
-     "state": "current"
-    },
-    {
-     "code": "BEINEU",
-     "name": "Бейнеу",
-     "lat": 45.32,
-     "lon": 55.19,
-     "planned_at": "2026-11-01T23:08:54.312620Z",
-     "actual_at": null,
-     "state": "planned"
-    },
-    {
-     "code": "KOSTANAY",
-     "name": "Костанай",
-     "lat": 53.21,
-     "lon": 63.62,
-     "planned_at": "2026-11-03T21:08:54.312620Z",
-     "actual_at": null,
-     "state": "planned"
-    }
-   ],
-   "track": [
-    [
-     14.9,
-     50.41
-    ],
-    [
-     14.43,
-     50.08
-    ],
-    [
-     14.47,
-     48.97
-    ],
-    [
-     14.29,
-     48.3
-    ],
-    [
-     15.44,
-     47.07
-    ],
-    [
-     14.51,
-     46.05
-    ],
-    [
-     13.73,
-     45.55
-    ],
-    [
-     13.3,
-     45.2
-    ],
-    [
-     14.5,
-     44.0
-    ],
-    [
-     16.3,
-     42.7
-    ],
-    [
-     17.9,
-     41.6
-    ],
-    [
-     18.9,
-     40.3
-    ],
-    [
-     19.6,
-     39.3
-    ],
-    [
-     20.4,
-     37.9
-    ],
-    [
-     21.6,
-     36.5
-    ],
-    [
-     22.9,
-     36.25
-    ],
-    [
-     24.5,
-     36.9
-    ],
-    [
-     25.0,
-     37.9
-    ],
-    [
-     25.6,
-     39.3
-    ],
-    [
-     26.15,
-     40.05
-    ],
-    [
-     26.7,
-     40.4
-    ],
-    [
-     27.7,
-     40.75
-    ],
-    [
-     28.5,
-     40.93
-    ],
-    [
-     28.68,
-     40.97
-    ],
-    [
-     28.95,
-     40.98
-    ],
-    [
-     29.06,
-     41.08
-    ],
-    [
-     29.12,
-     41.23
-    ],
-    [
-     30.5,
-     41.45
-    ],
-    [
-     32.5,
-     41.75
-    ],
-    [
-     35.0,
-     42.1
-    ],
-    [
-     37.5,
-     41.9
-    ],
-    [
-     39.5,
-     41.6
-    ],
-    [
-     41.2,
-     41.9
-    ],
-    [
-     41.65,
-     42.15
-    ],
-    [
-     42.34,
-     42.16
-    ],
-    [
-     43.05,
-     42.11
-    ],
-    [
-     43.6,
-     41.99
-    ],
-    [
-     44.11,
-     41.98
-    ],
-    [
-     44.8,
-     41.72
-    ],
-    [
-     45.09,
-     41.46
-    ],
-    [
-     45.1,
-     41.44
-    ],
-    [
-     45.63,
-     40.99
-    ],
-    [
-     46.36,
-     40.68
-    ],
-    [
-     47.15,
-     40.62
-    ],
-    [
-     48.15,
-     40.34
-    ],
-    [
-     49.41,
-     39.93
-    ],
-    [
-     50.1,
-     40.05
-    ],
-    [
-     50.9,
-     40.45
-    ],
-    [
-     51.1,
-     41.0
-    ],
-    [
-     51.2,
-     42.8
-    ],
-    [
-     51.25,
-     43.63
-    ],
-    [
-     52.1,
-     44.17
-    ],
-    [
-     55.19,
-     45.32
-    ],
-    [
-     55.8,
-     47.1
-    ],
-    [
-     57.0,
-     48.6
-    ],
-    [
-     57.42,
-     49.47
-    ],
-    [
-     57.17,
-     50.28
-    ],
-    [
-     58.45,
-     50.25
-    ],
-    [
-     60.6,
-     51.4
-    ],
-    [
-     62.4,
-     52.4
-    ],
-    [
-     63.62,
-     53.21
     ]
    ]
   }
@@ -5018,6 +4606,214 @@
      47.5
     ]
    ]
+  },
+  {
+   "from_code": "MLADA_BOLESLAV",
+   "to_code": "KOPER",
+   "mode": "rail",
+   "coordinates": [
+    [
+     14.9,
+     50.41
+    ],
+    [
+     14.43,
+     50.08
+    ],
+    [
+     14.47,
+     48.97
+    ],
+    [
+     14.29,
+     48.3
+    ],
+    [
+     15.44,
+     47.07
+    ],
+    [
+     14.51,
+     46.05
+    ],
+    [
+     13.73,
+     45.55
+    ]
+   ]
+  },
+  {
+   "from_code": "KOPER",
+   "to_code": "AMBARLI",
+   "mode": "sea",
+   "coordinates": [
+    [
+     13.73,
+     45.55
+    ],
+    [
+     13.3,
+     45.2
+    ],
+    [
+     14.5,
+     44.0
+    ],
+    [
+     16.3,
+     42.7
+    ],
+    [
+     17.9,
+     41.6
+    ],
+    [
+     18.9,
+     40.3
+    ],
+    [
+     19.6,
+     39.3
+    ],
+    [
+     20.4,
+     37.9
+    ],
+    [
+     21.6,
+     36.5
+    ],
+    [
+     22.9,
+     36.25
+    ],
+    [
+     24.5,
+     36.9
+    ],
+    [
+     25.0,
+     37.9
+    ],
+    [
+     25.6,
+     39.3
+    ],
+    [
+     26.15,
+     40.05
+    ],
+    [
+     26.7,
+     40.4
+    ],
+    [
+     27.7,
+     40.75
+    ],
+    [
+     28.5,
+     40.93
+    ],
+    [
+     28.68,
+     40.97
+    ]
+   ]
+  },
+  {
+   "from_code": "AMBARLI",
+   "to_code": "POTI",
+   "mode": "sea",
+   "coordinates": [
+    [
+     28.68,
+     40.97
+    ],
+    [
+     28.95,
+     40.98
+    ],
+    [
+     29.06,
+     41.08
+    ],
+    [
+     29.12,
+     41.23
+    ],
+    [
+     30.5,
+     41.45
+    ],
+    [
+     32.5,
+     41.75
+    ],
+    [
+     35.0,
+     42.1
+    ],
+    [
+     37.5,
+     41.9
+    ],
+    [
+     39.5,
+     41.6
+    ],
+    [
+     41.2,
+     41.9
+    ],
+    [
+     41.65,
+     42.15
+    ]
+   ]
+  },
+  {
+   "from_code": "BEINEU",
+   "to_code": "KOSTANAY",
+   "mode": "rail",
+   "coordinates": [
+    [
+     55.19,
+     45.32
+    ],
+    [
+     55.8,
+     47.1
+    ],
+    [
+     57.0,
+     48.6
+    ],
+    [
+     57.42,
+     49.47
+    ],
+    [
+     57.17,
+     50.28
+    ],
+    [
+     58.45,
+     50.25
+    ],
+    [
+     60.6,
+     51.4
+    ],
+    [
+     62.4,
+     52.4
+    ],
+    [
+     63.62,
+     53.21
+    ]
+   ]
   }
  ],
  "news": [
@@ -5027,7 +4823,7 @@
    "title": "Объём перевозок по Среднему коридору за 8 месяцев вырос на 62%",
    "summary": "Основной прирост — транзит Китай → Европа через Актау и Алят; доля контейнерных поездов впервые превысила половину объёма.",
    "url": "https://example.org/mock/news/1",
-   "published_at": "2026-10-31T09:38:54.412290Z"
+   "published_at": "2026-10-31T09:38:54.312620Z"
   },
   {
    "id": 2,
@@ -5035,7 +4831,7 @@
    "title": "Актау: штормовое предупреждение, паромные операции приостановлены",
    "summary": "Ветер до 20 м/с с порывами выше 21 м/с. Швартовка паромов в Актау и Курыке закрыта, ожидается улучшение к концу суток.",
    "url": "https://example.org/mock/news/2",
-   "published_at": "2026-10-31T08:08:54.412290Z"
+   "published_at": "2026-10-31T08:08:54.312620Z"
   },
   {
    "id": 3,
@@ -5043,7 +4839,47 @@
    "title": "ASCO выводит на линию Курык — Алят дополнительный паром",
    "summary": "Седьмое судно на линии должно сократить очередь составов в Курыке и вернуть интервал отправлений к 8–10 часам.",
    "url": "https://example.org/mock/news/3",
-   "published_at": "2026-10-31T02:08:54.412290Z"
+   "published_at": "2026-10-31T02:08:54.312620Z"
+  },
+  {
+   "id": 4,
+   "source": "Rail Eurasia",
+   "title": "На границе Бёюк-Кясик — Гардабани запущено электронное предварительное декларирование",
+   "summary": "Пилот на грузовых составах ТМТМ: среднее время оформления должно снизиться с 18 до 8 часов.",
+   "url": "https://example.org/mock/news/4",
+   "published_at": "2026-10-30T21:08:54.312620Z"
+  },
+  {
+   "id": 5,
+   "source": "Black Sea Logistics",
+   "title": "Констанца: новая ро-ро линия из Поти — два отправления в неделю",
+   "summary": "Расписание синхронизировано с контейнерными поездами из Тбилиси; первый рейс уже принят в порту.",
+   "url": "https://example.org/mock/news/5",
+   "published_at": "2026-10-30T13:08:54.312620Z"
+  },
+  {
+   "id": 6,
+   "source": "Rail Eurasia",
+   "title": "КТЖ увеличила пропускную способность участка Бейнеу — Мангистау на 30%",
+   "summary": "Завершена реконструкция разъездов; участок — узкое место маршрута к каспийским портам.",
+   "url": "https://example.org/mock/news/6",
+   "published_at": "2026-10-30T04:08:54.312620Z"
+  },
+  {
+   "id": 7,
+   "source": "Steppe Business",
+   "title": "Ставки на 40' контейнер Китай — Европа по ТМТМ стабилизировались около $3 500",
+   "summary": "После летнего роста ставки вышли на плато; экспедиторы ждут осеннего сезона высокого спроса.",
+   "url": "https://example.org/mock/news/7",
+   "published_at": "2026-10-29T19:08:54.312620Z"
+  },
+  {
+   "id": 8,
+   "source": "Middle Corridor Wire",
+   "title": "Хоргос: очередь на перегруз сократилась до 18 часов",
+   "summary": "Дополнительная смена на терминале Алтынколь; неделей ранее ожидание доходило до двух суток.",
+   "url": "https://example.org/mock/news/8",
+   "published_at": "2026-10-29T04:08:54.312620Z"
   }
  ],
  "reports": [
@@ -5056,7 +4892,29 @@
     "ferry_expected": "2026-11-01"
    },
    "note": "Швартовка закрыта по ветру, пять составов ждут погрузки",
-   "ts": "2026-10-31T08:08:54.412718Z"
+   "ts": "2026-10-31T08:08:54.312620Z"
+  },
+  {
+   "report_type": "border_delay",
+   "port_name": null,
+   "port_code": null,
+   "payload": {
+    "border": "Бёюк-Кясик / Гардабани",
+    "border_code": "BOYUK_KASIK",
+    "delay_hours": 14
+   },
+   "note": "Досмотр на азербайджанской стороне, очередь около 40 вагонов",
+   "ts": "2026-10-31T04:08:54.312620Z"
+  },
+  {
+   "report_type": "rate",
+   "port_name": "Баку (Алят)",
+   "port_code": "BAKU_ALAT",
+   "payload": {
+    "rate_usd": 3450
+   },
+   "note": "40' HC Сиань — Констанца, all-in, сентябрь",
+   "ts": "2026-10-30T09:08:54.312620Z"
   }
  ],
  "thresholds": {
@@ -5068,9 +4926,9 @@
  },
  "summary": {
   "period_hours": 168,
-  "caspian_crossings": 3,
-  "avg_delay_hours": 2.9,
-  "port_downtime_hours": 315.0,
+  "caspian_crossings": 0,
+  "avg_delay_hours": 15.1,
+  "port_downtime_hours": 277.0,
   "ports_stopped": 2
  }
 }

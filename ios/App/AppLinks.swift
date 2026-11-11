@@ -29,7 +29,7 @@ enum AppLinks {
         URL(string: "mcstatus://s/\(ref)") ?? URL(fileURLWithPath: "/")
     }
 
-    /// «MC-26-0398 · Стоянка · +18 ч · прибытие 6 нояб., 17:08».
+    /// «MC-26-0501 · Стоянка · +30 ч · прибытие 6 нояб., 17:08».
     static func message(_ s: Shipment, labels: Labels, l: L10n) -> String {
         var status = labels.state(s)
         if s.isDelayed { status += " · +\(l.hours(s.delayHours))" }

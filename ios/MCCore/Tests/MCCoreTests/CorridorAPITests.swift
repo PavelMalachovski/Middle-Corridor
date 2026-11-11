@@ -44,18 +44,18 @@ final class CorridorAPITests: XCTestCase {
     }
 
     func test_shipment_ok() async throws {
-        let body = try Fixture.data("shipment_MC-26-0412")
+        let body = try Fixture.data("shipment_MC-26-0431")
         StubProtocol.handler = { _ in (200, body) }
-        let s = try await api().shipment(ref: "MC-26-0412")
-        XCTAssertEqual(s.ref, "MC-26-0412")
-        XCTAssertEqual(StubProtocol.lastPath, "/api/v1/shipments/MC-26-0412")
+        let s = try await api().shipment(ref: "MC-26-0431")
+        XCTAssertEqual(s.ref, "MC-26-0431")
+        XCTAssertEqual(StubProtocol.lastPath, "/api/v1/shipments/MC-26-0431")
     }
 
     func test_snapshot_ok() async throws {
         let body = try Fixture.data("snapshot")
         StubProtocol.handler = { _ in (200, body) }
         let snap = try await api().snapshot()
-        XCTAssertEqual(snap.nodes.count, 18)
+        XCTAssertEqual(snap.nodes.count, 22)
         XCTAssertEqual(StubProtocol.lastPath, "/api/v1/snapshot")
     }
 
@@ -66,7 +66,7 @@ final class CorridorAPITests: XCTestCase {
 
     func test_500_isHttp() async {
         StubProtocol.handler = { _ in (500, Data()) }
-        await assertAPIError(.http(500)) { try await self.api().shipment(ref: "MC-26-0412") }
+        await assertAPIError(.http(500)) { try await self.api().shipment(ref: "MC-26-0431") }
     }
 
     func test_networkError_isOffline() async {
@@ -77,7 +77,7 @@ final class CorridorAPITests: XCTestCase {
     func test_garbage_isDecoding() async {
         StubProtocol.handler = { _ in (200, Data("{}".utf8)) }
         do {
-            _ = try await api().shipment(ref: "MC-26-0412")
+            _ = try await api().shipment(ref: "MC-26-0431")
             XCTFail("ожидалась ошибка")
         } catch let error as APIError {
             guard case .decoding = error else { return XCTFail("\(error)") }
@@ -100,7 +100,7 @@ final class CorridorAPITests: XCTestCase {
     // MARK: часы демо
 
     private static let clockJSON = Data(
-        #"{"now":"2026-11-01T10:00:00Z","offset_hours":6,"story_start":"2026-11-01T04:00:00Z","story_ref":"MC-26-0398"}"#.utf8)
+        #"{"now":"2026-11-01T10:00:00Z","offset_hours":6,"story_start":"2026-11-01T04:00:00Z","story_ref":"MC-26-0501"}"#.utf8)
 
     private static func body(_ request: URLRequest) -> [String: Any]? {
         var data = request.httpBody

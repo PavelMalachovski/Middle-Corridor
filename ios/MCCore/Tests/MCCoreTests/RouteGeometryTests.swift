@@ -48,27 +48,27 @@ final class RouteGeometryTests: XCTestCase {
         XCTAssertTrue(done.isEmpty && rest.isEmpty)
     }
 
-    func test_split_fixture0412() throws {
-        let s = try Fixture.shipment("MC-26-0412")
+    func test_split_fixture0501OnFerry() throws {
+        let s = try Fixture.shipment("MC-26-0501_ferry")
         let (done, rest) = RouteGeometry.split(track: s.track, at: s.position, state: s.state.known)
         XCTAssertEqual(done.count + rest.count, s.track.count + 2)
         XCTAssertEqual(done.last, GeoPoint(lat: s.position.lat, lon: s.position.lon))
     }
 
-    func test_weatherPort_waitingInAktau() throws {
-        let s = try Fixture.shipment("MC-26-0398")
-        let port = RouteGeometry.weatherPort(for: s, nodes: try Fixture.snapshot().nodes)
-        XCTAssertEqual(port?.code, "AKTAU")
-    }
-
-    func test_weatherPort_atSea_isNextPort() throws {
-        let s = try Fixture.shipment("MC-26-0412")
+    func test_weatherPort_waitingInAlat() throws {
+        let s = try Fixture.shipment("MC-26-0501")
         let port = RouteGeometry.weatherPort(for: s, nodes: try Fixture.snapshot().nodes)
         XCTAssertEqual(port?.code, "BAKU_ALAT")
     }
 
+    func test_weatherPort_atSea_isNextPort() throws {
+        let s = try Fixture.shipment("MC-26-0501_ferry")
+        let port = RouteGeometry.weatherPort(for: s, nodes: try Fixture.snapshot().nodes)
+        XCTAssertEqual(port?.code, "AKTAU")
+    }
+
     func test_weatherPort_noTrackedPorts_isNil() throws {
-        let s = try Fixture.shipment("MC-26-0412")
+        let s = try Fixture.shipment("MC-26-0501_ferry")
         XCTAssertNil(RouteGeometry.weatherPort(for: s, nodes: []))
     }
 }

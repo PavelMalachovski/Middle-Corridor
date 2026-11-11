@@ -8,31 +8,31 @@ final class LabelsTests: XCTestCase {
     }
 
     func test_eventEn_fromCodes() throws {
-        let s = try Fixture.shipment("MC-26-0412")
-        XCTAssertEqual(try labels(.en).event(s), "Departure: Kuryk — loaded onto ferry “Barda”")
+        let s = try Fixture.shipment("MC-26-0501_ferry")
+        XCTAssertEqual(try labels(.en).event(s), "Departure: Baku (Alat) — loaded onto ferry “Shahdag”")
     }
 
     func test_eventRu_withNoteCode_buildsFromCodes() throws {
-        let s = try Fixture.shipment("MC-26-0412")
-        XCTAssertEqual(try labels(.ru).event(s), "Отправление: Курык — погружен на паром «Barda»")
+        let s = try Fixture.shipment("MC-26-0501_ferry")
+        XCTAssertEqual(try labels(.ru).event(s), "Отправление: Баку (Алят) — погружен на паром «Shahdag»")
     }
 
     func test_eventRu_withoutNoteCode_usesBackendString() throws {
-        var s = try Fixture.shipment("MC-26-0412")
+        var s = try Fixture.shipment("MC-26-0501_ferry")
         s.lastEventNoteCode = nil
-        s.lastEvent = "Отправление: Курык"
-        XCTAssertEqual(try labels(.ru).event(s), "Отправление: Курык")
+        s.lastEvent = "Отправление: Баку (Алят)"
+        XCTAssertEqual(try labels(.ru).event(s), "Отправление: Баку (Алят)")
     }
 
     func test_holdEn_weatherBan() throws {
-        let s = try Fixture.shipment("MC-26-0398")
+        let s = try Fixture.shipment("MC-26-0501")
         let hold = try XCTUnwrap(try labels(.en).hold(s))
         XCTAssertTrue(hold.hasPrefix("Weather berthing ban: "), hold)
         XCTAssertFalse(hold.contains("{"), hold)
     }
 
     func test_unknownHoldCode_fallsBackToRussian() throws {
-        var s = try Fixture.shipment("MC-26-0398")
+        var s = try Fixture.shipment("MC-26-0501")
         s.holdCode = "strike"
         s.holdReason = "Забастовка"
         XCTAssertEqual(try labels(.en).hold(s), "Забастовка")
@@ -40,32 +40,33 @@ final class LabelsTests: XCTestCase {
     }
 
     func test_noHold_isNil() throws {
-        XCTAssertNil(try labels(.en).hold(Fixture.shipment("MC-26-0412")))
+        XCTAssertNil(try labels(.en).hold(Fixture.shipment("MC-26-0431")))
     }
 
     func test_unknownState_showsRaw() throws {
-        var s = try Fixture.shipment("MC-26-0412")
+        var s = try Fixture.shipment("MC-26-0431")
         s.state = Coded(raw: "cancelled")
         XCTAssertEqual(try labels(.en).state(s), "cancelled")
         XCTAssertEqual(s.tone, .unknown)
     }
 
     func test_tone() throws {
-        XCTAssertEqual(try Fixture.shipment("MC-26-0398").tone, .delayed)
-        XCTAssertEqual(try Fixture.shipment("MC-26-0412").tone, .inTransit)
-        let delivered = try XCTUnwrap(try Fixture.snapshot().shipments.first { $0.ref == "MC-26-0322" })
+        XCTAssertEqual(try Fixture.shipment("MC-26-0501").tone, .delayed)
+        XCTAssertEqual(try Fixture.shipment("MC-26-0431").tone, .inTransit)
+        var delivered = try Fixture.shipment("MC-26-0501")  // доставленного в демо-снимке нет
+        delivered.state = Coded(.delivered)
         XCTAssertEqual(delivered.tone, .delivered)
     }
 
     func test_routeAndCargo_inEnglish() throws {
-        let s = try Fixture.shipment("MC-26-0412")
+        let s = try Fixture.shipment("MC-26-0431")
         XCTAssertEqual(try labels(.en).route(s), "Xi'an → Budapest")
-        XCTAssertEqual(try labels(.en).cargo(s), "2 × 40' HC, electronics")
+        XCTAssertEqual(try labels(.en).cargo(s), "1 × 40' HC, auto parts")
         XCTAssertEqual(try labels(.ru).route(s), "Сиань → Будапешт")
     }
 
     func test_projectionIsNotFact() throws {
-        var s = try Fixture.shipment("MC-26-0412")
+        var s = try Fixture.shipment("MC-26-0501_ferry")
         s.position.source = Coded(.projection)
         s.position.onVessel = nil
         s.position.confirmed = false
@@ -75,8 +76,8 @@ final class LabelsTests: XCTestCase {
     }
 
     func test_aisPosition() throws {
-        let text = try labels(.ru).position(Fixture.shipment("MC-26-0412"))
-        XCTAssertEqual(text.title, "На пароме «Barda»")
+        let text = try labels(.ru).position(Fixture.shipment("MC-26-0501_ferry"))
+        XCTAssertEqual(text.title, "На пароме «Shahdag»")
         XCTAssertTrue(text.confirmed)
     }
 

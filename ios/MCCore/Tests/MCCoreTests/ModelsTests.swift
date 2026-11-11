@@ -4,31 +4,31 @@ import XCTest
 
 final class ModelsTests: XCTestCase {
     func test_decodesShipmentFixture() throws {
-        let s = try Fixture.shipment("MC-26-0412")
-        XCTAssertEqual(s.ref, "MC-26-0412")
-        XCTAssertEqual(s.id, "MC-26-0412")
+        let s = try Fixture.shipment("MC-26-0501_ferry")  // публичный 0501 на «Shahdag»
+        XCTAssertEqual(s.ref, "MC-26-0501")
+        XCTAssertEqual(s.id, "MC-26-0501")
         XCTAssertEqual(s.state.known, .inTransit)
         XCTAssertEqual(s.position.source.known, .ais)
         XCTAssertTrue(s.position.confirmed)
-        XCTAssertEqual(s.position.onVessel, "Barda")
+        XCTAssertEqual(s.position.onVessel, "Shahdag")
         XCTAssertEqual(s.position.mode?.known, .sea)
-        XCTAssertEqual(s.checkpoints.first?.code, "XIAN")
+        XCTAssertEqual(s.checkpoints.first?.code, "MLADA_BOLESLAV")
         XCTAssertEqual(s.checkpoints.first?.state.known, .done)
         XCTAssertEqual(s.lastEventKind?.known, .departed)
         XCTAssertEqual(s.lastEventNoteCode, "loaded_on_ferry")
         XCTAssertNotNil(s.eta)
         XCTAssertGreaterThan(s.track.count, 10)
-        XCTAssertEqual(s.cargoEn, "2 × 40' HC, electronics")
+        XCTAssertEqual(s.cargoEn, "1 × 40' HC, car assembly kits")
     }
 
     func test_decodesSnapshotFixture() throws {
         let snap = try Fixture.snapshot()
-        XCTAssertEqual(snap.nodes.count, 18)
-        XCTAssertEqual(snap.shipments.count, 5)  // + MC-26-0431 (санкции), MC-26-0501 (груз) из patch_fixtures
-        XCTAssertEqual(snap.summary?.caspianCrossings, 3)
+        XCTAssertEqual(snap.nodes.count, 22)
+        XCTAssertEqual(snap.shipments.map(\.ref), ["MC-26-0501", "MC-26-0431"])  // демо — ровно два груза
+        XCTAssertEqual(snap.summary?.portsStopped, 2)
         XCTAssertEqual(snap.nodes.first?.nameEn, "Xi'an")
         XCTAssertTrue(snap.mock)
-        XCTAssertEqual(snap.news.count, 3)
+        XCTAssertEqual(snap.news.count, 8)
     }
 
     func test_parsesMicrosecondsAndPlainDates() throws {
@@ -46,7 +46,7 @@ final class ModelsTests: XCTestCase {
     }
 
     func test_unknownStateDoesNotFail() throws {
-        var json = try XCTUnwrap(String(data: Fixture.data("shipment_MC-26-0412"), encoding: .utf8))
+        var json = try XCTUnwrap(String(data: Fixture.data("shipment_MC-26-0431"), encoding: .utf8))
         let range = try XCTUnwrap(json.range(of: "\"state\": \"in_transit\""))
         json.replaceSubrange(range, with: "\"state\": \"cancelled\"")
         let s = try APIDate.makeDecoder().decode(Shipment.self, from: Data(json.utf8))
@@ -55,19 +55,19 @@ final class ModelsTests: XCTestCase {
     }
 
     func test_shipmentRoundTripsThroughEncoder() throws {
-        let s = try Fixture.shipment("MC-26-0398")
+        let s = try Fixture.shipment("MC-26-0501")
         let data = try APIDate.makeEncoder().encode(s)
         let back = try APIDate.makeDecoder().decode(Shipment.self, from: data)
         XCTAssertEqual(back, s)
     }
 
     func test_decodesQueue() throws {
-        let queue = try XCTUnwrap(Fixture.shipment("MC-26-0398").queue)
+        let queue = try XCTUnwrap(Fixture.shipment("MC-26-0501").queue)
         XCTAssertEqual(queue.p50Hours, 60)
         XCTAssertEqual(queue.p90Hours, 120)
         XCTAssertEqual(queue.basisCode, "weather_ban")
-        XCTAssertEqual(queue.portCode, "AKTAU")
-        let inSnapshot = try Fixture.snapshot().shipments.first { $0.ref == "MC-26-0398" }
+        XCTAssertEqual(queue.portCode, "BAKU_ALAT")  // очередь в Аляте, шторм — в Актау
+        let inSnapshot = try Fixture.snapshot().shipments.first { $0.ref == "MC-26-0501" }
         XCTAssertEqual(inSnapshot?.queue, queue)
     }
 
@@ -82,7 +82,7 @@ final class ModelsTests: XCTestCase {
     }
 
     func test_oldPayloadWithoutNewFields() throws {
-        let s = try Fixture.shipment("MC-26-0412")
+        let s = try Fixture.shipment("MC-26-0431")
         XCTAssertNil(s.queue)
         let bare = #"{"generated_at":"2026-10-31T11:00:00Z","server_time":"2026-10-31T11:00:00Z","replay":false,"mock":true,"nodes":[],"shipments":[],"news":[]}"#
         let snapshot = try APIDate.makeDecoder().decode(MapSnapshot.self, from: Data(bare.utf8))
@@ -99,9 +99,9 @@ final class ModelsTests: XCTestCase {
     }
 
     func test_decodesDemoClock() throws {
-        let json = #"{"now":"2026-11-01T10:00:00Z","offset_hours":6,"story_start":"2026-11-01T04:00:00.123456Z","story_ref":"MC-26-0398"}"#
+        let json = #"{"now":"2026-11-01T10:00:00Z","offset_hours":6,"story_start":"2026-11-01T04:00:00.123456Z","story_ref":"MC-26-0501"}"#
         let state = try APIDate.makeDecoder().decode(DemoClockState.self, from: Data(json.utf8))
         XCTAssertEqual(state.offsetHours, 6)
-        XCTAssertEqual(state.storyRef, "MC-26-0398")
+        XCTAssertEqual(state.storyRef, "MC-26-0501")
     }
 }

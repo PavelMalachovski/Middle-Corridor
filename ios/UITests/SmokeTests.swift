@@ -55,15 +55,15 @@ final class SmokeTests: XCTestCase {
     func test_addByNumber_opensCard() {
         let app = launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
-        add(app, "mc-26-0412")
-        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
+        add(app, "mc-26-0501")
+        XCTAssertTrue(app.navigationBars["MC-26-0501"].waitForExistence(timeout: 5))
         let position = element(app, "card.position")
         XCTAssertTrue(position.waitForExistence(timeout: 5))
-        XCTAssertTrue(position.label.contains("Barda"), position.label)
+        XCTAssertTrue(position.label.contains("Баку (Алят)"), position.label)  // ждёт парома в Аляте
         shot(app, "02-card-ru")
 
-        app.navigationBars["MC-26-0412"].buttons.firstMatch.tap()
-        XCTAssertTrue(element(app, "row.MC-26-0412").waitForExistence(timeout: 5))
+        app.navigationBars["MC-26-0501"].buttons.firstMatch.tap()
+        XCTAssertTrue(element(app, "row.MC-26-0501").waitForExistence(timeout: 5))
         shot(app, "03-list-ru")
     }
 
@@ -107,8 +107,8 @@ final class SmokeTests: XCTestCase {
         let app = launch(splash: ["-mc.splash", "hold"])
         let splash = element(app, "splash")
         XCTAssertTrue(splash.waitForExistence(timeout: 10))
-        app.open(try XCTUnwrap(URL(string: "mcstatus://s/MC-26-0412")))
-        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 10))
+        app.open(try XCTUnwrap(URL(string: "mcstatus://s/MC-26-0431")))
+        XCTAssertTrue(app.navigationBars["MC-26-0431"].waitForExistence(timeout: 10))
         XCTAssertTrue(splash.waitForNonExistence(timeout: 3))
     }
 
@@ -116,11 +116,12 @@ final class SmokeTests: XCTestCase {
     func test_deepLink() throws {
         let app = launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
-        app.open(try XCTUnwrap(URL(string: "mcstatus://s/MC-26-0398")))
-        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 10))
+        app.open(try XCTUnwrap(URL(string: "mcstatus://s/MC-26-0501")))
+        XCTAssertTrue(app.navigationBars["MC-26-0501"].waitForExistence(timeout: 10))
         let hold = element(app, "hold")
         XCTAssertTrue(hold.waitForExistence(timeout: 5))
         XCTAssertTrue(hold.label.contains("Погодный запрет"), hold.label)
+        XCTAssertTrue(hold.label.contains("Актау"), hold.label)  // запрет на швартовку — в порту назначения парома
         // очередь — в первом блоке карточки, без прокрутки
         let queue = element(app, "card.queue")
         XCTAssertTrue(queue.waitForExistence(timeout: 5))
@@ -133,7 +134,7 @@ final class SmokeTests: XCTestCase {
         let weather = element(app, "card.weather")
         if !weather.exists { app.swipeUp() }
         XCTAssertTrue(weather.waitForExistence(timeout: 5))
-        XCTAssertTrue(weather.label.contains("Актау"), weather.label)
+        XCTAssertTrue(weather.label.contains("Баку (Алят)"), weather.label)  // погода порта, где груз стоит
         shot(app, "09-card-weather-ru")
     }
 
@@ -142,10 +143,10 @@ final class SmokeTests: XCTestCase {
         let app = launch(lang: "en")
         XCTAssertTrue(app.navigationBars["My shipments"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.buttons["empty.add"].label, "Add shipment")
-        add(app, "MC-26-0412")
+        add(app, "MC-26-0431")
         let event = element(app, "card.event")
         XCTAssertTrue(event.waitForExistence(timeout: 5))
-        XCTAssertTrue(event.label.contains("loaded onto ferry"), event.label)
+        XCTAssertTrue(event.label.contains("Departure: Kyzylorda"), event.label)  // из кодов, не русская строка
         shot(app, "06-card-en")
     }
 
@@ -178,27 +179,29 @@ final class SmokeTests: XCTestCase {
     func test_listSectionsByUrgency() {
         let app = launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
-        add(app, "MC-26-0412")
-        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
-        app.navigationBars["MC-26-0412"].buttons.firstMatch.tap()
+        add(app, "MC-26-0431")
+        XCTAssertTrue(app.navigationBars["MC-26-0431"].waitForExistence(timeout: 5))
+        app.navigationBars["MC-26-0431"].buttons.firstMatch.tap()
         app.buttons["add"].tap()
         let field = app.textFields["add.field"]
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap()
-        field.typeText("MC-26-0398")
+        field.typeText("MC-26-0501")
         app.buttons["add.submit"].tap()
-        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
-        app.navigationBars["MC-26-0398"].buttons.firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["MC-26-0501"].waitForExistence(timeout: 5))
+        app.navigationBars["MC-26-0501"].buttons.firstMatch.tap()
 
-        // 0398 стоит под штормом с задержкой — секция «Требуют внимания» над «В пути»
-        let attention = element(app, "section.0")
-        let active = element(app, "section.1")
-        XCTAssertTrue(attention.waitForExistence(timeout: 5))
-        XCTAssertTrue(active.exists)
-        XCTAssertLessThan(attention.frame.minY, active.frame.minY)
-        let urgent = element(app, "row.MC-26-0398")
-        let moving = element(app, "row.MC-26-0412")
-        XCTAssertLessThan(urgent.frame.minY, moving.frame.minY)
+        // оба демо-груза — «Требуют внимания»: 0501 стоит с задержкой под штормом, 0431 —
+        // возможна санкционка. Секция одна — заголовка нет (список однородный). Груза «в пути»
+        // без проблем в демо нет: порядок секций между собой проверяет MCCore
+        // (ShipmentGroupsTests); здесь — одна секция и порядок списка внутри неё.
+        let newest = element(app, "row.MC-26-0501")
+        let older = element(app, "row.MC-26-0431")
+        XCTAssertTrue(newest.waitForExistence(timeout: 5))
+        XCTAssertTrue(older.exists)
+        XCTAssertFalse(element(app, "section.0").exists)
+        XCTAssertFalse(element(app, "section.1").exists)
+        XCTAssertLessThan(newest.frame.minY, older.frame.minY)  // последний добавленный — первым
         shot(app, "23-list-sections-ru")
     }
 
@@ -206,10 +209,10 @@ final class SmokeTests: XCTestCase {
     func test_removeAndUndo() {
         let app = launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
-        add(app, "MC-26-0412")
-        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
-        app.navigationBars["MC-26-0412"].buttons.firstMatch.tap()
-        let row = element(app, "row.MC-26-0412")
+        add(app, "MC-26-0431")
+        XCTAssertTrue(app.navigationBars["MC-26-0431"].waitForExistence(timeout: 5))
+        app.navigationBars["MC-26-0431"].buttons.firstMatch.tap()
+        let row = element(app, "row.MC-26-0431")
         XCTAssertTrue(row.waitForExistence(timeout: 5))
         row.swipeLeft()
         app.buttons["Delete"].exists ? app.buttons["Delete"].tap() : app.buttons["Удалить"].tap()
@@ -263,6 +266,12 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(block.label.contains("DEMU5010012"), block.label)
         XCTAssertTrue(block.label.contains("и ещё 4"), block.label)
         shot(app, "32-cargo-ru")
+
+        // «Подробности»: строка «Груз» не дублирует блок, клиент остаётся
+        let client = element(app, "details.client")
+        for _ in 0..<3 where !client.exists { app.swipeUp() }
+        XCTAssertTrue(client.waitForExistence(timeout: 5))
+        XCTAssertFalse(element(app, "details.cargo").exists)
     }
 
     /// Проверка санкций: 0431 — стальной прокат российского происхождения среди автозапчастей.
@@ -307,8 +316,8 @@ final class SmokeTests: XCTestCase {
     func test_liveActivity() {
         let app = launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
-        add(app, "MC-26-0412")
-        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0431")
+        XCTAssertTrue(app.navigationBars["MC-26-0431"].waitForExistence(timeout: 5))
         let button = element(app, "card.liveActivity")
         for _ in 0..<4 where !button.exists { app.swipeUp() }
         XCTAssertTrue(button.waitForExistence(timeout: 5))
@@ -336,9 +345,9 @@ final class SmokeTests: XCTestCase {
     func test_demoPreview() {
         let app = launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
-        add(app, "MC-26-0398")
-        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
-        app.navigationBars["MC-26-0398"].buttons.firstMatch.tap()
+        add(app, "MC-26-0501")
+        XCTAssertTrue(app.navigationBars["MC-26-0501"].waitForExistence(timeout: 5))
+        app.navigationBars["MC-26-0501"].buttons.firstMatch.tap()
         app.buttons["settings"].tap()
         let version = element(app, "settings.version")
         for _ in 0..<3 where !version.exists { app.swipeUp() }
@@ -359,8 +368,8 @@ final class SmokeTests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
         shot(app, "15-dark-empty")
-        add(app, "MC-26-0398")
-        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0501")
+        XCTAssertTrue(app.navigationBars["MC-26-0501"].waitForExistence(timeout: 5))
         shot(app, "16-dark-card")
         app.terminate()
 
@@ -371,8 +380,8 @@ final class SmokeTests: XCTestCase {
         ]
         app.launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
-        add(app, "MC-26-0398")
-        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0501")
+        XCTAssertTrue(app.navigationBars["MC-26-0501"].waitForExistence(timeout: 5))
         shot(app, "17-large-card")
         app.swipeUp()
         shot(app, "18-large-card-queue")
@@ -382,9 +391,9 @@ final class SmokeTests: XCTestCase {
     func test_liveActivityEndsWhenShipmentRemoved() {
         let app = launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
-        add(app, "MC-26-0412")
+        add(app, "MC-26-0431")
         // ждём карточку: свайпы во время закрытия шторки и перехода уходят в пустоту
-        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["MC-26-0431"].waitForExistence(timeout: 5))
         let button = element(app, "card.liveActivity")
         for _ in 0..<6 where !button.exists { app.swipeUp() }
         XCTAssertTrue(button.waitForExistence(timeout: 5))
@@ -394,16 +403,16 @@ final class SmokeTests: XCTestCase {
         waitForExpectations(timeout: 5)
 
         // удалить груз из списка — его Live Activity не должна остаться висеть
-        app.navigationBars["MC-26-0412"].buttons.firstMatch.tap()
-        let row = element(app, "row.MC-26-0412")
+        app.navigationBars["MC-26-0431"].buttons.firstMatch.tap()
+        let row = element(app, "row.MC-26-0431")
         XCTAssertTrue(row.waitForExistence(timeout: 5))
         row.swipeLeft()
         app.buttons["Delete"].exists ? app.buttons["Delete"].tap() : app.buttons["Удалить"].tap()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
         sleep(1)
 
-        add(app, "MC-26-0412")
-        XCTAssertTrue(app.navigationBars["MC-26-0412"].waitForExistence(timeout: 5))
+        add(app, "MC-26-0431")
+        XCTAssertTrue(app.navigationBars["MC-26-0431"].waitForExistence(timeout: 5))
         for _ in 0..<6 where !button.exists { app.swipeUp() }
         XCTAssertTrue(button.waitForExistence(timeout: 5))
         XCTAssertTrue(button.label.contains("На экран блокировки"), button.label)
@@ -413,8 +422,8 @@ final class SmokeTests: XCTestCase {
     func test_cardEtaRangeDelayAndFullMap() throws {
         let app = launch()
         XCTAssertTrue(app.buttons["empty.add"].waitForExistence(timeout: 5))
-        app.open(try XCTUnwrap(URL(string: "mcstatus://s/MC-26-0398")))
-        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 10))
+        app.open(try XCTUnwrap(URL(string: "mcstatus://s/MC-26-0501")))
+        XCTAssertTrue(app.navigationBars["MC-26-0501"].waitForExistence(timeout: 10))
 
         let eta = element(app, "card.eta")
         for _ in 0..<4 where !eta.exists { app.swipeUp() }
@@ -436,7 +445,7 @@ final class SmokeTests: XCTestCase {
         shot(app, "20-full-map")
         element(app, "map.fitRoute").tap()
         element(app, "map.close").tap()
-        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["MC-26-0501"].waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -526,6 +535,13 @@ final class SmokeTests: XCTestCase {
         first.tap()
         XCTAssertTrue(app.navigationBars["MC-27-0001"].waitForExistence(timeout: 5))
         shot(app, "43-account-card-ru")
+        // блока «Груз» у груза аккаунта нет — описание груза в «Подробностях»
+        let cargoRow = element(app, "details.cargo")
+        for _ in 0..<6 where !cargoRow.exists { app.swipeUp() }
+        XCTAssertTrue(cargoRow.waitForExistence(timeout: 5))
+        let text = "\(cargoRow.label) \(cargoRow.value as? String ?? "")"
+        XCTAssertTrue(text.contains("Запчасти") || app.staticTexts["Запчасти"].exists, text)
+        XCTAssertTrue(element(app, "details.client").exists)
         app.navigationBars["MC-27-0001"].buttons.firstMatch.tap()
 
         app.buttons["settings"].tap()
@@ -650,6 +666,8 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(agent.waitForExistence(timeout: 5))
         agent.tap()
         let node = element(app, "invite.node.AKTAU")
+        // узлов в снимке 22 (восточный маршрут 0501): Актау может быть ниже экрана, а строки формы ленивые
+        for _ in 0..<4 where !node.waitForExistence(timeout: 2) { app.swipeUp() }
         XCTAssertTrue(node.waitForExistence(timeout: 5))
         for _ in 0..<3 where !node.isHittable { app.swipeUp() }
         node.tap()

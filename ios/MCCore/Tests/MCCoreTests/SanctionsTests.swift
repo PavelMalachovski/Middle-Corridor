@@ -15,7 +15,7 @@ final class SanctionsTests: XCTestCase {
     // MARK: модели
 
     func test_review_decodedFromFixture() throws {
-        let check = try XCTUnwrap(try Fixture.shipment("MC-26-0412").sanctions)
+        let check = try XCTUnwrap(try Fixture.review().sanctions)
         XCTAssertEqual(check.status.known, .review)
         XCTAssertEqual(check.lists.map(\.code), ["chpl", "eu_833_2014", "eu_833_2014_export"])
         XCTAssertNotNil(check.checkedAt)
@@ -37,7 +37,7 @@ final class SanctionsTests: XCTestCase {
 
     func test_absentField_isNil() throws {
         var json = try XCTUnwrap(
-            try JSONSerialization.jsonObject(with: Fixture.data("shipment_MC-26-0412")) as? [String: Any])
+            try JSONSerialization.jsonObject(with: Fixture.data("shipment_MC-26-0431")) as? [String: Any])
         json["sanctions"] = nil
         let data = try JSONSerialization.data(withJSONObject: json)
         XCTAssertNil(try APIDate.makeDecoder().decode(Shipment.self, from: data).sanctions)
@@ -69,7 +69,7 @@ final class SanctionsTests: XCTestCase {
     }
 
     func test_weakMatchTexts() throws {
-        let check = try XCTUnwrap(try Fixture.shipment("MC-26-0412").sanctions)
+        let check = try XCTUnwrap(try Fixture.review().sanctions)
         XCTAssertEqual(check.matches.map(\.listId), ["chpl"])  // справочные совпадения наружу не идут
         let chpl = try XCTUnwrap(check.matches.first)
         XCTAssertEqual(
@@ -92,7 +92,7 @@ final class SanctionsTests: XCTestCase {
     }
 
     func test_clearFixture_hasNoMatches() throws {
-        let check = try XCTUnwrap(try Fixture.shipment("MC-26-0398").sanctions)
+        let check = try XCTUnwrap(try Fixture.shipment("MC-26-0501").sanctions)
         XCTAssertEqual(check.status.known, .clear)
         XCTAssertTrue(check.matches.isEmpty)
     }
@@ -122,9 +122,10 @@ final class SanctionsTests: XCTestCase {
     // MARK: группа в списке
 
     func test_flaggedOrMissing_isAttention() throws {
-        let nodes = Dictionary(
+        var nodes = Dictionary(
             try Fixture.snapshot().nodes.map { ($0.code, $0) }, uniquingKeysWith: { first, _ in first })
-        var s = try Fixture.shipment("MC-26-0412")
+        var s = try Fixture.review()
+        nodes["KURYK"]?.alertLevel = nil  // шторм впереди сам по себе поднял бы груз
         XCTAssertEqual(ShipmentGroup.of(s, nodes: nodes), .active)  // review — не повод поднимать
         s.sanctions?.status = Coded(.flagged)
         XCTAssertEqual(ShipmentGroup.of(s, nodes: nodes), .attention)

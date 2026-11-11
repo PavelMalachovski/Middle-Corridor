@@ -7,22 +7,39 @@ final class ShipmentGroupsTests: XCTestCase {
         Dictionary(try Fixture.snapshot().nodes.map { ($0.code, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
+    /// Узлы снимка без шторма в Курыке: он впереди у 0431 и сам по себе поднял бы груз.
+    private func calmNodes() throws -> [String: NodeStatus] {
+        var all = try nodes()
+        all["KURYK"]?.alertLevel = nil
+        return all
+    }
+
+    /// 0431 в пути без задержки; «проверить вручную» вместо флага — не повод поднимать.
+    private func inTransit() throws -> Shipment { try Fixture.review() }
+
+    private func delivered() throws -> Shipment {
+        var s = try Fixture.shipment("MC-26-0431")  // доставленного в демо-снимке нет
+        s.state = Coded(.delivered)
+        s.progress = 1
+        return s
+    }
+
     func test_delayedWithHold_isAttention() throws {
-        XCTAssertEqual(ShipmentGroup.of(try Fixture.shipment("MC-26-0398"), nodes: try nodes()), .attention)
+        XCTAssertEqual(ShipmentGroup.of(try Fixture.shipment("MC-26-0501"), nodes: try nodes()), .attention)
     }
 
     func test_inTransitWithoutStormAhead_isActive() throws {
-        XCTAssertEqual(ShipmentGroup.of(try Fixture.shipment("MC-26-0412"), nodes: try nodes()), .active)
+        XCTAssertEqual(ShipmentGroup.of(try inTransit(), nodes: try calmNodes()), .active)
+        XCTAssertEqual(ShipmentGroup.of(try inTransit(), nodes: try nodes()), .attention)  // Курык впереди — critical
     }
 
     func test_delivered_isDelivered() throws {
-        let delivered = try XCTUnwrap(try Fixture.snapshot().shipments.first { $0.state.known == .delivered })
-        XCTAssertEqual(ShipmentGroup.of(delivered, nodes: try nodes()), .delivered)
+        XCTAssertEqual(ShipmentGroup.of(try delivered(), nodes: try nodes()), .delivered)
     }
 
     func test_stormAtPortAhead_raisesToAttention() throws {
-        var s = try Fixture.shipment("MC-26-0412")
-        var all = try nodes()
+        var s = try inTransit()
+        var all = try calmNodes()
         all["POTI"]?.alertLevel = Coded(.warning)
         XCTAssertEqual(ShipmentGroup.of(s, nodes: all), .attention)
         all["POTI"]?.alertLevel = Coded(.watch)  // «усиление ветра» — ещё не повод
@@ -33,7 +50,7 @@ final class ShipmentGroupsTests: XCTestCase {
     }
 
     func test_plannedWithoutProblems_isPlanned() throws {
-        var s = try Fixture.shipment("MC-26-0412")
+        var s = try inTransit()
         s.state = Coded(.planned)
         XCTAssertEqual(ShipmentGroup.of(s, nodes: [:]), .planned)
         s.delayHours = 5
@@ -41,29 +58,31 @@ final class ShipmentGroupsTests: XCTestCase {
     }
 
     func test_group_ordersSectionsAndKeepsListOrder() throws {
-        let snapshot = try Fixture.snapshot()
-        let delivered = try XCTUnwrap(snapshot.shipments.first { $0.state.known == .delivered })
+        var snapshot = try Fixture.snapshot()
+        snapshot.nodes = Array(try calmNodes().values)
+        var delivered = try delivered()
+        delivered.ref = "MC-26-0002"
         let rows = [
-            TrackedRow(ref: "MC-26-0412", shipment: try Fixture.shipment("MC-26-0412")),
+            TrackedRow(ref: "MC-26-0431", shipment: try inTransit()),
             TrackedRow(ref: delivered.ref, shipment: delivered),
-            TrackedRow(ref: "MC-26-0398", shipment: try Fixture.shipment("MC-26-0398")),
+            TrackedRow(ref: "MC-26-0501", shipment: try Fixture.shipment("MC-26-0501")),
             TrackedRow(ref: "MC-26-9999", shipment: nil),
             TrackedRow(ref: "MC-26-0001", shipment: nil),
         ]
         let groups = ShipmentGroup.group(rows, nodes: snapshot.nodes, missing: ["MC-26-9999"])
         XCTAssertEqual(groups.map(\.group), [.attention, .active, .delivered])
-        XCTAssertEqual(groups[0].rows.map(\.ref), ["MC-26-0398", "MC-26-9999"])
-        XCTAssertEqual(groups[1].rows.map(\.ref), ["MC-26-0412", "MC-26-0001"])
+        XCTAssertEqual(groups[0].rows.map(\.ref), ["MC-26-0501", "MC-26-9999"])
+        XCTAssertEqual(groups[1].rows.map(\.ref), ["MC-26-0431", "MC-26-0001"])
         XCTAssertEqual(groups[2].rows.map(\.ref), [delivered.ref])
     }
 }
 
 final class CheckpointWindowTests: XCTestCase {
-    func test_fixture0398_showsPreviousCurrentAndThreeAhead() throws {
-        let window = CheckpointWindow(try Fixture.shipment("MC-26-0398").checkpoints)
-        XCTAssertEqual(window.visible, 6...10)  // Бейнеу, Актау, Баку, Гянджа, Бёюк-Кясик
-        XCTAssertEqual(window.hiddenBefore, 6)
-        XCTAssertEqual(window.hiddenAfter, 3)
+    func test_fixture0431_showsPreviousCurrentAndThreeAhead() throws {
+        let window = CheckpointWindow(try Fixture.shipment("MC-26-0431").checkpoints)
+        XCTAssertEqual(window.visible, 5...9)  // Кызылорда, Бейнеу, Курык, Баку, Гянджа
+        XCTAssertEqual(window.hiddenBefore, 5)
+        XCTAssertEqual(window.hiddenAfter, 6)
     }
 
     func test_singleHiddenPoint_isShownInstead() {

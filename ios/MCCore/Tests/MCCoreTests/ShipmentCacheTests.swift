@@ -14,13 +14,13 @@ final class ShipmentCacheTests: XCTestCase {
     }
 
     func test_fileCache_roundTrip() throws {
-        let s = try Fixture.shipment("MC-26-0412")
+        let s = try Fixture.shipment("MC-26-0431")
         let state = CachedState(
             shipments: [s.ref: s], snapshot: try Fixture.snapshot(), updatedAt: Date(timeIntervalSince1970: 5000))
         FileShipmentCache(directory: dir).save(state)
 
         let loaded = try XCTUnwrap(FileShipmentCache(directory: dir).load())
-        XCTAssertEqual(Set(loaded.shipments.keys), ["MC-26-0412"])
+        XCTAssertEqual(Set(loaded.shipments.keys), ["MC-26-0431"])
         XCTAssertEqual(loaded.updatedAt, Date(timeIntervalSince1970: 5000))
         XCTAssertEqual(loaded.snapshot?.nodes.count, state.snapshot?.nodes.count)
     }
@@ -38,11 +38,11 @@ final class ShipmentCacheTests: XCTestCase {
     func test_fileCache_missingNewField_decodes() throws {
         // кэш, записанный до появления queue/forecast/thresholds
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let shipment = try XCTUnwrap(String(data: Fixture.data("shipment_MC-26-0412"), encoding: .utf8))
-        let old = #"{"shipments":{"MC-26-0412":\#(shipment)},"updated_at":"2026-10-31T11:00:00Z"}"#
+        let shipment = try XCTUnwrap(String(data: Fixture.data("shipment_MC-26-0431"), encoding: .utf8))
+        let old = #"{"shipments":{"MC-26-0431":\#(shipment)},"updated_at":"2026-10-31T11:00:00Z"}"#
         try Data(old.utf8).write(to: dir.appending(path: FileShipmentCache.fileName))
         let loaded = try XCTUnwrap(FileShipmentCache(directory: dir).load())
-        XCTAssertNil(loaded.shipments["MC-26-0412"]?.queue)
+        XCTAssertNil(loaded.shipments["MC-26-0431"]?.queue)
         XCTAssertNil(loaded.snapshot)
     }
 }

@@ -2,12 +2,12 @@
   "Simulator Target Bundle": "com.malakhouski.mcstatus",
   "aps": {
     "alert": {
-      "title": "Выход из очереди MC-26-0398: 2–3 дня",
+      "title": "Выход из очереди MC-26-0501: 2–3 дня",
       "body": "в плохом сценарии — до 5 дней"
     },
     "sound": "default",
-    "thread-id": "MC-26-0398"
+    "thread-id": "MC-26-0501"
   },
-  "ref": "MC-26-0398",
+  "ref": "MC-26-0501",
   "kind": "queue"
 }

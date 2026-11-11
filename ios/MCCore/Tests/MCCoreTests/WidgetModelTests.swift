@@ -4,21 +4,21 @@ import XCTest
 final class WidgetModelTests: XCTestCase {
     func test_resolve_prefersIntent() {
         XCTAssertEqual(
-            WidgetModel.resolve(intentRef: " mc-26-0412 ", sharedRef: "MC-26-0398", cachedRefs: ["MC-26-0322"]),
-            "MC-26-0412")
+            WidgetModel.resolve(intentRef: " mc-26-0501 ", sharedRef: "MC-26-0431", cachedRefs: ["MC-26-0001"]),
+            "MC-26-0501")
     }
 
     func test_resolve_fallsBackToShared() {
         XCTAssertEqual(
-            WidgetModel.resolve(intentRef: "  ", sharedRef: "MC-26-0398", cachedRefs: ["MC-26-0322"]), "MC-26-0398")
+            WidgetModel.resolve(intentRef: "  ", sharedRef: "MC-26-0431", cachedRefs: ["MC-26-0001"]), "MC-26-0431")
     }
 
     func test_resolve_garbageIntent_usesShared() {
-        XCTAssertEqual(WidgetModel.resolve(intentRef: "привет", sharedRef: "MC-26-0398", cachedRefs: []), "MC-26-0398")
+        XCTAssertEqual(WidgetModel.resolve(intentRef: "привет", sharedRef: "MC-26-0431", cachedRefs: []), "MC-26-0431")
     }
 
     func test_resolve_cache() {
-        XCTAssertEqual(WidgetModel.resolve(intentRef: nil, sharedRef: nil, cachedRefs: ["MC-26-0322", "MC-26-0398"]), "MC-26-0322")
+        XCTAssertEqual(WidgetModel.resolve(intentRef: nil, sharedRef: nil, cachedRefs: ["MC-26-0001", "MC-26-0431"]), "MC-26-0001")
     }
 
     func test_resolve_none_isNil() {

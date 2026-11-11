@@ -2,12 +2,12 @@
   "Simulator Target Bundle": "com.malakhouski.mcstatus",
   "aps": {
     "alert": {
-      "title": "MC-26-0398: Отправление: Актау — погружен на паром «Turkestan»",
-      "body": "Сиань → Констанца"
+      "title": "MC-26-0501: Отправление: Баку (Алят) — погружен на паром «Turkestan»",
+      "body": "Млада-Болеслав → Костанай"
     },
     "sound": "default",
-    "thread-id": "MC-26-0398"
+    "thread-id": "MC-26-0501"
   },
-  "ref": "MC-26-0398",
+  "ref": "MC-26-0501",
   "kind": "event"
 }

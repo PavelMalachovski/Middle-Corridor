@@ -1,7 +1,8 @@
 import XCTest
 
-/// Сценарий демо для записи видео (`ios/scripts/record_demo.sh`): история груза MC-26-0398
-/// от ссылки до доставки. Время переводит сам тест через `/api/v1/demo/clock`, поэтому пульт
+/// Сценарий демо для записи видео (`ios/scripts/record_demo.sh`): история груза MC-26-0501
+/// (Млада-Болеслав → Костанай) от ссылки до доставки: ждёт парома в Аляте, шторм в Актау,
+/// паром → Актау → Бейнеу → Костанай (5 тактов `next_beat`, цикл 184 ч). Время переводит сам тест через `/api/v1/demo/clock`, поэтому пульт
 /// в кадр не попадает. Нужен бэкенд `MOCK_DATA=true DEMO_CONTROL=true` на :8000; в обычном
 /// прогоне UI-тестов сценарий пропускается.
 final class DemoScenarioTests: XCTestCase {
@@ -25,7 +26,7 @@ final class DemoScenarioTests: XCTestCase {
     }
 
     private static func state() async throws -> String {
-        let (data, _) = try await URLSession.shared.data(from: server.appending(path: "api/v1/shipments/MC-26-0398"))
+        let (data, _) = try await URLSession.shared.data(from: server.appending(path: "api/v1/shipments/MC-26-0501"))
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         return json?["state"] as? String ?? ""
     }
@@ -72,9 +73,9 @@ final class DemoScenarioTests: XCTestCase {
         pause(1)
 
         // 2. Ссылка от оператора → груз: маршрут, где сейчас, ETA
-        app.open(URL(string: "mcstatus://s/MC-26-0398")!)
+        app.open(URL(string: "mcstatus://s/MC-26-0501")!)
         allowNotificationsIfAsked()
-        XCTAssertTrue(app.navigationBars["MC-26-0398"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["MC-26-0501"].waitForExistence(timeout: 10))
         pause(4)
         app.swipeUp()
         pause(3)
@@ -86,7 +87,7 @@ final class DemoScenarioTests: XCTestCase {
         pause(2)
         for _ in 0..<5 { app.swipeDown() }
 
-        // 4–5. Шторм в Актау: уведомление, запрет, очередь «2–3 дня, до 5»
+        // 4–5. Шторм в Актау: уведомление, запрет на швартовку, очередь в Аляте «2–3 дня, до 5»
         try await Self.clock("next_beat")
         pullToRefresh(app)
         pause(4)
@@ -113,7 +114,7 @@ final class DemoScenarioTests: XCTestCase {
             pause(1)
         }
 
-        // 7. Перемотка: погружен на паром, вышел, … доставлен — Live Activity закрывается
+        // 7. Перемотка: паром из Алята, Актау, Бейнеу, доставлен в Костанай — Live Activity закрывается
         for _ in 0..<5 { app.swipeDown() }
         try await Self.clock("next_beat")
         pullToRefresh(app)

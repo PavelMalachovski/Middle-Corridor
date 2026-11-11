@@ -371,19 +371,19 @@ final class AccountLabelsAndRulesTests: XCTestCase {
 
     func test_pushManagedRefs_skipsDiff_emptyKeepsBehaviour() throws {
         let nodes = try Fixture.snapshot().nodes
-        let s0412 = try Fixture.shipment("MC-26-0412")
-        var old = s0412
+        let ferry = try Fixture.shipment("MC-26-0501_ferry")
+        var old = ferry
         old.lastEventAt = old.lastEventAt?.addingTimeInterval(-3600)
         old.lastEventKind = Coded(.arrived)
         old.lastEventNoteCode = nil
-        old.lastEvent = "Прибытие: Курык"
+        old.lastEvent = "Прибытие: Баку (Алят)"
         func run(_ managed: Set<String>) -> [AppNotice] {
             NotificationRules.diff(
-                old: [old.ref: old], new: [s0412.ref: s0412], oldNodes: nodes, newNodes: nodes,
+                old: [old.ref: old], new: [ferry.ref: ferry], oldNodes: nodes, newNodes: nodes,
                 settings: .all, labels: Labels(lang: .ru, nodes: nodes), pushManagedRefs: managed)
         }
         XCTAssertEqual(run([]).map(\.kind), [.event])
-        XCTAssertTrue(run([s0412.ref]).isEmpty)
+        XCTAssertTrue(run([ferry.ref]).isEmpty)
         XCTAssertEqual(run(["MC-OTHER"]).map(\.kind), [.event])
     }
 }
@@ -393,7 +393,7 @@ final class AccountReviewFixesTests: XCTestCase {
 
     func test_pushManaged_stillGetsDelayNotice_notEvent() throws {
         let nodes = try Fixture.snapshot().nodes
-        let s = try Fixture.shipment("MC-26-0398")
+        let s = try Fixture.shipment("MC-26-0501")
         var old = s
         old.delayHours = 0
         old.lastEventAt = old.lastEventAt?.addingTimeInterval(-3600)

@@ -2,12 +2,12 @@
   "Simulator Target Bundle": "com.malakhouski.mcstatus",
   "aps": {
     "alert": {
-      "title": "Задержка MC-26-0398: +30 ч",
+      "title": "Задержка MC-26-0501: +30 ч",
       "body": "Погодный запрет на швартовку: Актау — критический ветер"
     },
     "sound": "default",
-    "thread-id": "MC-26-0398"
+    "thread-id": "MC-26-0501"
   },
-  "ref": "MC-26-0398",
+  "ref": "MC-26-0501",
   "kind": "delay"
 }
